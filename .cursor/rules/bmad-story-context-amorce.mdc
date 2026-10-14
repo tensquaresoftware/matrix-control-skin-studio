@@ -1,0 +1,70 @@
+---
+description: Mandatory Contexte de la Story opening for build/code-review BMad commands
+alwaysApply: true
+---
+
+# BMad — amorce « Contexte de la Story » (NON NÉGOCIABLE)
+
+## Scope (exact)
+
+Applies on **first activation** of any of these skills / slash commands:
+
+- `bmad-build`
+- `bmad-code-review`
+
+Does **not** apply to other BMad commands (`sprint-planning`, `help`, `correct-course`, etc.).
+
+## Hard gate — first user-facing content
+
+After optional `rename_chat` (see `bmad-agent-chat-titles.mdc`) and skill activation setup, the **very first text Guillaume sees in the assistant reply** MUST be exactly this shape — before greeting fluff, before En bref, before questions, before tool narrations:
+
+```
+## Contexte de la Story
+
+<one synthetic French sentence>
+```
+
+Rules for the sentence:
+
+1. **One sentence only** (two short sentences max if unavoidable).
+2. **Plain French** around the idea — natural language, **no excess engineering jargon** — pass the phrase-test « Reformule en langage naturel, sans jargon excessif ».
+3. Summarize **what the story / request is about** at product level — not how you will implement it.
+4. **Keep product / domain English names as-is** (do **not** force-translate).  
+   Ex. say **Skin Studio**, not « studio de skins » ; **Matrix-Control**, not « contrôle matriciel » ; keep skin names like **Black** / **Green**.
+5. **Forbidden in this blurb:** file paths, AC IDs, class names, long bullet lists, implementation plans, English sentence dumps that are not product labels.
+6. If no story ID yet (freeform build), still use the same heading and summarize the requested change in one sentence.
+
+Then continue the normal workflow.
+
+## Do not repeat
+
+If this conversation **already contains** a prior assistant message with the heading `Contexte de la Story`, **do not** emit it again on later turns — continue the workflow normally.
+
+## Self-check before send (mandatory)
+
+Before sending the first assistant message of a fresh run of one of the commands above:
+
+1. Does the reply **start** with `## Contexte de la Story`?
+2. Is the following text **one** plain-French sentence (with product names kept in English when that is their real name)?
+3. Did you avoid force-translating product terms (e.g. Skin Studio)?
+4. Is anything else (tools except silent `rename_chat`, greetings, En bref) **after** that block?
+
+If any answer is no → rewrite before sending.
+
+## Examples
+
+**Bad** (forced translation of a product name):
+
+```
+## Contexte de la Story
+
+Cette story ajoute un aperçu du studio de skins pour comparer le look Black et le look vert avant export.
+```
+
+**Good** (French sentence, product names kept):
+
+```
+## Contexte de la Story
+
+Cette story ajoute un aperçu dans Skin Studio pour comparer les skins Black et Green avant export.
+```

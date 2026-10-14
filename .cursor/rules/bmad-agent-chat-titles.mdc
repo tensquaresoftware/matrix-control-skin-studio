@@ -1,0 +1,209 @@
+---
+description: Rename Cursor Agents sidebar title when a BMad skill or slash command is used
+alwaysApply: true
+---
+
+# BMad — titres des conversations Agents
+
+When Guillaume starts a conversation with a **BMad skill** (attached skill or slash command such as `/bmad-build`, `/bmad-code-review`, `/bmad-correct-course`, etc.), consider renaming the current chat — **only under the gate below**.
+
+Use the MCP tool `rename_chat` on server `cursor-app-control`. **Only this API persists the title** — direct database edits to the sidebar cache are overwritten when the conversation is opened (Cursor reloads the title from the conversation checkpoint).
+
+**Standing project instruction overrides the MCP tool blurb** that says “only when the user explicitly asks / never rename proactively”. For BMad activations in this repo, the rename-once gate below **is** that explicit standing ask — call `rename_chat` when the gate allows it.
+
+**Never announce the rename** unless Guillaume asks — apply it silently and continue the workflow.
+
+---
+
+## Rename-once gate (NON NÉGOCIABLE)
+
+Call `rename_chat` **at most once per conversation**.
+
+### When to rename (allowed)
+
+All of the following must be true:
+
+1. This is a BMad skill / slash-command turn (or a resume where the title is still auto-generated).
+2. The **current** sidebar title does **not** already look like a BMad title — i.e. it does **not** start with `BMad —` (em dash) or `BMad -` (hyphen fallback).
+3. You have **not** already called `rename_chat` earlier in this conversation.
+
+Typical auto-generated titles that still need a rename: `Story creation process`, `Code review discussion`, `bmad dev story 4-4`, `Build request`, `Quick dev request`, etc.
+
+### When NOT to rename (forbidden)
+
+- The title already starts with `BMad —` / `BMad -` → **never** call `rename_chat` again, even if the story ID, topic, or command would suggest a “better” title.
+- This conversation’s history already contains a prior `rename_chat` tool call → **skip** (treat as already renamed).
+- Any later turn in the same conversation after a successful rename → **skip**.
+- Do not “fix”, “refresh”, or re-apply duplicate suffixes on subsequent messages.
+
+### Resume behavior
+
+- Title already `BMad — …` → skip rename; continue workflow.
+- Title still auto-generated → rename **once**, then never again in that conversation.
+
+When renaming is allowed, do it as the **first tool call**, before other work.
+
+---
+
+## After rename — story-command amorce
+
+For `bmad-build` and `bmad-code-review`, follow `.cursor/rules/bmad-story-context-amorce.mdc` for the first user-facing content (`Contexte de la Story`).
+
+---
+
+## Title formats
+
+Use an em dash (`—`) after `BMad`. **Never append a date** (e.g. `(2026-06-19)`). The Agents sidebar already shows when each conversation occurred.
+
+### A — Story ID compact (fixed shape, no topic, no colon)
+
+These commands keep a compact ID-only title when a story ID is present:
+
+| Skill / command | Title |
+|---|---|
+| `bmad-code-review` | `BMad — Code Review {Story ID}` |
+| `bmad-build` | `BMad — Build {Story ID}` |
+
+Omit `{Story ID}` only when none can be inferred. For `bmad-build` without a story ID, fall through to format B.
+
+Examples:
+
+- `/bmad-code-review 4-4` → `BMad — Code Review 4-4`
+- `/bmad-build 8-4` → `BMad — Build 8-4`
+- `/bmad-build` + story `8-4` in the message → `BMad — Build 8-4`
+
+### B — All other BMad commands (label + short topic)
+
+Also used for `bmad-build` **only when no story ID** can be inferred.
+
+Format: `BMad — {Workflow Label} : {Topic}`
+
+- Space before and after the colon.
+- `{Workflow Label}` stays in English (command name).
+- `{Topic}` is a short **French** subject (see Topic rules below).
+- If no useful topic can be inferred (e.g. bare `/bmad-help`), use the label only: `BMad — Help` (no colon).
+
+Examples:
+
+- `/bmad-build` + black skin preview (no story ID) → `BMad — Build : Aperçu skin Black`
+- `/bmad-correct-course` + export path simplify → `BMad — Correct Course : Chemin export`
+- `/bmad-sprint-planning` → `BMad — Sprint Planning` (no topic needed)
+
+---
+
+## Workflow labels
+
+| Skill / command prefix | Label |
+|---|---|
+| `bmad-code-review` | Code Review |
+| `bmad-correct-course` | Correct Course |
+| `bmad-sprint-planning` | Sprint Planning |
+| `bmad-build` | Build |
+| `bmad-build-auto` | Build Auto |
+| `bmad-create-epics-and-stories` | Create Epics |
+| `bmad-prd` | PRD |
+| `bmad-spec` | Spec |
+| `bmad-retrospective` | Retrospective |
+| `bmad-help` | Help |
+| `bmad-walkthrough` | Walkthrough |
+| `bmad-review` | Review |
+| `bmad-party-mode` | Party Mode |
+| `bmad-brainstorming` | Brainstorming |
+| `bmad-ux` | UX |
+| `bmad-deep-recon` | Deep Recon |
+| `bmad-project-context` | Project Context |
+| Other `bmad-*` skill | Title-case the skill slug after `bmad-`, words separated by spaces |
+
+---
+
+## Topic rules (format B only)
+
+Infer the topic from the user intent / first message (and attached story or spec name when present).
+
+1. **Language split (mandatory):**
+   - **English stays only** for the fixed prefix: `BMad` + workflow label (`Build`, `Correct Course`, …).
+   - **French for the topic** after the colon — never English Title Case for the subject.
+2. **Length:** 2–5 content words. Prefer concrete nouns already in the request.
+3. **Casing:** sentence-style French (not English Title Case for the whole topic). Keep established product / UI terms **untranslated** when they are real product names (`Skin Studio`, `Matrix-Control`, `Black`, `Green`, IDs) mixed into an otherwise French phrase — never force-translate them (bad: « studio de skins »).
+4. **Strip stop words** when they only pad the phrase: `a`, `an`, `the`, `of`, `for`, `to`, `and`, `or`, `de`, `du`, `des`, `la`, `le`, `les`, `un`, `une`, `et`, `ou`, `à`, `au`, `aux`, `en`, `dans`, `pour`, `sur`, `avec`, `par` — keep distinctive nouns. Avoid long filler like `réduction de la…` / `amélioration de…`.
+5. **Good:** `Aperçu skin Black`, `Export Green`, `Palette skins`, `Grille assets`
+6. **Bad:** `Black Skin Preview` (English topic), `Amélioration de l’export des skins` (stop words + too long), `Improve the skin studio export flow` (English + verbose)
+
+---
+
+## Story ID extraction
+
+Parse from the user message (slash command or attached skill context):
+
+- Epic-story: `4-5`, `7-3b`, `2-9b`, `8-4`
+- Utility stories: `U-0`, `U-11`
+- Accept `/bmad-build 8-4`, or `story 4-5` / `US 8-4` in plain text
+
+---
+
+## Duplicate titles → ` (n)` suffix
+
+When several conversations would share the **same base title** (formats A or B), disambiguate with a numeric suffix:
+
+```
+BMad — Build 8-4 (1)
+BMad — Build 8-4 (2)
+BMad — Build 8-4 (3)
+```
+
+### Algorithm (before calling `rename_chat`)
+
+Only run this when the rename-once gate allows a rename.
+
+1. Compute the **base title** (no `(n)` suffix) using format A or B above.
+2. Read existing Agents sidebar names from Cursor’s state DB (**read-only**):
+
+   ```bash
+   python3 - <<'PY'
+   import json, re, sqlite3
+   from pathlib import Path
+   base = """BASE_TITLE_HERE"""  # replace with the computed base title
+   db = Path.home() / "Library/Application Support/Cursor/User/globalStorage/state.vscdb"
+   conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+   row = conn.execute(
+       "SELECT value FROM ItemTable WHERE key='composer.composerHeaders'"
+   ).fetchone()
+   conn.close()
+   names = [c.get("name") or "" for c in json.loads(row[0]).get("allComposers", [])]
+   pat = re.compile(rf"^{re.escape(base)}(?: \((\d+)\))?$")
+   taken = set()
+   for name in names:
+       m = pat.match(name)
+       if not m:
+           continue
+       taken.add(int(m.group(1)) if m.group(1) else 0)
+   if not taken:
+       print(base)
+   else:
+       n = 1
+       while n in taken:
+           n += 1
+       print(f"{base} ({n})")
+   PY
+   ```
+
+3. Use the printed string as the `rename_chat` title.
+4. Semantics:
+   - First conversation with that base → unsuffixed base (empty `taken`).
+   - If an unsuffixed base already exists (`0 ∈ taken`), the next free title is `base (1)`, then `(2)`, etc.
+   - If only numbered copies exist, pick the smallest free positive integer.
+5. Do **not** rename other conversations — only the current chat via `rename_chat`.
+6. Do **not** use dates as disambiguators.
+
+---
+
+## Wrong vs right
+
+| Wrong | Right |
+|---|---|
+| `BMad — Sprint Status (2026-06-19)` | `BMad — Sprint Status` |
+| `BMad — Build : 8-4` | `BMad — Build 8-4` |
+| Renaming again on turn 2 because the topic “improved” | Keep the existing `BMad — …` title |
+| `BMad — Build : Black Skin Preview` | `BMad — Build : Aperçu skin Black` (no story ID) |
+| `BMad — Correct Course : Amélioration de l’export des skins` | `BMad — Correct Course : Export skins` |
+| Two chats both named `BMad — Build 8-4` | Second becomes `BMad — Build 8-4 (1)` |

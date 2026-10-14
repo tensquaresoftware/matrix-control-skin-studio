@@ -1,0 +1,47 @@
+---
+description: Quality gate — web clean-code principles; thresholds are guidance until a real linter exists
+alwaysApply: false
+globs: "**/*.{html,css,js,mjs,cjs,ts,tsx,jsx,vue,svelte}"
+---
+
+# Code quality gate (Skin Studio — web)
+
+Short guidance for front-end work. **Numeric thresholds below are guidance only** — this repo does not yet ship an analyser that enforces them. When ESLint / Biome / stylelint (or similar) lands, update this file to point at the real command and treat failing checks as blockers.
+
+## Principles
+
+- **KISS** — simplest design that meets the current need.
+- **YAGNI** — only what the story requires; no hooks “for later”.
+- **WET → DRY** — duplicating once is OK; factorize when the pattern is stable (~2nd–3rd time).
+- **Boy Scout (scoped)** — improve the zone changed for the ticket; do **not** clean an entire large file because one line moved.
+- **English everywhere** in code and UI strings (identifiers, comments that stay in source, user-visible product strings unless a future i18n story says otherwise).
+- **Naming** — `camelCase` locals / functions; `PascalCase` components / classes / types; `UPPER_SNAKE` module-level constants; avoid Hungarian / cryptic abbreviations. Names must reveal intent (`loadSkin`, not `doStuff` / `process2`).
+- **Names over narrative comments** — do not paper over a vague function with a comment that describes what it does; rename or extract instead. Comments only for *why* / non-obvious constraints, never as a substitute for a clear name.
+
+## Thresholds (guidance — not auto-enforced yet)
+
+| Metric | Guidance max |
+|---|---|
+| Function / method | ~40 lines (UI glue / handlers up to ~50 if still readable) |
+| Parameters | 4 (group into an options object beyond that) |
+| Nesting depth | 4 (prefer early returns / extract) |
+| Useful source file | ~400 lines (split by responsibility when larger) |
+
+Framework / browser APIs are not rewritten solely to satisfy parameter counts. Historical debt outside the diff is a separate chore.
+
+## Front-end notes
+
+- Prefer clear DOM / component boundaries over clever abstractions.
+- Keep CSS specificity and global side effects under control in the touched zone; do not restyle the whole app “while here”.
+- No phantom quality scripts: do **not** invent `lint_touched.py` or claim a C++-style analyser exists here.
+
+## Definition of done
+
+Before finishing a coding task:
+
+1. The change does what the story / request asked — nothing more.
+2. Relevant tests pass **when they exist**.
+3. If a project linter / formatter is configured, run it on touched files and fix findings.
+4. Until a linter exists: apply the principles and guidance thresholds above by eye on the diff; do **not** run a mandatory redesign loop.
+
+**No** whole-file Boy Scout outside ticket scope. **Commits only when Guillaume explicitly asks.**
