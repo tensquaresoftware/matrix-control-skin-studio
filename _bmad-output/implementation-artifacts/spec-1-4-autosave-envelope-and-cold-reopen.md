@@ -76,6 +76,23 @@ context:
 - Given a corrupt envelope, when the app boots, then the bad key is removed, the store stays empty, seed is not applied, and boot does not throw.
 - Given `npm test` and `npm run build`, when they finish, then both exit 0 with the persist matrix covered.
 
+### Review Findings
+
+- [x] [Review][Patch] Exercise default `getBrowserStorage()` path in persist matrix (happy + blocked soft-fail to noop) [src/persist/storage.ts; scripts/persist-matrix.test.mjs]
+- [x] [Review][Patch] Prefs-separation assert should use exported `PREFS_KEY`, not hardcoded string [scripts/persist-matrix.test.mjs:153]
+
+Rejected:
+- `false` — Code Map still says stub `export {}`: fix would edit this spec (rejected).
+- `false` — frontmatter `status: done` vs sprint `review`: expected during code-review lifecycle.
+- `false` — empty Spec Change Log: fix would edit this spec / filled by review process (rejected).
+- `false` — lean `isProjectDocument` accepts half-documents [src/persist/envelope.ts]: Design Notes require at least formatVersion + session shape; intentional lean accept (blind-hunter + edge-case-hunter).
+- `false` — matrix omits some invalid shapes (`{}`, `[]`, null project/session): same reject→CLEAR path already covered by representative corrupt cases.
+- `false` — corrupt prefs left sticky [src/persist/prefs.ts]: CORRUPT_ENVELOPE = CLEAR applies only to project envelope key.
+- `false` — `getBrowserStorage` comment overclaims noop for blocked ops: getItem/setItem soft-fail in restore/write; noop correctly covers binding throw only.
+- `false` — empty catch without log on soft-fail writes: intentional fail-soft per AC; logging not in scope.
+- `low` rejected — prefs accept NaN/Infinity pan, array `sidebarPaneHeights`, empty `zoomStep` [src/persist/prefs.ts]: unlikely everyday use this story; chrome prefs writer not wired; fix adds validation guards.
+- `low` rejected — restore-before-autosave order undocumented on public API: already encoded in `main.ts` + scaffold assert; cosmetic docs.
+
 ## Implementation Notes
 
 - Added `persist/` modules: keys, injectable storage, envelope parse/write/clear, prefs load/defaults.
@@ -83,7 +100,8 @@ context:
 - CORRUPT_ENVELOPE = CLEAR; lean validation (`formatVersion === 1` + session nullable strings).
 - `scripts/persist-matrix.test.mjs` covers all matrix rows + write/getItem fail-soft; scaffold asserts restore→autosave→mount order.
 - Review patches: soft-fail `getBrowserStorage`; CLEAR on getItem throw; scaffold wiring assert; getItem-throw matrix case.
-- `npm test` (21) and `npm run build` exit 0.
+- `npm test` (23) and `npm run build` exit 0.
+- Code-review patches: matrix covers default `getBrowserStorage` happy + blocked noop; prefs-separation assert uses `PREFS_KEY`.
 
 ## Spec Change Log
 

@@ -128,6 +128,7 @@ describe('persist I/O matrix', () => {
       attachAutosave,
       createMemoryStorage,
       PROJECT_ENVELOPE_KEY,
+      PREFS_KEY,
       loadPrefs,
       getDefaultPrefs,
     } = await importCompiledTs('src/persist/index.ts')
@@ -150,7 +151,7 @@ describe('persist I/O matrix', () => {
     }
 
     // Prefs helpers return defaults without forcing a prefs write
-    assert.equal(storage.getItem('skin-studio:prefs'), null)
+    assert.equal(storage.getItem(PREFS_KEY), null)
     assert.deepEqual(loadPrefs(storage), getDefaultPrefs())
     assert.equal(getDefaultPrefs().zoomStep, '100%')
   })
@@ -287,5 +288,107 @@ describe('persist I/O matrix', () => {
         session: sampleSession(),
       })
     })
+  })
+
+  it('getBrowserStorage happy: default restore/autosave use stubbed localStorage', async () => {
+    const { createStore, createEmptyProject, createEmptySession } =
+      await importCompiledTs('src/model/index.ts')
+    const {
+      attachAutosave,
+      getBrowserStorage,
+      restoreEnvelope,
+      PROJECT_ENVELOPE_KEY,
+    } = await importCompiledTs('src/persist/index.ts')
+
+    const map = new Map()
+    const stub = {
+      getItem(key) {
+        return map.has(key) ? map.get(key) : null
+      },
+      setItem(key, value) {
+        map.set(key, String(value))
+      },
+      removeItem(key) {
+        map.delete(key)
+      },
+    }
+
+    const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: stub,
+      configurable: true,
+      writable: true,
+    })
+
+    try {
+      const adapter = getBrowserStorage()
+      assert.equal(adapter, stub)
+      assert.equal(typeof adapter.getItem, 'function')
+      assert.equal(typeof adapter.setItem, 'function')
+      assert.equal(typeof adapter.removeItem, 'function')
+
+      const writer = createStore()
+      // Default arg path — same as main.ts (no storage override)
+      attachAutosave(writer)
+      writer.apply({
+        project: sampleProject(),
+        session: sampleSession(),
+      })
+      assert.notEqual(stub.getItem(PROJECT_ENVELOPE_KEY), null)
+
+      const boot = createStore()
+      assert.deepEqual(boot.getState().project, createEmptyProject())
+      assert.deepEqual(boot.getState().session, createEmptySession())
+      restoreEnvelope(boot)
+      assert.deepEqual(boot.getState().project, sampleProject())
+      assert.deepEqual(boot.getState().session, sampleSession())
+    } finally {
+      if (previous) {
+        Object.defineProperty(globalThis, 'localStorage', previous)
+      } else {
+        delete globalThis.localStorage
+      }
+    }
+  })
+
+  it('getBrowserStorage blocked: soft-fail to noop; default restore/autosave stay safe', async () => {
+    const { createStore, createEmptyProject, createEmptySession } =
+      await importCompiledTs('src/model/index.ts')
+    const { attachAutosave, getBrowserStorage, restoreEnvelope } =
+      await importCompiledTs('src/persist/index.ts')
+
+    const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+    Object.defineProperty(globalThis, 'localStorage', {
+      get() {
+        throw new Error('localStorage blocked')
+      },
+      configurable: true,
+    })
+
+    try {
+      const adapter = getBrowserStorage()
+      assert.equal(adapter.getItem('any'), null)
+      assert.doesNotThrow(() => adapter.setItem('k', 'v'))
+      assert.doesNotThrow(() => adapter.removeItem('k'))
+
+      const store = createStore()
+      assert.doesNotThrow(() => restoreEnvelope(store))
+      assert.deepEqual(store.getState().project, createEmptyProject())
+      assert.deepEqual(store.getState().session, createEmptySession())
+
+      assert.doesNotThrow(() => attachAutosave(store))
+      assert.doesNotThrow(() => {
+        store.apply({
+          project: sampleProject(),
+          session: sampleSession(),
+        })
+      })
+    } finally {
+      if (previous) {
+        Object.defineProperty(globalThis, 'localStorage', previous)
+      } else {
+        delete globalThis.localStorage
+      }
+    }
   })
 })
