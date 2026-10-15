@@ -1,0 +1,107 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+#
+# MVP QUEUE (this project):
+# ========================
+# - Active MVP build queue = Epics 1–5 only (22 stories).
+# - Epic 6 = Soon intent-only (FR-12, FR-22…FR-28). Keep in tracking for visibility,
+#   but do NOT pull into the active MVP build queue until promoted with full ACs.
+# - Collect-blocked notes below: implement against loaded seed inventory
+#   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
+#   to fill SM-1. Definitive JSON field freeze waits on Collect.
+generated: 10-15-2026 22:25
+last_updated: 10-15-2026 22:25
+project: Matrix-Control-Skin-Studio
+project_key: NOKEY
+tracking_system: file-system
+story_location: 
+  /Volumes/Guillaume/Dev/Projects/JUCE/Matrix-Control-Skin-Studio/_bmad-output/implementation-artifacts
+development_status:
+  # --- Epic 1: Seed / store (MVP) ---
+  epic-1: backlog
+  1-1-scaffold-vite-typescript-spa: backlog
+  1-2-single-writer-project-store: backlog
+  # Collect-dep: seed inventory until Collect replaces it; no invented ObjectTypes
+  1-3-seed-v1-skins-palette-and-placeholder-inventory: backlog
+  1-4-autosave-envelope-and-cold-reopen: backlog
+  1-5-first-open-and-new-load-seed: backlog
+  epic-1-retrospective: optional
+
+  # --- Epic 2: Chrome (MVP) ---
+  epic-2: backlog
+  2-1-design-tokens-and-typography: backlog
+  2-2-chrome-shell-layout: backlog
+  2-3-top-bar-ops-zoom-and-skin-combo: backlog
+  2-4-sticky-context-across-skin-switch: backlog
+  2-5-canvas-pan-and-prefs-persistence: backlog
+  epic-2-retrospective: optional
+
+  # --- Epic 3: Palette / Skins (MVP) ---
+  epic-3: backlog
+  3-1-palette-selection-and-picker-recolour: backlog
+  3-2-palette-create-rename-and-referenced-delete: backlog
+  3-3-skin-tab-rename-duplicate-delete: backlog
+  # Collect-dep: Duo LED #FFCC00 is a palette entry; Header LED green confirm awaits Collect
+  3-4-create-skin-and-preserve-v1-duo-led-entry: backlog
+  epic-3-retrospective: optional
+
+  # --- Epic 4: Mapping / preview (MVP) ---
+  epic-4: backlog
+  # Collect-dep: clickable regions only for loaded seed inventory; no invented Collect inventory
+  4-1-gui-view-mock-with-orchestrator-zones: backlog
+  # Collect-dep: Property/State sets come from loaded inventory only
+  4-2-object-type-state-and-palette-id-mappings: backlog
+  4-3-bidirectional-canvas-sidebar-selection-sync: backlog
+  4-4-live-preview-led-fully-on-and-mapping-pulse: backlog
+  epic-4-retrospective: optional
+
+  # --- Epic 5: Undo / export (MVP) ---
+  epic-5: backlog
+  5-1-history-stack-with-coalesced-undo-redo: backlog
+  # Collect-dep: Unbound from loaded inventory; do not invent slots for SM-1
+  5-2-unbound-derive-and-unbound-pane: backlog
+  # Collect-dep: JSON field names freeze post-Collect; writer pin formatVersion 1 OK now
+  5-3-hard-export-gate-and-single-project-json: backlog
+  5-4-import-replace-all-with-fail-closed-formatversion: backlog
+  epic-5-retrospective: optional
+
+  # --- Epic 6: Soon intent-only — OUT OF MVP ACTIVE QUEUE ---
+  # Do not start these until promoted (full consequences / ACs). Status stays backlog for tracking only.
+  epic-6: backlog
+  6-1-where-used-and-rename-refactor-intent-only-soon: backlog
+  6-2-side-by-side-skin-compare-intent-only-soon: backlog
+  6-3-replace-colour-within-skin-intent-only-soon: backlog
+  6-4-search-and-zoom-to-selection-intent-only-soon: backlog
+  6-5-draft-vs-ready-intent-only-soon: backlog
+  6-6-contrast-hints-intent-only-soon: backlog
+  6-7-collect-import-merge-intent-only-soon: backlog
+  6-8-soft-narrow-viewport-layout-intent-only-soon: backlog
+  epic-6-retrospective: optional
