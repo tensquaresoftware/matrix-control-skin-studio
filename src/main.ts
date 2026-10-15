@@ -1,16 +1,16 @@
 import './model'
 import './history'
+import './persist'
 import './io'
 import './seed'
 import './chrome'
 import './canvas'
 import './sidebar'
 import './styles'
+import { bootProjectStore } from './boot-project'
 import { mountBootSurface } from './boot-surface'
 import { initProjectStore } from './model'
-import { attachAutosave, restoreEnvelope } from './persist'
 
 const projectStore = initProjectStore()
-restoreEnvelope(projectStore)
-attachAutosave(projectStore)
-mountBootSurface(document.querySelector<HTMLDivElement>('#app'))
+bootProjectStore(projectStore)
+mountBootSurface(document.querySelector<HTMLDivElement>('#app'), projectStore)

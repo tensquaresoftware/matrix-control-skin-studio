@@ -1,3 +1,5 @@
+import { createEmptySession } from '../model/empty-project'
+import type { ProjectStore } from '../model/store'
 import type { ProjectDocument } from '../model/types'
 import { SEED_INVENTORY, SEED_PALETTE, SEED_SKINS } from './seed-data'
 
@@ -15,4 +17,15 @@ export function createSeedProject(): ProjectDocument {
     skins: SEED_SKINS,
     inventory: SEED_INVENTORY,
   }) as ProjectDocument
+}
+
+/**
+ * Shared first-open / New path: seed project + empty session via single-writer `apply`.
+ * No UI imports — callers own confirm and boot orchestration.
+ */
+export function applySeedBaseline(store: ProjectStore): void {
+  store.apply({
+    project: createSeedProject(),
+    session: createEmptySession(),
+  })
 }

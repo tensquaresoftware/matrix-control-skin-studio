@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
-import { join, dirname, basename } from 'node:path'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
@@ -23,8 +23,28 @@ const modules = [
 ]
 const frameworks = ['react', 'preact', 'lit', 'vue', 'svelte']
 
+/** Node ESM requires explicit .js on relative specifiers; tsc emit omits them. */
+function addJsExtensionsToRelativeImports(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      addJsExtensionsToRelativeImports(full)
+      continue
+    }
+    if (!entry.name.endsWith('.js')) continue
+    const code = readFileSync(full, 'utf8').replace(
+      /((?:import|export)(?:\s+[^'"()]+?)?\s+from\s+|import\s+)\s*(['"])(\.[^'"]+)\2/g,
+      (match, prefix, quote, spec) => {
+        if (/\.(js|json|mjs|cjs)$/.test(spec)) return match
+        return `${prefix}${quote}${spec}.js${quote}`
+      },
+    )
+    writeFileSync(full, code)
+  }
+}
+
 /**
- * Emit one src/*.ts file via the TypeScript CLI and import it.
+ * Emit a src/*.ts entry (and its relative imports) via tsc, then import the JS.
  * Avoids --experimental-strip-types (Node 22+) so Node 20.19 matches engines.
  */
 async function importCompiledTs(relPath) {
@@ -53,10 +73,80 @@ async function importCompiledTs(relPath) {
       ],
       { cwd: root, stdio: 'pipe' },
     )
-    const outJs = join(dir, basename(relPath, '.ts') + '.js')
+    addJsExtensionsToRelativeImports(dir)
+    const outJs = join(dir, relPath.replace(/^src\//, '').replace(/\.ts$/, '.js'))
     return await import(pathToFileURL(outJs).href)
   } finally {
     rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+/** Minimal DOM so mountBootSurface can run under Node without a browser. */
+function installMinimalDocument() {
+  function createElement(tagName) {
+    const attrs = new Map()
+    const listeners = new Map()
+    const node = {
+      tagName: String(tagName).toUpperCase(),
+      type: '',
+      textContent: '',
+      style: { cssText: '' },
+      children: [],
+      parent: null,
+      setAttribute(name, value) {
+        attrs.set(name, String(value))
+      },
+      getAttribute(name) {
+        return attrs.has(name) ? attrs.get(name) : null
+      },
+      append(...nodes) {
+        for (const child of nodes) {
+          child.parent = node
+          node.children.push(child)
+        }
+      },
+      appendChild(child) {
+        node.append(child)
+        return child
+      },
+      replaceChildren(...nodes) {
+        for (const child of node.children) child.parent = null
+        node.children = []
+        node.append(...nodes)
+      },
+      remove() {
+        if (!node.parent) return
+        node.parent.children = node.parent.children.filter((c) => c !== node)
+        node.parent = null
+      },
+      querySelector(selector) {
+        const matchAttr = /^\[([^\]]+)\]$/.exec(selector)
+        const walk = (el) => {
+          if (matchAttr && el.getAttribute(matchAttr[1]) !== null) return el
+          for (const child of el.children) {
+            const found = walk(child)
+            if (found) return found
+          }
+          return null
+        }
+        return walk(node)
+      },
+      addEventListener(type, fn) {
+        if (!listeners.has(type)) listeners.set(type, [])
+        listeners.get(type).push(fn)
+      },
+      click() {
+        for (const fn of listeners.get('click') || []) fn()
+      },
+    }
+    return node
+  }
+
+  const previous = globalThis.document
+  globalThis.document = { createElement }
+  return () => {
+    if (previous === undefined) delete globalThis.document
+    else globalThis.document = previous
   }
 }
 
@@ -82,6 +172,7 @@ describe('scaffold I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /store-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /seed-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /persist-matrix\.test\.mjs/)
+    assert.match(pkg.scripts?.test ?? '', /boot-seed-matrix\.test\.mjs/)
     assert.equal(deps.vite, '8.3.4')
     assert.equal(deps.typescript, '7.0.2')
     for (const name of frameworks) {
@@ -106,11 +197,14 @@ describe('scaffold I/O matrix', () => {
       )
     }
 
-    // Entry must call the helper with #app (no silent skip). Full main import
-    // needs CSS/DOM loaders; assert wiring + execute the helper instead.
+    // Entry wires the shared helper (seed-if-empty lives inside bootProjectStore).
     assert.match(
       main,
-      /(?:const|let)\s+(\w+)\s*=\s*initProjectStore\s*\(\s*\)\s*;?\s*restoreEnvelope\s*\(\s*\1\s*\)\s*;?\s*attachAutosave\s*\(\s*\1\s*\)\s*;?\s*mountBootSurface\s*\(\s*document\.querySelector(?:<[^>]+>)?\s*\(\s*['"]#app['"]\s*\)\s*\)/,
+      /import\s*\{[^}]*\bbootProjectStore\b[^}]*\}\s*from\s*['"]\.\/boot-project['"]/,
+    )
+    assert.match(
+      main,
+      /(?:const|let)\s+(\w+)\s*=\s*initProjectStore\s*\(\s*\)\s*;?\s*bootProjectStore\s*\(\s*\1\s*\)\s*;?\s*mountBootSurface\s*\(\s*document\.querySelector(?:<[^>]+>)?\s*\(\s*['"]#app['"]\s*\)\s*,\s*\1\s*\)/,
     )
     assert.doesNotMatch(main, /if\s*\(\s*app\s*\)/)
 
@@ -119,11 +213,44 @@ describe('scaffold I/O matrix', () => {
     assert.match(stylesIndex, /base\.css/)
     assert.ok(existsSync(join(root, 'public/.gitkeep')))
 
-    const { mountBootSurface } = await importCompiledTs('src/boot-surface.ts')
-    const el = { textContent: '' }
-    mountBootSurface(/** @type {HTMLElement} */ (el))
-    assert.equal(el.textContent, 'Skin Studio')
-    assert.throws(() => mountBootSurface(null))
+    const restoreDoc = installMinimalDocument()
+    try {
+      const { createStore, createEmptySession } = await importCompiledTs(
+        'src/model/index.ts',
+      )
+      const { createMemoryStorage, PROJECT_ENVELOPE_KEY } = await importCompiledTs(
+        'src/persist/index.ts',
+      )
+      const { createSeedProject } = await importCompiledTs('src/seed/index.ts')
+      const { bootProjectStore } = await importCompiledTs('src/boot-project.ts')
+      const { mountBootSurface } = await importCompiledTs('src/boot-surface.ts')
+
+      const storage = createMemoryStorage()
+      const store = createStore()
+      assert.equal(bootProjectStore(store, storage), false)
+      assert.deepEqual(store.getState().project, createSeedProject())
+      assert.deepEqual(store.getState().session, createEmptySession())
+      assert.notEqual(storage.getItem(PROJECT_ENVELOPE_KEY), null)
+
+      const el = {
+        children: [],
+        replaceChildren() {
+          el.children = []
+        },
+        append(...nodes) {
+          el.children.push(...nodes)
+        },
+        querySelector() {
+          return null
+        },
+      }
+      mountBootSurface(/** @type {HTMLElement} */ (el), createStore())
+      assert.equal(el.children[0]?.textContent, 'Skin Studio')
+      assert.equal(el.children[1]?.textContent, 'New')
+      assert.throws(() => mountBootSurface(null, createStore()))
+    } finally {
+      restoreDoc()
+    }
   })
 
   it('production build row: npm run build emits dist with Skin Studio', () => {

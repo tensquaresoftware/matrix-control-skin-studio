@@ -182,14 +182,15 @@ describe('persist I/O matrix', () => {
     assert.deepEqual(boot.getState().project, createEmptyProject())
     assert.deepEqual(boot.getState().session, createEmptySession())
 
-    restoreEnvelope(boot, storage)
+    const restored = restoreEnvelope(boot, storage)
+    assert.equal(restored, true)
 
     assert.deepEqual(boot.getState().project, saved.project)
     assert.deepEqual(boot.getState().session, saved.session)
     assert.equal(boot.getState().project.formatVersion, 1)
   })
 
-  it('no prior envelope: store stays empty baseline; no seed apply', async () => {
+  it('no prior envelope: restore false; store stays empty baseline; no seed apply', async () => {
     const { createStore, createEmptyProject, createEmptySession } =
       await importCompiledTs('src/model/index.ts')
     const { createMemoryStorage, restoreEnvelope, PROJECT_ENVELOPE_KEY } =
@@ -199,7 +200,11 @@ describe('persist I/O matrix', () => {
     assert.equal(storage.getItem(PROJECT_ENVELOPE_KEY), null)
 
     const store = createStore()
-    assert.doesNotThrow(() => restoreEnvelope(store, storage))
+    let restored
+    assert.doesNotThrow(() => {
+      restored = restoreEnvelope(store, storage)
+    })
+    assert.equal(restored, false)
 
     assert.deepEqual(store.getState().project, createEmptyProject())
     assert.deepEqual(store.getState().session, createEmptySession())
@@ -207,7 +212,7 @@ describe('persist I/O matrix', () => {
     assert.equal(store.getState().project.palette.length, 0)
   })
 
-  it('corrupt / invalid envelope: CLEAR bad key; empty store; no throw', async () => {
+  it('corrupt / invalid envelope: CLEAR bad key; restore false; empty store; no throw', async () => {
     const { createStore, createEmptyProject, createEmptySession } =
       await importCompiledTs('src/model/index.ts')
     const { createMemoryStorage, restoreEnvelope, PROJECT_ENVELOPE_KEY } =
@@ -231,7 +236,11 @@ describe('persist I/O matrix', () => {
       storage.setItem(PROJECT_ENVELOPE_KEY, bad)
       const store = createStore()
 
-      assert.doesNotThrow(() => restoreEnvelope(store, storage))
+      let restored
+      assert.doesNotThrow(() => {
+        restored = restoreEnvelope(store, storage)
+      })
+      assert.equal(restored, false)
       assert.equal(
         storage.getItem(PROJECT_ENVELOPE_KEY),
         null,
@@ -242,7 +251,7 @@ describe('persist I/O matrix', () => {
     }
   })
 
-  it('getItem throw: restore fails soft, CLEAR attempted, empty baseline', async () => {
+  it('getItem throw: restore false, CLEAR attempted, empty baseline', async () => {
     const { createStore, createEmptyProject, createEmptySession } =
       await importCompiledTs('src/model/index.ts')
     const { restoreEnvelope } = await importCompiledTs('src/persist/index.ts')
@@ -259,7 +268,11 @@ describe('persist I/O matrix', () => {
     }
 
     const store = createStore()
-    assert.doesNotThrow(() => restoreEnvelope(store, storage))
+    let restored
+    assert.doesNotThrow(() => {
+      restored = restoreEnvelope(store, storage)
+    })
+    assert.equal(restored, false)
     assert.ok(removeItemCalls >= 1, 'expected CLEAR via removeItem')
     assert.deepEqual(store.getState().project, createEmptyProject())
     assert.deepEqual(store.getState().session, createEmptySession())
@@ -339,7 +352,7 @@ describe('persist I/O matrix', () => {
       const boot = createStore()
       assert.deepEqual(boot.getState().project, createEmptyProject())
       assert.deepEqual(boot.getState().session, createEmptySession())
-      restoreEnvelope(boot)
+      assert.equal(restoreEnvelope(boot), true)
       assert.deepEqual(boot.getState().project, sampleProject())
       assert.deepEqual(boot.getState().session, sampleSession())
     } finally {
@@ -372,7 +385,11 @@ describe('persist I/O matrix', () => {
       assert.doesNotThrow(() => adapter.removeItem('k'))
 
       const store = createStore()
-      assert.doesNotThrow(() => restoreEnvelope(store))
+      let restored
+      assert.doesNotThrow(() => {
+        restored = restoreEnvelope(store)
+      })
+      assert.equal(restored, false)
       assert.deepEqual(store.getState().project, createEmptyProject())
       assert.deepEqual(store.getState().session, createEmptySession())
 
