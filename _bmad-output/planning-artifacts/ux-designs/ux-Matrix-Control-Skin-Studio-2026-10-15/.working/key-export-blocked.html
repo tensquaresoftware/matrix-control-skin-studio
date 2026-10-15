@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Skin Studio — Key screen: Export blocked</title>
+<style>
+/*
+  Spine sections illustrated:
+  - EXPERIENCE.md → State Patterns: Unbound > 0 (pane 4 count + list; Export disabled)
+  - EXPERIENCE.md → Component Patterns: export-disabled, unbound-pane, top-bar
+  - EXPERIENCE.md → Voice and Tone: “3 unbound”, “Export blocked — 3 unbound mapping(s)”
+  - EXPERIENCE.md → Key Flows → Flow 1 steps 8–10 climax / failure (hard Unbound gate)
+  - EXPERIENCE.md → Inspiration & Anti-patterns: Rejected — Soft export with warnings
+  - DESIGN.md → Components: export-disabled, unbound-pane
+*/
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0c;
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: #E8E9ED;
+}
+.frame {
+  width: 1280px;
+  height: 800px;
+  background: #1A1B1E;
+  border: 1px solid #52545C;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+}
+.titlebar {
+  height: 28px;
+  background: #222326;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #A8AAB4;
+  flex-shrink: 0;
+}
+.titlebar .dots { display: flex; gap: 6px; margin-right: 12px; }
+.titlebar .dot { width: 10px; height: 10px; border-radius: 9999px; background: #3A3B42; }
+
+.top-bar {
+  height: 40px;
+  background: #222326;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 4px;
+  border: 1px solid #52545C;
+  background: #2A2B30;
+  color: #E8E9ED;
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-ghost { background: transparent; }
+.btn-export-disabled {
+  background: #32333A;
+  color: #6E707A;
+  border-color: #3A3B42;
+  opacity: 0.55;
+  position: relative;
+}
+.export-callout {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #32333A;
+  border: 1px solid #52545C;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #E8E9ED;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.export-callout::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: #52545C;
+}
+.sep {
+  width: 1px;
+  height: 20px;
+  background: #52545C;
+  margin: 0 4px;
+}
+.combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #A8AAB4;
+  font-size: 13px;
+}
+.combo .value {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid #52545C;
+  background: #141518;
+  color: #E8E9ED;
+  font: inherit;
+  font-size: 13px;
+  min-width: 72px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.combo .chev { color: #6E707A; font-size: 10px; }
+.spacer { flex: 1; }
+.skin-combo .value { min-width: 120px; }
+
+.context-strip {
+  height: 28px;
+  background: #141518;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 20px;
+  font-size: 12px;
+  color: #A8AAB4;
+  flex-shrink: 0;
+}
+.context-strip .lbl { color: #6E707A; margin-right: 6px; }
+.context-strip .val { color: #E8E9ED; }
+
+.body { flex: 1; display: flex; min-height: 0; }
+.canvas {
+  flex: 1;
+  background: #1A1B1E;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-width: 0;
+}
+.canvas-label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6E707A;
+}
+.mock {
+  width: 640px;
+  height: 520px;
+  background: linear-gradient(180deg, #2a2a2e 0%, #1e1e22 100%);
+  border: 1px solid #52545C;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0.72;
+}
+.mock-header {
+  height: 56px;
+  background: #121214;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+.mock-title { font-size: 14px; font-weight: 600; color: #E8E9ED; margin-right: auto; }
+.led { width: 14px; height: 14px; border-radius: 2px; background: #00AA55; border: 1px solid #52545C; }
+.led.duo { background: #FFCC00; }
+.mock-body { flex: 1; display: flex; min-height: 0; }
+.mock-col {
+  flex: 1;
+  padding: 16px;
+  border-right: 1px solid #3A3B42;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mock-col:last-child { border-right: none; }
+.mock-zone-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #6E707A;
+  text-transform: uppercase;
+}
+.knob-row { display: flex; gap: 16px; }
+.knob {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #1A1A1A;
+  border: 3px solid #00AA55;
+  box-shadow: inset 0 0 0 8px #2a2a2e;
+}
+.btn-widget {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: #00AA55;
+  color: #0E0F12;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #52545C;
+  width: fit-content;
+}
+.orch {
+  height: 48px;
+  border-radius: 4px;
+  background: #FFCC00;
+  opacity: 0.85;
+  border: 1px solid #52545C;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0E0F12;
+}
+.mock-footer {
+  height: 48px;
+  background: #121214;
+  border-top: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+}
+.fader {
+  width: 80px;
+  height: 8px;
+  border-radius: 2px;
+  background: #1A1A1A;
+  border: 1px solid #52545C;
+  position: relative;
+}
+.fader::after {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 55%;
+  background: #00AA55;
+  border-radius: 1px;
+}
+
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background: #2A2B30;
+  border-left: 1px solid #3A3B42;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pane { display: flex; flex-direction: column; min-height: 0; }
+.pane-picker { height: 160px; flex-shrink: 0; opacity: 0.45; }
+.pane-palette { height: 110px; flex-shrink: 0; opacity: 0.45; }
+.pane-mappings { flex: 1; min-height: 140px; opacity: 0.5; }
+.pane-unbound {
+  flex: 1.35;
+  min-height: 200px;
+  border: 2px solid #E0A020;
+  border-radius: 0;
+  background: #2A2B30;
+  box-shadow: inset 0 0 0 1px #5C4510;
+  position: relative;
+  z-index: 2;
+}
+.pane-head {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6E707A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pane-unbound .pane-head { color: #E0A020; }
+.pane-body { padding: 0 12px 12px; flex: 1; min-height: 0; overflow: hidden; }
+.splitter { height: 1px; background: #3A3B42; flex-shrink: 0; }
+
+.swatch-lg {
+  width: 100%;
+  height: 40px;
+  border-radius: 4px;
+  background: #FFCC00;
+  border: 1px solid #52545C;
+  margin-bottom: 8px;
+}
+.hex-field {
+  height: 26px;
+  background: #141518;
+  border: 1px solid #52545C;
+  border-radius: 4px;
+  padding: 0 8px;
+  font-family: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: #E8E9ED;
+  display: flex;
+  align-items: center;
+}
+.swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+.chip {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  border: 1px solid #52545C;
+  flex-shrink: 0;
+}
+.swatch-name { color: #A8AAB4; flex: 1; }
+.swatch-hex {
+  font-family: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: #6E707A;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid #52545C;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.seg span {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #A8AAB4;
+  background: #141518;
+  border-right: 1px solid #52545C;
+}
+.seg span:last-child { border-right: none; }
+.seg span.on { background: #2A4A8A; color: #E8E9ED; }
+.map-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+.map-prop { color: #E8E9ED; width: 88px; }
+.map-unbound { color: #E0A020; display: flex; align-items: center; gap: 6px; }
+.warn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #E0A020;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #5C4510;
+  color: #E0A020;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.unbound-row {
+  padding: 8px 8px;
+  border-radius: 4px;
+  color: #E8E9ED;
+  font-size: 13px;
+  margin-bottom: 4px;
+  background: #32333A;
+  border: 1px solid #5C4510;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.unbound-row .warn-dot { width: 10px; height: 10px; }
+</style>
+</head>
+<body>
+  <div class="frame" role="img" aria-label="Skin Studio export gate blocked by unbound mappings">
+    <div class="titlebar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      Skin Studio
+    </div>
+
+    <div class="top-bar">
+      <span class="btn">New</span>
+      <span class="btn">Import</span>
+      <span class="btn btn-export-disabled">
+        Export
+        <span class="export-callout">Export blocked — 3 unbound mapping(s)</span>
+      </span>
+      <span class="sep"></span>
+      <span class="btn btn-ghost">Undo</span>
+      <span class="btn btn-ghost">Redo</span>
+      <span class="combo">
+        Zoom:
+        <span class="value">100% <span class="chev">▾</span></span>
+      </span>
+      <span class="spacer"></span>
+      <span class="combo skin-combo">
+        Skin:
+        <span class="value">Black/Green <span class="chev">▾</span></span>
+      </span>
+    </div>
+
+    <div class="context-strip">
+      <span><span class="lbl">Object</span><span class="val">Knob large</span></span>
+      <span><span class="lbl">State</span><span class="val">Normal</span></span>
+      <span><span class="lbl">Zoom</span><span class="val">100%</span></span>
+      <span><span class="lbl">Skin</span><span class="val">Black/Green</span></span>
+    </div>
+
+    <div class="body">
+      <div class="canvas">
+        <div class="canvas-label">GUI view · Figma-like mock</div>
+        <div class="mock">
+          <div class="mock-header">
+            <span class="mock-title">Matrix-Control</span>
+            <span class="led"></span>
+            <span class="led"></span>
+            <span class="led duo"></span>
+          </div>
+          <div class="mock-body">
+            <div class="mock-col">
+              <div class="mock-zone-label">Patch</div>
+              <div class="knob-row"><div class="knob"></div><div class="knob"></div></div>
+              <span class="btn-widget">Bypass</span>
+              <div class="orch">Orchestrator zone</div>
+            </div>
+            <div class="mock-col">
+              <div class="mock-zone-label">Master</div>
+              <div class="knob-row"><div class="knob"></div><div class="knob"></div></div>
+              <span class="btn-widget">Mute</span>
+              <div class="orch">Orchestrator zone</div>
+            </div>
+          </div>
+          <div class="mock-footer">
+            <div class="fader"></div>
+            <div class="fader"></div>
+            <div class="fader"></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="pane pane-picker">
+          <div class="pane-head">Picker</div>
+          <div class="pane-body">
+            <div class="swatch-lg"></div>
+            <div class="hex-field">#FFCC00</div>
+          </div>
+        </div>
+        <div class="splitter"></div>
+
+        <div class="pane pane-palette">
+          <div class="pane-head">Palette</div>
+          <div class="pane-body">
+            <div class="swatch-row"><span class="chip" style="background:#1A1A1A"></span><span class="swatch-name">bg_dark</span><span class="swatch-hex">#1A1A1A</span></div>
+            <div class="swatch-row"><span class="chip" style="background:#FFCC00"></span><span class="swatch-name">led_duo</span><span class="swatch-hex">#FFCC00</span></div>
+          </div>
+        </div>
+        <div class="splitter"></div>
+
+        <div class="pane pane-mappings">
+          <div class="pane-head">Object / State / Mappings</div>
+          <div class="pane-body">
+            <div class="seg"><span class="on">Mappings</span><span>Skin</span></div>
+            <div class="map-row"><span class="map-prop">value_fill</span><span class="map-unbound"><span class="warn-dot"></span>Unbound</span></div>
+            <div class="map-row"><span class="map-prop">fill</span><span class="map-unbound"><span class="warn-dot"></span>Unbound</span></div>
+          </div>
+        </div>
+        <div class="splitter"></div>
+
+        <div class="pane pane-unbound">
+          <div class="pane-head">Unbound <span class="badge">3 unbound</span></div>
+          <div class="pane-body">
+            <div class="unbound-row"><span class="warn-dot"></span>Knob large · value_fill</div>
+            <div class="unbound-row"><span class="warn-dot"></span>Button · fill</div>
+            <div class="unbound-row"><span class="warn-dot"></span>LED · on</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>

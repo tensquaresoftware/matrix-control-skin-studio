@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Skin Studio — Key screen: Delete colour confirm</title>
+<style>
+/*
+  Spine sections illustrated:
+  - EXPERIENCE.md → Component Patterns: modal-confirm, palette-swatch
+  - EXPERIENCE.md → State Patterns: Delete referenced Palette id (confirm first, list n→Unbound)
+  - EXPERIENCE.md → Voice and Tone: Delete colour “{name}”?; “{n} mapping(s) will become Unbound:”;
+    primary “Delete and unbind”; Cancel
+  - EXPERIENCE.md → Key Flows → Flow 2 failure path (delete colour still in use)
+  - DESIGN.md → Components: modal-confirm (scrim, destructive primary, secondary Cancel)
+*/
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0c;
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: #E8E9ED;
+}
+.frame {
+  width: 1280px;
+  height: 800px;
+  background: #1A1B1E;
+  border: 1px solid #52545C;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+  position: relative;
+}
+.titlebar {
+  height: 28px;
+  background: #222326;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #A8AAB4;
+  flex-shrink: 0;
+}
+.titlebar .dots { display: flex; gap: 6px; margin-right: 12px; }
+.titlebar .dot { width: 10px; height: 10px; border-radius: 9999px; background: #3A3B42; }
+
+.top-bar {
+  height: 40px;
+  background: #222326;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 4px;
+  border: 1px solid #52545C;
+  background: #2A2B30;
+  color: #E8E9ED;
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-ghost { background: transparent; }
+.btn-export-disabled {
+  background: #32333A;
+  color: #6E707A;
+  border-color: #3A3B42;
+  opacity: 0.55;
+}
+.sep { width: 1px; height: 20px; background: #52545C; margin: 0 4px; }
+.combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #A8AAB4;
+  font-size: 13px;
+}
+.combo .value {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid #52545C;
+  background: #141518;
+  color: #E8E9ED;
+  min-width: 72px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.combo .chev { color: #6E707A; font-size: 10px; }
+.spacer { flex: 1; }
+.skin-combo .value { min-width: 120px; }
+
+.context-strip {
+  height: 28px;
+  background: #141518;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 20px;
+  font-size: 12px;
+  color: #A8AAB4;
+  flex-shrink: 0;
+}
+.context-strip .lbl { color: #6E707A; margin-right: 6px; }
+.context-strip .val { color: #E8E9ED; }
+
+.body { flex: 1; display: flex; min-height: 0; filter: blur(0.4px); }
+.canvas {
+  flex: 1;
+  background: #1A1B1E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.mock {
+  width: 640px;
+  height: 520px;
+  background: linear-gradient(180deg, #2a2a2e 0%, #1e1e22 100%);
+  border: 1px solid #52545C;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mock-header {
+  height: 56px;
+  background: #121214;
+  border-bottom: 1px solid #3A3B42;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+.mock-title { font-size: 14px; font-weight: 600; color: #E8E9ED; }
+.mock-body { flex: 1; display: flex; }
+.mock-col {
+  flex: 1;
+  padding: 16px;
+  border-right: 1px solid #3A3B42;
+}
+.mock-col:last-child { border-right: none; }
+.knob {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #1A1A1A;
+  border: 3px solid #00AA55;
+  box-shadow: inset 0 0 0 8px #2a2a2e;
+  margin-bottom: 12px;
+}
+.mock-footer {
+  height: 48px;
+  background: #121214;
+  border-top: 1px solid #3A3B42;
+}
+
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background: #2A2B30;
+  border-left: 1px solid #3A3B42;
+  display: flex;
+  flex-direction: column;
+}
+.pane-head {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6E707A;
+}
+.pane-body { padding: 0 12px 12px; }
+.splitter { height: 1px; background: #3A3B42; }
+.swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+.swatch-row.selected {
+  box-shadow: inset 0 0 0 1px #4C8DFF;
+  background: #32333A;
+}
+.chip {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  border: 1px solid #52545C;
+  flex-shrink: 0;
+}
+.swatch-name { color: #A8AAB4; flex: 1; }
+.swatch-hex {
+  font-family: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: #6E707A;
+}
+.palette-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+
+/* Scrim + modal */
+.scrim {
+  position: absolute;
+  inset: 28px 0 0 0; /* below window titlebar chrome */
+  background: rgba(14, 15, 18, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.modal {
+  width: 420px;
+  background: #32333A;
+  border: 1px solid #52545C;
+  border-radius: 6px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #E8E9ED;
+  margin-bottom: 12px;
+  line-height: 1.35;
+}
+.modal-body {
+  font-size: 13px;
+  color: #A8AAB4;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.will-unbound {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 8px;
+  background: #141518;
+  border: 1px solid #3A3B42;
+  border-radius: 4px;
+  max-height: 160px;
+  overflow: hidden;
+}
+.will-unbound li {
+  padding: 6px 8px;
+  color: #E8E9ED;
+  font-size: 13px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.will-unbound li + li { margin-top: 2px; }
+.warn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #E0A020;
+  flex-shrink: 0;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn-cancel {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid #52545C;
+  background: #2A2B30;
+  color: #E8E9ED;
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-destructive {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid #E05555;
+  background: #E05555;
+  color: #0E0F12;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Dim the chrome under scrim via reduced contrast on app chrome */
+.app-dim { opacity: 0.42; pointer-events: none; }
+</style>
+</head>
+<body>
+  <div class="frame" role="img" aria-label="Delete colour confirmation modal over Skin Studio editor">
+    <div class="titlebar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      Skin Studio
+    </div>
+
+    <div class="app-dim">
+      <div class="top-bar">
+        <span class="btn">New</span>
+        <span class="btn">Import</span>
+        <span class="btn btn-export-disabled" title="Export blocked — 3 unbound mapping(s)">Export</span>
+        <span class="sep"></span>
+        <span class="btn btn-ghost">Undo</span>
+        <span class="btn btn-ghost">Redo</span>
+        <span class="combo">
+          Zoom:
+          <span class="value">100% <span class="chev">▾</span></span>
+        </span>
+        <span class="spacer"></span>
+        <span class="combo skin-combo">
+          Skin:
+          <span class="value">Black/Green <span class="chev">▾</span></span>
+        </span>
+      </div>
+
+      <div class="context-strip">
+        <span><span class="lbl">Object</span><span class="val">Knob large</span></span>
+        <span><span class="lbl">State</span><span class="val">Normal</span></span>
+        <span><span class="lbl">Zoom</span><span class="val">100%</span></span>
+        <span><span class="lbl">Skin</span><span class="val">Black/Green</span></span>
+      </div>
+
+      <div class="body">
+        <div class="canvas">
+          <div class="mock">
+            <div class="mock-header"><span class="mock-title">Matrix-Control</span></div>
+            <div class="mock-body">
+              <div class="mock-col"><div class="knob"></div></div>
+              <div class="mock-col"><div class="knob"></div></div>
+            </div>
+            <div class="mock-footer"></div>
+          </div>
+        </div>
+        <aside class="sidebar">
+          <div class="pane-head">Picker</div>
+          <div class="pane-body" style="height:80px"></div>
+          <div class="splitter"></div>
+          <div class="pane-head">Palette</div>
+          <div class="pane-body">
+            <div class="swatch-row"><span class="chip" style="background:#1A1A1A"></span><span class="swatch-name">bg_dark</span><span class="swatch-hex">#1A1A1A</span></div>
+            <div class="swatch-row selected"><span class="chip" style="background:#FFCC00"></span><span class="swatch-name">led_duo</span><span class="swatch-hex">#FFCC00</span></div>
+            <div class="swatch-row"><span class="chip" style="background:#00AA55"></span><span class="swatch-name">accent_g</span><span class="swatch-hex">#00AA55</span></div>
+            <div class="palette-actions">
+              <span class="btn btn-sm">+ Add</span>
+              <span class="btn btn-sm btn-ghost">Delete…</span>
+            </div>
+          </div>
+          <div class="splitter"></div>
+          <div class="pane-head">Object / State / Mappings</div>
+          <div class="pane-body" style="height:100px"></div>
+          <div class="splitter"></div>
+          <div class="pane-head">Unbound</div>
+          <div class="pane-body" style="height:60px"></div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="scrim">
+      <div class="modal">
+        <div class="modal-title">Delete colour “led_duo”?</div>
+        <p class="modal-body">2 mapping(s) will become Unbound:</p>
+        <ul class="will-unbound">
+          <li><span class="warn-dot"></span>Knob large · led_on</li>
+          <li><span class="warn-dot"></span>LED · on</li>
+        </ul>
+        <div class="modal-actions">
+          <span class="btn-cancel">Cancel</span>
+          <span class="btn-destructive">Delete and unbind</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
