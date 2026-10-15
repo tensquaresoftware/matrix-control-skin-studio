@@ -20,8 +20,9 @@ export function createSeedProject(): ProjectDocument {
 }
 
 /**
- * Shared first-open / New path: seed project + empty session via single-writer `apply`.
- * No UI imports — callers own confirm and boot orchestration.
+ * Sole seed-replace path for first-open and New (Epic 1 boot + future chrome).
+ * Applies seed project + empty session via single-writer `apply`.
+ * No UI imports — callers own confirm and boot orchestration; do not bypass with ad-hoc apply.
  */
 export function applySeedBaseline(store: ProjectStore): void {
   store.apply({

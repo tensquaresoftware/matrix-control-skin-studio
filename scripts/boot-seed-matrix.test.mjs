@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const tscJs = join(root, 'node_modules/typescript/lib/tsc.js')
 
 const NEW_CONFIRM_BODY =
-  'Replace the current project with the seed baseline? Unsaved browser state will be overwritten.'
+  'Replace the current project with the seed baseline? The saved browser project will be replaced. Preferences stay unchanged.'
 
 /** Node ESM requires explicit .js on relative specifiers; tsc emit omits them. */
 function addJsExtensionsToRelativeImports(dir) {

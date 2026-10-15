@@ -2,11 +2,12 @@ import type { ProjectStore } from './model/store'
 import { applySeedBaseline } from './seed/index'
 
 const NEW_CONFIRM_BODY =
-  'Replace the current project with the seed baseline? Unsaved browser state will be overwritten.'
+  'Replace the current project with the seed baseline? The saved browser project will be replaced. Preferences stay unchanged.'
 
 /**
  * Minimal Epic 1 boot shell: title + New control with one-deep confirm modal.
- * Full chrome placement is Story 2.3.
+ * Full chrome placement is Story 2.3 — chrome must reuse `applySeedBaseline` for New
+ * (sole seed-replace path; do not invent a parallel store.apply).
  */
 export function mountBootSurface(
   root: HTMLElement | null,

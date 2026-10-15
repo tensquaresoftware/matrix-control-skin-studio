@@ -221,11 +221,36 @@ describe('persist I/O matrix', () => {
     const cases = [
       '{ not json',
       JSON.stringify({ project: { formatVersion: 2 }, session: sampleSession() }),
+      // formatVersion 1 alone is no longer enough (half-document)
+      JSON.stringify({ project: { formatVersion: 1 }, session: sampleSession() }),
       JSON.stringify({ project: sampleProject() }),
       JSON.stringify({ session: sampleSession() }),
       JSON.stringify({
         project: sampleProject(),
         session: { selectedObjectTypeId: 1, selectedStateId: null, activeSkinId: null },
+      }),
+      // raw hex on Mapping.paletteEntryId must CLEAR
+      JSON.stringify({
+        project: {
+          formatVersion: 1,
+          palette: [{ id: 'duoLedYellow', hex: '#FFCC00' }],
+          skins: [
+            {
+              id: 'black-duo',
+              displayName: 'Black/Duo',
+              mappings: [
+                {
+                  objectTypeId: 'ot',
+                  stateId: 'idle',
+                  propertyId: 'led',
+                  paletteEntryId: '#FFCC00',
+                },
+              ],
+            },
+          ],
+          inventory: { objectTypes: [] },
+        },
+        session: sampleSession(),
       }),
       'null',
       '"string"',
@@ -249,6 +274,34 @@ describe('persist I/O matrix', () => {
       assert.deepEqual(store.getState().project, createEmptyProject())
       assert.deepEqual(store.getState().session, createEmptySession())
     }
+  })
+
+  it('session extras stripped on restore: only allow-listed session fields apply', async () => {
+    const { createStore } = await importCompiledTs('src/model/index.ts')
+    const {
+      createMemoryStorage,
+      restoreEnvelope,
+      PROJECT_ENVELOPE_KEY,
+    } = await importCompiledTs('src/persist/index.ts')
+
+    const storage = createMemoryStorage()
+    storage.setItem(
+      PROJECT_ENVELOPE_KEY,
+      JSON.stringify({
+        project: sampleProject(),
+        session: {
+          ...sampleSession(),
+          zoomStep: '200%',
+          panXY: { x: 9, y: 9 },
+        },
+      }),
+    )
+
+    const store = createStore()
+    assert.equal(restoreEnvelope(store, storage), true)
+    assert.deepEqual(store.getState().session, sampleSession())
+    assert.equal('zoomStep' in store.getState().session, false)
+    assert.equal('panXY' in store.getState().session, false)
   })
 
   it('getItem throw: restore false, CLEAR attempted, empty baseline', async () => {

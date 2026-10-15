@@ -22,9 +22,10 @@ export function parseEnvelope(raw: string): ProjectEnvelope | null {
   if (!isProjectDocument(o.project)) return null
   if (!isSessionUiState(o.session)) return null
 
+  // Allow-list session fields only — strip prefs-like bleed from older/corrupt writes.
   return {
     project: o.project,
-    session: o.session,
+    session: pickSessionUiState(o.session),
   }
 }
 
@@ -36,7 +37,7 @@ export function writeEnvelope(
   try {
     const payload: ProjectEnvelope = {
       project: envelope.project,
-      session: envelope.session,
+      session: pickSessionUiState(envelope.session),
     }
     storage.setItem(PROJECT_ENVELOPE_KEY, JSON.stringify(payload))
   } catch {
@@ -53,10 +54,41 @@ export function clearEnvelopeKey(storage: PersistStorage): void {
   }
 }
 
+/**
+ * One-notch envelope gate (Epic 1 → 2 readiness):
+ * formatVersion 1 + array runtime shapes + no raw hex on Mapping.paletteEntryId.
+ */
 function isProjectDocument(value: unknown): value is ProjectDocument {
   if (value === null || typeof value !== 'object') return false
   const p = value as Record<string, unknown>
-  return p.formatVersion === 1
+  if (p.formatVersion !== 1) return false
+  if (!Array.isArray(p.palette)) return false
+  if (!Array.isArray(p.skins)) return false
+  if (p.inventory === null || typeof p.inventory !== 'object') return false
+  const inventory = p.inventory as Record<string, unknown>
+  if (!Array.isArray(inventory.objectTypes)) return false
+  return skinsHaveValidMappings(p.skins)
+}
+
+function skinsHaveValidMappings(skins: unknown[]): boolean {
+  for (const skin of skins) {
+    if (skin === null || typeof skin !== 'object') return false
+    const mappings = (skin as Record<string, unknown>).mappings
+    if (!Array.isArray(mappings)) return false
+    for (const mapping of mappings) {
+      if (!isValidMappingPaletteEntryId(mapping)) return false
+    }
+  }
+  return true
+}
+
+/** Mapping values are palette entry id or null — never raw `#RRGGBB`. */
+function isValidMappingPaletteEntryId(mapping: unknown): boolean {
+  if (mapping === null || typeof mapping !== 'object') return false
+  const id = (mapping as Record<string, unknown>).paletteEntryId
+  if (id === null) return true
+  if (typeof id !== 'string') return false
+  return !id.startsWith('#')
 }
 
 function isSessionUiState(value: unknown): value is SessionUiState {
@@ -67,6 +99,14 @@ function isSessionUiState(value: unknown): value is SessionUiState {
     isNullableString(s.selectedStateId) &&
     isNullableString(s.activeSkinId)
   )
+}
+
+function pickSessionUiState(session: SessionUiState): SessionUiState {
+  return {
+    selectedObjectTypeId: session.selectedObjectTypeId,
+    selectedStateId: session.selectedStateId,
+    activeSkinId: session.activeSkinId,
+  }
 }
 
 function isNullableString(value: unknown): value is string | null {
