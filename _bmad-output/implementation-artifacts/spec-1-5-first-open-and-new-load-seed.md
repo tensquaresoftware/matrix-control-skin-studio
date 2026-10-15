@@ -78,6 +78,24 @@ context:
 ### Review Findings
 
 - [x] [Review][Patch] Execute first-open seed orchestration via shared `bootProjectStore` (main + boot-seed), not a mirrored helper / unbound regex [src/boot-project.ts; src/main.ts; scripts/boot-seed-matrix.test.mjs; scripts/scaffold-matrix.test.mjs]
+- [x] [Review][Defer] Production `main.ts` only wires `bootProjectStore` via source-text regex; behavioral matrices execute the helper directly [src/main.ts:15-16] — deferred: shared helper is the intentional executed boundary; matrices avoid importing `main` (CSS/DOM side effects); source-text tripwire remains as a weak guard
+- [x] [Review][Defer] Epic 1 context doc not updated for shared `bootProjectStore` continuity [epic-1-context.md] — deferred: fix would edit planning/agent-context docs outside this story’s code surface
+
+#### Rejected (code review 2026-10-16)
+
+- `false` — spec frontmatter `done` vs sprint `review`: expected while review runs; sprint is the live gate
+- `false` — New confirm modal stays open if `applySeedBaseline` throws: autosave write failures fail soft; seed apply has no everyday throw path
+- rejected (fix edits spec) — Code Map / Design Notes / Tasks / Spec Change Log / `review_loop_iteration` drift after `bootProjectStore` extraction
+- `low` rejected — `applySeedBaseline` not in seed-matrix: covered via boot-seed / New rows; helper is a thin `apply` wrapper
+- `low` rejected — corrupt row omits envelope `session` assert: store session asserted; same `writeEnvelope` writes both slices
+- `low` rejected — confirm-copy string duplicated in test: intentional golden assert against frozen NEW_CONFIRM_COPY
+- `low` rejected — `mountBootSurface` JSDoc omits autosave-attached precondition: caller contract already documented on `bootProjectStore`
+- `low` rejected — getItem-throw → seed matrix row omitted: same `if (!restored)` branch; persist matrix covers restore `false` on getItem throw
+- `low` rejected — New cancel omits prefs-untouched assert: cancel path does not write; prefs only relevant on confirm
+- `low` rejected — Escape / scrim-click dismiss unspecified: BOOT_MINIMAL; Cancel/Confirm buttons covered
+- `low` rejected — null/undefined store into `mountBootSurface`: typed API; production always passes `initProjectStore()` result
+- `low` rejected — double `bootProjectStore` duplicates autosave listeners: production boots once; unlikely everyday
+- `low` rejected — cancel-path New click without `assert.ok`: missing control still fails the test via TypeError
 
 ## Implementation Notes
 
@@ -104,6 +122,12 @@ context:
 - `low` rejected — second New while modal open is silent no-op; scrim-dismiss unspecified: not in frozen I/O matrix; cancel/confirm paths covered.
 - `false` — empty Spec Change Log / Review Triage at review start: expected until this pass fills them; Implementation Notes count is continuity-only.
 - `medium` — first-open seed gate in `main.ts` never executed by counting tests [src/main.ts:15-20; scripts/boot-seed-matrix.test.mjs:172-183 mirror]: verification-gap pre-verified — deleting seed-if-empty in main leaves boot-seed green; only source-text regex would move. Routed patch.
+- `medium` deferred — residual: after shared-helper patch, production `main` still only source-text-wired; behavioral matrices call `bootProjectStore` directly (verification-gap 2026-10-16)
+- `false` — spec `done` vs sprint `review` at review start: expected lifecycle lag
+- `false` — confirm modal stays open if seed apply throws: autosave fails soft; no everyday throw path
+- rejected — Code Map / Design Notes / Tasks / Spec Change Log / `review_loop_iteration` drift: fix edits spec under review
+- `low` rejected — seed-matrix omits `applySeedBaseline`; corrupt envelope session assert; confirm-copy golden duplicate; JSDoc autosave note; getItem-throw boot row; cancel prefs assert; Escape/scrim; null store guard; double-boot autosave; cancel New without `assert.ok`
+- deferred — epic-1-context.md not refreshed for `bootProjectStore` (planning/agent-context edit)
 
 ## Design Notes
 
