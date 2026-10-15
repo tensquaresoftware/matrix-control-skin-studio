@@ -130,6 +130,43 @@ describe('seed I/O matrix', () => {
     }
   })
 
+  it('exported SEED_* are frozen; mutation cannot poison later createSeedProject', async () => {
+    const {
+      createSeedProject,
+      SEED_PALETTE,
+      SEED_SKINS,
+      SEED_INVENTORY,
+    } = await importCompiledTs('src/seed/index.ts')
+
+    assert.equal(Object.isFrozen(SEED_PALETTE), true)
+    assert.equal(Object.isFrozen(SEED_PALETTE[0]), true)
+    assert.equal(Object.isFrozen(SEED_SKINS), true)
+    assert.equal(Object.isFrozen(SEED_SKINS[0]), true)
+    assert.equal(Object.isFrozen(SEED_SKINS[0].mappings), true)
+    assert.equal(Object.isFrozen(SEED_INVENTORY), true)
+    assert.equal(Object.isFrozen(SEED_INVENTORY.objectTypes), true)
+
+    assert.throws(() => {
+      SEED_PALETTE[0].hex = '#000000'
+    }, TypeError)
+    assert.throws(() => {
+      SEED_SKINS.push({ id: 'extra', displayName: 'Extra', mappings: [] })
+    }, TypeError)
+    assert.throws(() => {
+      SEED_INVENTORY.source = 'mutated'
+    }, TypeError)
+
+    const doc = createSeedProject()
+    assert.equal(doc.palette.length, 1)
+    assert.equal(doc.palette[0].hex, '#FFCC00')
+    assert.equal(doc.skins.length, 5)
+    assert.deepEqual(
+      doc.skins.map((s) => s.displayName),
+      V1_DISPLAY_NAMES,
+    )
+    assert.equal(doc.inventory.source, 'seed-placeholder')
+  })
+
   it('apply path: caller store.apply holds seeded document; seed does not mutate store', async () => {
     const { createSeedProject } = await importCompiledTs('src/seed/index.ts')
     const { createStore, createEmptyProject } = await importCompiledTs('src/model/index.ts')

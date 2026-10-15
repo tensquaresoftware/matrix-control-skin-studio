@@ -75,6 +75,22 @@ context:
 - Given the seeded skins, when inspected, then each has `mappings: []`.
 - Given `npm test` and `npm run build`, when they finish, then both exit 0 with the seed matrix covered.
 
+### Review Findings
+
+- [x] [Review][Patch] Assert exported SEED_* freeze / poison path in seed matrix [scripts/seed-matrix.test.mjs; src/seed/seed-data.ts:22-43]
+- [x] [Review][Patch] Remove redundant shallow copy before structuredClone in createSeedProject [src/seed/index.ts:11-16]
+- [x] [Review][Patch] Align freezeInventory return type with readonly freeze helpers [src/seed/seed-data.ts:16-18]
+
+#### Rejected
+
+- `false` — Spec `done` vs sprint `review`: expected mid-review lifecycle; sprint `review` is why this pass ran.
+- `false` — Spec Code Map still says seed stub: fix would edit this build's spec (rejected).
+- `false` — Spec Change Log empty / review_loop_iteration 0 / Design Notes “illustrative” ids: fix would edit this build's spec (rejected).
+- `false` — Mapping-discipline inner loop never runs: AC requires `mappings: []`; outer `deepEqual` already satisfies the row.
+- `false` — Factory-to-factory isolation untested: `structuredClone` + frozen `SEED_*` already prevent poisoning via a returned document.
+- `false` — Public `SEED_*` re-exports beyond AC-named `createSeedProject`: allowed surface; not a product defect of this diff.
+- `false` — No repo-wide ObjectTypes scan outside seed: EMPTY inventory ownership already asserted in seed; inventing elsewhere is not a defect of this diff.
+
 ## Implementation Notes
 
 - Added `seed-data.ts` (single ownership) + `createSeedProject()` pure factory in `seed/index.ts`.
@@ -82,6 +98,7 @@ context:
 - `scripts/seed-matrix.test.mjs` covers all four I/O matrix rows; `package.json` test script includes it.
 - Boot unchanged (no `store.apply` of seed) — deferred to 1.4/1.5.
 - Review patches: freeze `SEED_*`; `createSeedProject` via `structuredClone`; assert kebab skin ids; scaffold pins `seed-matrix` in `scripts.test`.
+- Code-review patches: assert `SEED_*` freeze in matrix; drop redundant shallow copy before `structuredClone`; `freezeInventory` returns `Readonly<Inventory>`.
 - `npm test` and `npm run build` exit 0 after implementation and review patches.
 
 ## Spec Change Log

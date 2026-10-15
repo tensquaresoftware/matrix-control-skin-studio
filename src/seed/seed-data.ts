@@ -13,7 +13,7 @@ function freezeSkins(skins: Skin[]): readonly Skin[] {
   return Object.freeze(skins)
 }
 
-function freezeInventory(inventory: Inventory): Inventory {
+function freezeInventory(inventory: Inventory): Readonly<Inventory> {
   Object.freeze(inventory.objectTypes)
   return Object.freeze(inventory)
 }
