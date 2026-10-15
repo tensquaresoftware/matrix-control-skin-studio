@@ -102,9 +102,19 @@ describe('store I/O matrix', () => {
     assert.deepEqual(boot.getState().session, createEmptySession())
   })
 
-  it('apply project: replaces document, notifies, does not mutate prior nested objects', async () => {
+  it('apply project: replaces document, notifies, does not mutate prior nested objects; session unchanged', async () => {
     const { createStore } = await importCompiledTs('src/model/index.ts')
     const store = createStore()
+
+    store.apply({
+      session: {
+        selectedObjectTypeId: 'ot-1',
+        selectedStateId: 'on',
+        activeSkinId: 'skin-1',
+      },
+    })
+    const sessionBefore = store.getState().session
+
     const prior = store.getState().project
     const priorPalette = prior.palette
 
@@ -145,6 +155,11 @@ describe('store I/O matrix', () => {
     // Store owns a clone — mutating the payload after apply must not change state
     replacement.palette.push({ id: 'p2', hex: '#000000' })
     assert.equal(store.getState().project.palette.length, 1)
+    // Project-only apply must leave session slice untouched
+    assert.deepEqual(store.getState().session, sessionBefore)
+    assert.equal(store.getState().session.activeSkinId, 'skin-1')
+    assert.equal(store.getState().session.selectedObjectTypeId, 'ot-1')
+    assert.equal(store.getState().session.selectedStateId, 'on')
   })
 
   it('apply session: updates session only; project unchanged; payload isolated', async () => {
@@ -173,7 +188,42 @@ describe('store I/O matrix', () => {
     assert.equal(store.getState().session.activeSkinId, 'skin-1')
   })
 
-  it('mapping type shape: paletteEntryId string | null; SessionUiState keys only', async () => {
+  it('apply project and session together: both slices update', async () => {
+    const { createStore } = await importCompiledTs('src/model/index.ts')
+    const store = createStore()
+
+    let notifyCount = 0
+    store.subscribe(() => {
+      notifyCount += 1
+    })
+
+    const projectPayload = {
+      formatVersion: 1,
+      palette: [{ id: 'p1', hex: '#112233' }],
+      skins: [{ id: 'skin-a', displayName: 'Monochrome', mappings: [] }],
+      inventory: { objectTypes: [] },
+    }
+    const sessionPayload = {
+      selectedObjectTypeId: 'ot',
+      selectedStateId: 'idle',
+      activeSkinId: 'skin-a',
+    }
+
+    store.apply({ project: projectPayload, session: sessionPayload })
+
+    assert.equal(notifyCount, 1)
+    assert.equal(store.getState().project.skins[0].id, 'skin-a')
+    assert.equal(store.getState().project.palette[0].id, 'p1')
+    assert.equal(store.getState().session.activeSkinId, 'skin-a')
+    assert.equal(store.getState().session.selectedObjectTypeId, 'ot')
+    assert.equal(store.getState().session.selectedStateId, 'idle')
+    projectPayload.palette.push({ id: 'leak', hex: '#000000' })
+    sessionPayload.activeSkinId = 'mutated'
+    assert.equal(store.getState().project.palette.length, 1)
+    assert.equal(store.getState().session.activeSkinId, 'skin-a')
+  })
+
+  it('mapping type shape: paletteEntryId string | null; SessionUiState keys only; inventory round-trip', async () => {
     const { createStore } = await importCompiledTs('src/model/index.ts')
     const store = createStore()
 
@@ -214,10 +264,17 @@ describe('store I/O matrix', () => {
       },
     })
 
-    const skin = store.getState().project.skins[0]
+    const { project } = store.getState()
+    const skin = project.skins[0]
     assert.equal(skin.mappings[0].paletteEntryId, null)
     assert.equal(skin.mappings[1].paletteEntryId, 'entry-1')
     assert.equal('hex' in skin.mappings[0], false)
+
+    assert.equal(project.inventory.source, 'seed-placeholder')
+    assert.equal(project.inventory.objectTypes.length, 1)
+    assert.equal(project.inventory.objectTypes[0].id, 'ot')
+    assert.deepEqual(project.inventory.objectTypes[0].states, ['on'])
+    assert.deepEqual(project.inventory.objectTypes[0].properties, ['color'])
 
     const sessionKeys = Object.keys(store.getState().session).sort()
     assert.deepEqual(sessionKeys, [

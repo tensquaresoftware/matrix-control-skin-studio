@@ -78,13 +78,36 @@ context:
 - Given a subscriber, when `apply` replaces project or session, then listeners run and prior nested objects are not mutated in place.
 - Given `npm test` and `npm run build`, when they finish, then both exit 0 with the new store matrix covered.
 
+### Review Findings
+
+- [x] [Review][Patch] Project-only `apply` never asserts session isolation — seed a non-null session, `apply({ project })` only, assert session ids unchanged [`scripts/store-matrix.test.mjs:105-148`]
+- [x] [Review][Patch] Mapping-shape test builds inventory with `source` / objectTypes but never asserts they survived `apply` [`scripts/store-matrix.test.mjs:193-220`]
+- [x] [Review][Patch] No matrix row covers `apply({ project, session })` together [`scripts/store-matrix.test.mjs`]
+
+#### Rejected
+
+- `false` — Spec `status: done` vs sprint `review`: tracking lag; fixing would edit the spec under review (rejected). Sprint stays `review` until this review closes.
+- `false` — `review_loop_iteration` / empty Spec Change Log: metadata-only; fix would edit the spec under review.
+- `false` — Session-only `apply` uses `deepEqual` on `getState()` clones: public contract is value isolation (covered); store-internal reference identity is not observable via `getState` by design.
+- `false` — Scaffold pin that `scripts.test` mentions store-matrix: intentional regression pin for the acceptance criterion, not coupling debt.
+- `false` — Mapping hex only checked at runtime: frozen I/O matrix says compile-time typing only; no runtime hex scrubber required.
+- `false` — `PaletteEntry.hex` as plain `string`: documentation opacity, not a branded-type requirement in Boundaries.
+- `false` — `initProjectStore` returns the module singleton without re-baseline: intended boot API; empty baseline is established at module load.
+- `low` rejected — `createStore(initial?)` untested with non-default initial: unused in product path; everyday risk low.
+- `low` rejected — `empty-project.ts` also exports `createEmptySession`: naming nit; rename/split adds churn without product harm.
+- `low` rejected — `deferred-work.md` lacks title/schema: cosmetic artifact shape; not product-facing.
+- `low` rejected — Runtime `null` project/session in `apply`: TypeScript `ApplyPayload` excludes null; null-guard complexity for unreachable everyday path (same as prior triage).
+- `low` rejected — Throwing subscriber aborts later listeners: no production subscribers yet; try/catch isolation adds complexity not in intent (same as prior triage).
+- `low` rejected — Listener reentrancy / live Set during notify: speculative; snapshotting listeners is defensive complexity without demonstrated caller (same as prior triage).
+
 ## Implementation Notes
 
 - Added `types.ts`, `empty-project.ts`, `store.ts`; barrel re-exports from `index.ts`.
 - Store: `createStore` + module singleton `store` / `initProjectStore()`; `apply` and `getState` clone via `structuredClone`.
 - `Inventory.source?` (not per object-type) for future `seed-placeholder`.
 - Review patches: getState clones; store-matrix covers singleton boot + session payload isolation; scaffold pins `scripts.test` to both suites.
-- `npm test` 8/8 and `npm run build` exit 0 after review patches.
+- Code-review patches (2026-10-15): project-only apply asserts session isolation; inventory round-trip asserts; combined project+session apply matrix row.
+- `npm test` and `npm run build` exit 0 after review patches.
 
 ## Spec Change Log
 
@@ -105,6 +128,9 @@ context:
 - `low` rejected — throwing subscriber aborts later listeners: speculative; try/catch isolation adds complexity not in intent.
 - `low` rejected — `apply` with runtime `null` project/session: TypeScript `ApplyPayload` excludes null; null-guard complexity for unreachable everyday path.
 - `low` rejected — listener reentrancy during notify: speculative; snapshotting listeners is defensive complexity without demonstrated caller.
+- `medium` — project-only `apply` never asserted session isolation (pre-verified verification-gap); route patch — applied.
+- `medium` — mapping-shape inventory not asserted after `apply` (pre-verified verification-gap); route patch — applied.
+- `low` — no combined project+session `apply` matrix row; route patch — applied.
 
 ## Design Notes
 
