@@ -80,6 +80,7 @@ describe('scaffold I/O matrix', () => {
     assert.equal(pkg.scripts?.preview, 'vite preview')
     assert.match(pkg.scripts?.test ?? '', /scaffold-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /store-matrix\.test\.mjs/)
+    assert.match(pkg.scripts?.test ?? '', /seed-matrix\.test\.mjs/)
     assert.equal(deps.vite, '8.3.4')
     assert.equal(deps.typescript, '7.0.2')
     for (const name of frameworks) {
