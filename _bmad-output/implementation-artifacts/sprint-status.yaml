@@ -38,16 +38,17 @@
 #   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
 #   to fill SM-1. Definitive JSON field freeze waits on Collect.
 generated: 10-15-2026 22:25
-last_updated: 10-15-2026 22:25
+last_updated: 10-15-2026 22:55
 project: Matrix-Control-Skin-Studio
 project_key: NOKEY
 tracking_system: file-system
 story_location: 
   /Volumes/Guillaume/Dev/Projects/JUCE/Matrix-Control-Skin-Studio/_bmad-output/implementation-artifacts
 development_status:
+
   # --- Epic 1: Seed / store (MVP) ---
-  epic-1: backlog
-  1-1-scaffold-vite-typescript-spa: backlog
+  epic-1: in-progress
+  1-1-scaffold-vite-typescript-spa: done
   1-2-single-writer-project-store: backlog
   # Collect-dep: seed inventory until Collect replaces it; no invented ObjectTypes
   1-3-seed-v1-skins-palette-and-placeholder-inventory: backlog
