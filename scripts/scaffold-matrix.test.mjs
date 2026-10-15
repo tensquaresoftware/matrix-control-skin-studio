@@ -81,6 +81,7 @@ describe('scaffold I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /scaffold-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /store-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /seed-matrix\.test\.mjs/)
+    assert.match(pkg.scripts?.test ?? '', /persist-matrix\.test\.mjs/)
     assert.equal(deps.vite, '8.3.4')
     assert.equal(deps.typescript, '7.0.2')
     for (const name of frameworks) {
@@ -99,14 +100,17 @@ describe('scaffold I/O matrix', () => {
     const main = readFileSync(join(root, 'src/main.ts'), 'utf8')
     for (const mod of modules) {
       assert.ok(existsSync(join(root, 'src', mod, 'index.ts')), `missing stub: ${mod}`)
-      assert.match(main, new RegExp(`import\\s+['"]\\./${mod}['"]`))
+      assert.match(
+        main,
+        new RegExp(`import\\s+(?:[^'"\\n]+\\s+from\\s+)?['"]\\./${mod}['"]`),
+      )
     }
 
     // Entry must call the helper with #app (no silent skip). Full main import
     // needs CSS/DOM loaders; assert wiring + execute the helper instead.
     assert.match(
       main,
-      /mountBootSurface\s*\(\s*document\.querySelector(?:<[^>]+>)?\s*\(\s*['"]#app['"]\s*\)\s*\)/,
+      /(?:const|let)\s+(\w+)\s*=\s*initProjectStore\s*\(\s*\)\s*;?\s*restoreEnvelope\s*\(\s*\1\s*\)\s*;?\s*attachAutosave\s*\(\s*\1\s*\)\s*;?\s*mountBootSurface\s*\(\s*document\.querySelector(?:<[^>]+>)?\s*\(\s*['"]#app['"]\s*\)\s*\)/,
     )
     assert.doesNotMatch(main, /if\s*\(\s*app\s*\)/)
 
