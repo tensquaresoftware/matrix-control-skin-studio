@@ -78,6 +78,8 @@ describe('scaffold I/O matrix', () => {
   it('happy-path boot row: pins, no UI framework, module stubs, boot surface', async () => {
     assert.equal(pkg.scripts?.dev, 'vite')
     assert.equal(pkg.scripts?.preview, 'vite preview')
+    assert.match(pkg.scripts?.test ?? '', /scaffold-matrix\.test\.mjs/)
+    assert.match(pkg.scripts?.test ?? '', /store-matrix\.test\.mjs/)
     assert.equal(deps.vite, '8.3.4')
     assert.equal(deps.typescript, '7.0.2')
     for (const name of frameworks) {
