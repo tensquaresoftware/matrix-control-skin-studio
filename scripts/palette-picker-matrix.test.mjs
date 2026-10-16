@@ -381,15 +381,29 @@ describe('palette picker I/O matrix', () => {
       assert.equal(host.querySelector('.is-selected'), null)
 
       const hue = host.querySelector('[data-picker-hue]')
+      const sat = host.querySelector('[data-picker-sat]')
+      const val = host.querySelector('[data-picker-val]')
       const hexField = host.querySelector('[data-picker-hex]')
-      assert.ok(hue && hexField)
+      const swatch = host.querySelector('[data-picker-swatch]')
+      assert.ok(hue && sat && val && hexField && swatch)
 
       hue.value = '120'
       hue.dispatchEvent({ type: 'input' })
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(hue.value, '0')
+      assert.equal(sat.value, '0')
+      assert.equal(val.value, '0')
+      assert.equal(hexField.value, '#000000')
+      assert.equal(swatch.style.background, '#000000')
+
       hexField.value = '#ABCDEF'
       hexField.dispatchEvent({ type: 'input' })
-
       assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(hue.value, '0')
+      assert.equal(sat.value, '0')
+      assert.equal(val.value, '0')
+      assert.equal(hexField.value, '#000000')
+      assert.equal(swatch.style.background, '#000000')
     } finally {
       restore()
     }

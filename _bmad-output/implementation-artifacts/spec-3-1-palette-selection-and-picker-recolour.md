@@ -102,3 +102,27 @@ context:
 - `medium` — Orphan listeners on remount (edge-case) — same as subscribe finding; false for production single-mount path (already logged)
 - `medium` — Palette row `constantName` else `id` label never asserted — verification-gap pre-verified — route patch
 - `medium` — Slider write-through test circular on `hsvToHex` — verification-gap pre-verified; golden `#4C7F99` for (200,50,60) — route patch
+
+### Review Findings
+
+- [x] [Review][Patch] Idle picker test does not assert well re-sync after unselected edits [`scripts/palette-picker-matrix.test.mjs` idle case] — After unselected slider/hex `input`, assert hue/hex (and optionally swatch) reset to idle `#000000` / HSV zeros; store-only assert lets dropping `syncFromStore(true)` stay green.
+- [x] [Review][Defer] Selected palette id removed from store never asserted to clear selection [`src/sidebar/palette-pane.ts` orphan-clear] — deferred: not in story 3-1 I/O matrix; New-after-custom-select / delete makes missing-id common in 3.2 — add matrix case then.
+- [x] [Review][Defer] Epic 3 context still documents ~400 ms coalesce while 3-1 uses immediate `store.apply` [`epic-3-context.md`] — deferred: fix edits other planning artifact; story frozen intent already defers coalesce to 5-1.
+
+#### Rejected
+
+- `false` — Spec status `done` vs sprint `review` — workflow tracking only; this review owns sprint sync, not a product defect.
+- `false` — Spec Code Map still describes empty shells — would only edit this build’s spec.
+- `false` — Spec I/O matrix pins `palette[0]` for duoLedYellow — would only edit this build’s spec; tests look up by id.
+- `false` — Blank Implementation Notes / Spec Change Log — process fill-in, not a product defect.
+- `false` — Idle Picker lacks disabled/`aria-disabled` affordance — frozen intent allows idle wells without commit; no disabled UI required.
+- `false` — Multi-entry test names slider isolation but edits via hex — slider and hex share `commitHex`; separate slider golden already covers write-through.
+- `false` — `store.subscribe` / `selection.subscribe` never unsubscribed — production mounts chrome/sidebar once; New replaces project via `apply`, does not remount panes.
+- `false` — Hex focused when selection cleared can drift until blur — only reachable via programmatic clear while focus held; everyday click paths blur first; fix needs extra id-change branch.
+- `false` — Blur restore when selected `entry.hex` is non-opaque — seed/writer paths emit opaque hex; corrupt import is later story.
+- `false` — Duplicate palette ids confuse selection — unreachable with current seed/writers; not introduced by this change.
+- `false` — Palette row paints stored hex without `parseOpaqueHex` — live writers normalize uppercase; asymmetric display only under corrupt/external apply.
+- `false` — `mountSidebar` treats `store` as optional — intentional for layout-only callers (chrome-shell); production chrome passes `store`; matrix asserts wiring.
+- `low` rejected — `--comp-picker-pane-padding` unused / hard `padding-top: 0` — cosmetic token pairing; no everyday operator harm.
+- `low` rejected — Selected and hover rows share hover fill token — ring already marks selection; distinct fill would add design surface.
+- `low` rejected — Missing focused `hex-color.ts` round-trip unit cases — slider golden + matrix cover the LIVE path; extra helper matrix is scope creep for 3-1.

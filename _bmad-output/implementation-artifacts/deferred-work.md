@@ -39,3 +39,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-5-canvas-pan-and-prefs-persistence.md`
   summary: Assert non-primary pointer buttons do not start canvas pan in the chrome-shell matrix.
   evidence: Primary click-drag is covered; secondary-button ignore is real but outside everyday I/O rows until context-menu work lands on the canvas.
+
+## Deferred from: code review of spec-3-1-palette-selection-and-picker-recolour.md (2026-10-16)
+
+- Selected palette id removed from store never asserted to clear selection — orphan-clear exists in palette pane; not in 3-1 I/O matrix; cover with New-after-custom-select or when 3.2 delete makes missing-id common.
+- Epic 3 context still documents ~400 ms coalesce while 3-1 uses immediate `store.apply` — fix would edit planning/epic context outside this story; frozen 3-1 intent already defers coalesce to 5-1.
