@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-10-16'
 status: 'done'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 baseline_commit: '7340fab72f7da12eb1551131d5e6820b07f9bac8'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
@@ -89,8 +89,32 @@ context:
 - Sidebar splitters: index 0 redistributes panes 2–4 only (picker fixed 220px); heights keys `palette`/`mappings`/`unbound` via `savePrefs` on pointer-up.
 - Chrome-shell matrix covers all I/O rows; `npm test` 44/44 and `npm run build` exit 0 after implementation + review patches.
 - Review patches: splitter-0 absorb-limited growth; non-finite delta guard; pointercancel/lostpointercapture end drag; chrome null-root copy; matrix isolation via real commit, remount, distribute/clamp, Zoom/Skin —, savePrefs fail-soft.
+- Review loop 2 patches: pointerId + re-entrant drag guards; prefs commit on pointerup only; releasePointerCapture fail-soft cleanup; matrix covers splitter-2, splitter-0 shrink, pointercancel, mount-path distribute.
 
 ## Spec Change Log
+
+### Review Findings
+
+- [x] [Review][Patch] Splitter matrix misses index-2 resize and splitter-0 shrink [scripts/chrome-shell-matrix.test.mjs:450-490]
+- [x] [Review][Patch] pointercancel / lostpointercapture end-drag path untested [scripts/chrome-shell-matrix.test.mjs; src/sidebar/index.ts:237-261]
+- [x] [Review][Patch] Fresh-mount distribute defaults never asserted via mount path [scripts/chrome-shell-matrix.test.mjs:320-323; src/sidebar/index.ts:75-86]
+- [x] [Review][Patch] endDrag: releasePointerCapture before cleanup can skip listener removal; prefs written on cancel not only pointer-up [src/sidebar/index.ts:237-247]
+- [x] [Review][Patch] Splitter drag ignores pointerId — foreign pointer can end or resize mid-gesture [src/sidebar/index.ts:230-261]
+- [x] [Review][Patch] Re-entrant pointerdown while dragging duplicates window listeners [src/sidebar/index.ts:249-261]
+- [x] [Review][Defer] Chrome-shell matrix duplicates importCompiledTs / minimal DOM harness [scripts/chrome-shell-matrix.test.mjs] — deferred: pre-existing Epic 1 pattern debt; same shared-harness work already deferred from 1.2–1.4
+
+#### Rejected
+
+- `false` — Spec status `done` vs sprint `review` / empty Spec Change Log / Code Map “stub →” residue — reject (would only edit this build’s spec)
+- `false` — Partial `sidebarPaneHeights` drops to full defaults — matches corrupt/missing → defaults; not a defect
+- `false` — `resizeFromDrag` fall-through for index outside 0–2 — production only calls 0–2 via `wireSplitters`
+- `false` — loadPrefs→savePrefs race overwriting zoom/pan — sync single-writer in this story; no concurrent prefs writer yet
+- `low` rejected — Remount during drag leaves window listeners — production mounts once at boot; remount is test/rare
+- `low` rejected — AD-11 order/labels under-asserted — top bar builds correct order; product surface OK
+- `low` rejected — New confirm keeps `data-boot-confirm` Epic 1 ids — continuity by design; rename is cosmetic
+- `low` rejected — No upper bound on pane heights — spec clamps mins only; max adds design surface
+- `low` rejected — `savePrefs` fail-soft only asserts doesNotThrow — enough for this story’s fail-soft contract
+- `low` rejected — Forbidden-chrome asserts only absent attrs — positive chrome geometry already covered
 
 ## Review Triage Log
 

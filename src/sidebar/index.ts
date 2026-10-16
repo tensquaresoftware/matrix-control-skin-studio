@@ -220,6 +220,7 @@ function wireSplitters({ splitters, paneEls, storage }: SplitterWire): void {
   for (let i = 0; i < splitters.length; i++) {
     const splitter = splitters[i]
     let dragging = false
+    let activePointerId: number | null = null
     let startY = 0
     let startHeights: SidebarPaneHeights = {
       palette: DEFAULT_PALETTE_HEIGHT_PX,
@@ -228,7 +229,7 @@ function wireSplitters({ splitters, paneEls, storage }: SplitterWire): void {
     }
 
     const onPointerMove = (event: PointerEvent): void => {
-      if (!dragging) return
+      if (!dragging || event.pointerId !== activePointerId) return
       const delta = event.clientY - startY
       const next = resizeFromDrag(i, delta, startHeights)
       applyHeights(paneEls, next)
@@ -236,20 +237,39 @@ function wireSplitters({ splitters, paneEls, storage }: SplitterWire): void {
 
     const endDrag = (event: PointerEvent): void => {
       if (!dragging) return
+      if (activePointerId != null && event.pointerId !== activePointerId) return
+
+      // Spec: prefs commit on pointer-up only (not cancel / lost capture).
+      const shouldPersist = event.type === 'pointerup'
+      const pointerId = activePointerId
       dragging = false
-      splitter.releasePointerCapture(event.pointerId)
+      activePointerId = null
       splitter.classList.remove('is-dragging')
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', endDrag)
-      window.removeEventListener('pointercancel', endDrag)
-      splitter.removeEventListener('lostpointercapture', endDrag)
-      persistHeights(readCurrentHeights(paneEls), storage)
+
+      try {
+        if (pointerId != null) {
+          splitter.releasePointerCapture(pointerId)
+        }
+      } catch {
+        // Capture may already be gone (lostpointercapture / cancel).
+      } finally {
+        window.removeEventListener('pointermove', onPointerMove)
+        window.removeEventListener('pointerup', endDrag)
+        window.removeEventListener('pointercancel', endDrag)
+        splitter.removeEventListener('lostpointercapture', endDrag)
+      }
+
+      if (shouldPersist) {
+        persistHeights(readCurrentHeights(paneEls), storage)
+      }
     }
 
     splitter.addEventListener('pointerdown', (event: PointerEvent) => {
       if (event.button !== 0) return
+      if (dragging) return
       event.preventDefault()
       dragging = true
+      activePointerId = event.pointerId
       startY = event.clientY
       startHeights = readCurrentHeights(paneEls)
       splitter.classList.add('is-dragging')

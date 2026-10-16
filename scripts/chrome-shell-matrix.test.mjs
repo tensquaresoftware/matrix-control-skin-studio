@@ -78,6 +78,7 @@ function createElement(tagName) {
     type: '',
     textContent: '',
     disabled: false,
+    clientHeight: 0,
     style: {
       cssText: '',
       height: '',
@@ -422,6 +423,7 @@ describe('chrome shell I/O matrix', () => {
       globalThis.window.dispatchEvent({
         type: 'pointermove',
         clientY: 240,
+        pointerId: 1,
       })
       assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
       assert.equal(paneHeight(root, 'palette'), '180px')
@@ -456,7 +458,7 @@ describe('chrome shell I/O matrix', () => {
         { palette: 140, mappings: 220, unbound: 180 },
       )
 
-      // Splitter-0: picker stays 220px; panes 2–4 actually move.
+      // Splitter-0 grow: picker stays 220px; panes 2–4 actually move.
       const before0 = {
         palette: paneHeight(root, 'palette'),
         mappings: paneHeight(root, 'mappings'),
@@ -470,7 +472,11 @@ describe('chrome shell I/O matrix', () => {
         pointerId: 2,
         preventDefault() {},
       })
-      globalThis.window.dispatchEvent({ type: 'pointermove', clientY: 130 })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 130,
+        pointerId: 2,
+      })
       globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 2 })
       assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
       assert.notEqual(paneHeight(root, 'palette'), before0.palette)
@@ -488,6 +494,50 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(capped.palette, 140)
       assert.equal(capped.mappings, 160)
       assert.equal(capped.unbound, 120)
+
+      // Splitter-0 shrink: palette decreases; mappings+unbound absorb the freed space.
+      const shrunk = sidebar.resizeFromDrag(0, -40, {
+        palette: 140,
+        mappings: 200,
+        unbound: 180,
+      })
+      assert.equal(shrunk.palette, 100)
+      assert.equal(
+        shrunk.mappings + shrunk.unbound,
+        200 + 180 + 40,
+      )
+
+      // Splitter-2: mappings ↔ unbound boundary moves with mins.
+      const split2 = sidebar.resizeFromDrag(2, 30, {
+        palette: 140,
+        mappings: 200,
+        unbound: 180,
+      })
+      assert.equal(split2.palette, 140)
+      assert.equal(split2.mappings, 230)
+      assert.equal(split2.unbound, 150)
+
+      const split2Dom = root.querySelector('[data-sidebar-splitter="2"]')
+      const before2 = {
+        mappings: paneHeight(root, 'mappings'),
+        unbound: paneHeight(root, 'unbound'),
+      }
+      split2Dom.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientY: 300,
+        pointerId: 3,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 330,
+        pointerId: 3,
+      })
+      globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 3 })
+      assert.notEqual(paneHeight(root, 'mappings'), before2.mappings)
+      assert.notEqual(paneHeight(root, 'unbound'), before2.unbound)
+      assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
     } finally {
       restoreDoc()
     }
@@ -557,6 +607,24 @@ describe('chrome shell I/O matrix', () => {
         distributed.mappings + distributed.unbound,
         800 - sidebar.PICKER_PANE_HEIGHT_PX - 3 - sidebar.DEFAULT_PALETTE_HEIGHT_PX,
       )
+
+      // Mount path with measurable host height (not only the helper call).
+      const emptyStorage = persist.createMemoryStorage()
+      const measurableHost = createElement('aside')
+      measurableHost.clientHeight = 800
+      sidebar.mountSidebar(measurableHost, { storage: emptyStorage })
+      assert.equal(
+        paneHeight(measurableHost, 'palette'),
+        `${sidebar.DEFAULT_PALETTE_HEIGHT_PX}px`,
+      )
+      assert.equal(
+        paneHeight(measurableHost, 'mappings'),
+        `${distributed.mappings}px`,
+      )
+      assert.equal(
+        paneHeight(measurableHost, 'unbound'),
+        `${distributed.unbound}px`,
+      )
     } finally {
       restoreDoc()
     }
@@ -600,7 +668,11 @@ describe('chrome shell I/O matrix', () => {
         pointerId: 1,
         preventDefault() {},
       })
-      globalThis.window.dispatchEvent({ type: 'pointermove', clientY: 240 })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 240,
+        pointerId: 1,
+      })
       globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 1 })
 
       assert.equal(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
@@ -678,9 +750,179 @@ describe('chrome shell I/O matrix', () => {
           pointerId: 1,
           preventDefault() {},
         })
-        globalThis.window.dispatchEvent({ type: 'pointermove', clientY: 240 })
+        globalThis.window.dispatchEvent({
+          type: 'pointermove',
+          clientY: 240,
+          pointerId: 1,
+        })
         globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 1 })
       })
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('pointercancel ends drag without prefs commit; release throw still cleans up', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const prefsBefore = {
+        zoomStep: '100%',
+        panXY: { x: 0, y: 0 },
+        sidebarPaneHeights: {
+          palette: 140,
+          mappings: 220,
+          unbound: 180,
+        },
+      }
+      storage.setItem(persist.PREFS_KEY, JSON.stringify(prefsBefore))
+
+      const root = createRoot()
+      mountChromeShell(root, model.createStore(), { storage })
+      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
+
+      splitter1.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientY: 200,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 240,
+        pointerId: 1,
+      })
+      assert.equal(paneHeight(root, 'palette'), '180px')
+
+      globalThis.window.dispatchEvent({
+        type: 'pointercancel',
+        pointerId: 1,
+      })
+
+      // Cancel must not commit prefs (spec: write on pointer-up only).
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)), prefsBefore)
+      assert.equal(splitter1.classList.contains('is-dragging'), false)
+
+      // Remount from saved prefs; a full pointerup cycle must commit.
+      const root2 = createRoot()
+      mountChromeShell(root2, model.createStore(), { storage })
+      const splitter2 = root2.querySelector('[data-sidebar-splitter="1"]')
+      splitter2.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientY: 200,
+        pointerId: 2,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 240,
+        pointerId: 2,
+      })
+      globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 2 })
+      const afterUp = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.equal(afterUp.sidebarPaneHeights.palette, 180)
+      assert.equal(afterUp.sidebarPaneHeights.mappings, 180)
+
+      // releasePointerCapture throw must not skip listener cleanup / commit.
+      storage.setItem(persist.PREFS_KEY, JSON.stringify(prefsBefore))
+      const root3 = createRoot()
+      mountChromeShell(root3, model.createStore(), { storage })
+      const splitterThrow = root3.querySelector('[data-sidebar-splitter="1"]')
+      splitterThrow.releasePointerCapture = () => {
+        throw new Error('already released')
+      }
+      assert.doesNotThrow(() => {
+        splitterThrow.dispatchEvent({
+          type: 'pointerdown',
+          button: 0,
+          clientY: 200,
+          pointerId: 7,
+          preventDefault() {},
+        })
+        globalThis.window.dispatchEvent({
+          type: 'pointermove',
+          clientY: 230,
+          pointerId: 7,
+        })
+        globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 7 })
+      })
+      assert.equal(splitterThrow.classList.contains('is-dragging'), false)
+      const afterThrow = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.equal(afterThrow.sidebarPaneHeights.palette, 170)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('splitter drag ignores foreign pointerId and re-entrant pointerdown', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '100%',
+          panXY: { x: 0, y: 0 },
+          sidebarPaneHeights: {
+            palette: 140,
+            mappings: 220,
+            unbound: 180,
+          },
+        }),
+      )
+      const root = createRoot()
+      mountChromeShell(root, model.createStore(), { storage })
+      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
+
+      splitter1.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientY: 200,
+        pointerId: 1,
+        preventDefault() {},
+      })
+
+      // Foreign move must not resize.
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 280,
+        pointerId: 99,
+      })
+      assert.equal(paneHeight(root, 'palette'), '140px')
+
+      // Re-entrant pointerdown must not stack a second session.
+      splitter1.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientY: 200,
+        pointerId: 2,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientY: 240,
+        pointerId: 1,
+      })
+      assert.equal(paneHeight(root, 'palette'), '180px')
+
+      // Foreign up must not end the active drag.
+      globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 99 })
+      assert.equal(splitter1.classList.contains('is-dragging'), true)
+
+      globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 1 })
+      assert.equal(splitter1.classList.contains('is-dragging'), false)
+      const saved = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.equal(saved.sidebarPaneHeights.palette, 180)
     } finally {
       restoreDoc()
     }
