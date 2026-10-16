@@ -71,6 +71,27 @@ context:
 - Given non-default Zoom and pan prefs, when the shell remounts (cold reopen of prefs), then the same transform is restored.
 - Given pan or Zoom prefs writes, when inspecting the project envelope, then prefs fields are absent from the envelope document.
 
+### Review Findings
+
+- [x] [Review][Patch] Mid-drag live Zoom scale only asserted at 100% — drag case seeds `zoomStep: '100%'` and expects `scale(1)`; Zoom live/reopen uses `applyCanvasViewFromPrefs`, not mid-drag `applyLiveTransform`. A broken live scale during drag would still pass `npm test`. [scripts/chrome-shell-matrix.test.mjs:1474] — fixed: matrix asserts mid-drag `scale(1.5)` under `zoomStep: '150%'`
+- [x] [Review][Patch] Arrow-pan-while-dragging guard untested — `keydown` returns while `dragging` is true, but matrix never fires Arrow* between pointerdown and pointerup/cancel; deleting the guard would still leave tests green. [src/canvas/index.ts:161-162] — fixed: ArrowRight during open drag leaves prefs/transform unchanged before cancel restore
+
+**Rejected (code review 2026-10-16):**
+- `false` — Code Map “allow overflow” vs CSS — would only edit this spec; clipping already intentional
+- `false` — Spec `done` vs sprint `review` — expected BMad tracking during this review
+- `false` — Stale open mediums in prior triage log (ArrowLeft/Down, setPointerCapture try, arrow-during-drag commit, click-to-focus) — addressed in current code/tests; closed in triage log
+- `false` — Unfocused arrows lack explicit focus check — pan listener is on the canvas host only; keydown on Zoom select cannot pan
+- `false` — Empty Implementation Notes / Spec Change Log / review_loop_iteration — process metadata; not a product defect
+- `false` — Design Notes omit touch-action — already deferred in `deferred-work.md`; not a new product gap
+- `false` — Non-primary button ignore untested — already deferred prior review; not re-opened
+- `false` — Touch without `touch-action: none` — already deferred prior review
+- `false` — Double-mount duplicate listeners — chrome mounts a fresh host; product path does not re-wire same element
+- `false` — NaN/Infinity panXY — only hand-edited corrupt prefs
+- `low` rejected — Tab-to-focus / a11y name / grab cursor vs secondary button / Zoom clamp path / cancel mid-drag assert / harness capture no-ops / session snapshot on pan-only case — everyday harm unlikely or out of Always matrix
+- `low` rejected — savePrefs fail-soft snap (drag/arrow/Zoom) — rare quota path; same fail-soft class as sidebar
+- `low` rejected — Zoom change mid-drag wipes live pan — uncommon combo; everyday Zoom between gestures
+- `low` rejected — Arrow during drag omits `preventDefault` (possible page scroll) — app shell is `100vh` with no scrollable page body; polish only
+
 ## Implementation Notes
 
 ## Spec Change Log
@@ -81,23 +102,27 @@ context:
 - `false` — Frozen matrix missing `pointercancel` row — reject (would only edit frozen intent); cancel path already implemented and tested
 - `false` — Spec `in-review` vs sprint `in-progress` — expected BMad states during build review before sprint sync to review
 - `false` — Empty Implementation Notes / Spec Change Log / Review Triage Log at review start — process metadata; this log fills during triage
-- `medium` — ArrowLeft / ArrowDown never exercised in tests [scripts/chrome-shell-matrix.test.mjs] — only Right/Up run; broken Left/Down would still pass
+- `medium` closed — ArrowLeft / ArrowDown never exercised — addressed: matrix now asserts all four arrows
 - `low` rejected — Cancel-drag omits mid-drag transform assert before restore — restore/prefs equality already proven; everyday product harm unlikely
 - `false` — “Ignore drag started outside canvas” untested — pointerdown is only on the canvas host; outside starts cannot enter the handler
-- `low` — Click-to-focus (`host.focus()`) unasserted [src/canvas/index.ts pointerdown] — tests dispatch keydown on host without observing focus
-- `low` rejected — Drag-pan at Zoom ≠ 100% untested — Design Notes lock screen-pixel deltas; same `applyLiveTransform` path as 100%
+- `medium` closed — Click-to-focus unasserted — addressed: pan drag case asserts `canvasHost._focused === true` after pointerdown
+- `low` rejected — Drag-pan at Zoom ≠ 100% untested (pan deltas) — Design Notes lock screen-pixel deltas; superseded by finer mid-drag scale gap below
 - `low` rejected — Non-primary button ignore untested [button !== 0] — real gap but outside everyday I/O matrix; deferred separately
 - `low` rejected — savePrefs fail-soft after pan leaves visual snap via reload — rare quota path; same fail-soft class as sidebar/Zoom; fix adds branch complexity
 - `low` rejected — Mid-drag remount / listener teardown — product remounts replace the host element; not an everyday operator path
-- `medium` — `setPointerCapture` throw after `dragging = true` with no try [src/canvas/index.ts:149-151] — can leave drag stuck and ignore later pointerdowns
-- `medium` — Arrow pan while pointer drag still active [src/canvas/index.ts keydown] — commits prefs that diverge from live drag transform
+- `medium` closed — `setPointerCapture` throw after `dragging = true` with no try — addressed: try/catch around capture; window listeners still end drag
+- `medium` closed — Arrow pan while pointer drag still active commits prefs — addressed: `if (dragging) return` before arrow pan; remaining gap is missing test (patch below)
 - `low` rejected — Zoom change during active drag wipes live pan — uncommon combo; everyday Zoom happens between gestures
 - `low` rejected — Zoom savePrefs fail-soft desyncs strip vs canvas — strip uses in-memory next; canvas reloads; rare storage failure
 - `low` rejected — NaN/Infinity panXY passes typeof-number guard — only hand-edited corrupt prefs; not seed/product writers
 - `medium` deferred — Touch drag without `touch-action: none` [src/styles/base.css] — browser gesture may steal touch pans; desktop-first MVP
 - `low` rejected — Remount `mountCanvas` on same host duplicates listeners — chrome always creates a fresh host; product does not double-mount
-- `medium` — Click-to-focus regression gap [verification-gap] — delete `host.focus()` and tests still pass
 - `low` deferred — Non-primary pointer button ignore untested [verification-gap] — real gap; close if secondary-button canvas work lands
+- `medium` patch — Mid-drag live Zoom scale only asserted at 100% [verification-gap] — drag path’s `applyLiveTransform` scale unproven at 150%
+- `medium` patch — Arrow-pan-while-dragging guard untested [verification-gap] — deleting `if (dragging) return` would still leave matrix green
+- `false` — Spec `done` vs sprint `review` — expected during this code-review run
+- `false` — Unfocused arrows lack explicit `document.activeElement` check — host-scoped keydown already isolates focus
+- `low` rejected — Arrow during drag omits `preventDefault` — `100vh` shell; page scroll unlikely
 
 ## Design Notes
 

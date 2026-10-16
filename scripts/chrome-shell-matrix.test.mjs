@@ -1650,6 +1650,7 @@ describe('chrome shell I/O matrix', () => {
       assert.deepEqual(envelope.project, seed.createSeedProject())
 
       // Drag that never reaches pointer-up (cancel) must not commit.
+      // Arrow during open drag must not commit prefs or step the live transform.
       storage.setItem(
         persist.PREFS_KEY,
         JSON.stringify({
@@ -1675,6 +1676,23 @@ describe('chrome shell I/O matrix', () => {
         clientY: 50,
         pointerId: 2,
       })
+      assert.equal(
+        canvasSurfaceTransform(rootCancel),
+        'translate(50px, 50px) scale(1)',
+      )
+      hostCancel.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowRight',
+        preventDefault() {},
+      })
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 0,
+        y: 0,
+      })
+      assert.equal(
+        canvasSurfaceTransform(rootCancel),
+        'translate(50px, 50px) scale(1)',
+      )
       globalThis.window.dispatchEvent({
         type: 'pointercancel',
         clientX: 50,
@@ -1688,6 +1706,58 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(
         canvasSurfaceTransform(rootCancel),
         'translate(0px, 0px) scale(1)',
+      )
+
+      // Mid-drag live scale must keep non-100% Zoom (applyLiveTransform path).
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '150%',
+          panXY: { x: 5, y: 10 },
+          sidebarPaneHeights: {},
+        }),
+      )
+      const rootZoomDrag = createRoot()
+      mountChromeShell(rootZoomDrag, model.createStore(), { storage })
+      const hostZoomDrag = rootZoomDrag.querySelector('[data-canvas-host]')
+      assert.equal(
+        canvasSurfaceTransform(rootZoomDrag),
+        'translate(5px, 10px) scale(1.5)',
+      )
+      hostZoomDrag.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 20,
+        clientY: 30,
+        pointerId: 3,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientX: 60,
+        clientY: 70,
+        pointerId: 3,
+      })
+      assert.equal(
+        canvasSurfaceTransform(rootZoomDrag),
+        'translate(45px, 50px) scale(1.5)',
+      )
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 5,
+        y: 10,
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointerup',
+        clientX: 60,
+        clientY: 70,
+        pointerId: 3,
+      })
+      const afterZoomDrag = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.deepEqual(afterZoomDrag.panXY, { x: 45, y: 50 })
+      assert.equal(afterZoomDrag.zoomStep, '150%')
+      assert.equal(
+        canvasSurfaceTransform(rootZoomDrag),
+        'translate(45px, 50px) scale(1.5)',
       )
     } finally {
       restoreDoc()
