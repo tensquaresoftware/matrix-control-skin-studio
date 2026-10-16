@@ -70,6 +70,21 @@ context:
 - Given the context strip, when session Object/State change via `store.apply`, then strip values update and the strip itself stays non-editable.
 - Given Skin switch, when inspecting prefs and envelope, then prefs are untouched by the Skin path and the envelope gains no Zoom/pan fields.
 
+### Review Findings
+
+#### Rejected
+
+- `false` — Spec `status: done` vs sprint `review` — expected BMad states (implementation done, awaiting this review)
+- `false` — Code Map / empty Implementation Notes / Spec Change Log / `review_loop_iteration: 0` — reject (would only edit this build’s spec); process metadata only
+- `false` — Sticky Skin switch never re-asserts strip Zoom still `150%` — Skin path never writes Zoom readout; prefs blob equality already proves Zoom step sticky (same as build triage)
+- `false` — Asymmetric Object/State selection untested — each field syncs with its own `??`; no shared path that can desync one side
+- `false` — Null-selection Skin switch omits prefs isolation assert — same Skin change handler as sticky branch; handler never writes prefs
+- `false` — Orphan Skin sticky missing from frozen I/O matrix — reject (would only edit this build’s spec); orphan sticky covered in tests
+- `false` — Non-editability proven only via missing `contenteditable` — values are non-interactive spans from `contextField`, never inputs/editors
+- `false` — Empty-string Object/State shows blank instead of `—` (`??` vs `||`) — writers use `null` or real ids; empty string not produced on product/seed/Skin paths
+- `low` rejected — Second `store.subscribe` without unsubscribe on remount — product mounts chrome once; teardown needs a surface beyond a direct correction (same class as 2.3 Skin subscribe)
+- `false` — Live Object/State `store.apply` does not re-assert Skin strip — `syncSkinFromStore` keeps `activeSkinId` when session apply preserves it
+
 ## Implementation Notes
 
 ## Spec Change Log
