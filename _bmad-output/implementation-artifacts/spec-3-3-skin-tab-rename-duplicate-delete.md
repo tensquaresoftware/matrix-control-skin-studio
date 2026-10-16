@@ -103,12 +103,40 @@ context:
 - `low` rejected — Delete confirm lacks Escape / scrim dismiss — same pattern as New / Palette confirm
 - `low` rejected — Modal stale if Skin disappears while open — rare; Cancel still closes without mutate
 
+### Code review 2026-10-16 (post-build)
+
+- `medium` patch — Mid-edit rename contract (`editingSkinId` + `nameFocused` draft) untested — verified: happy-path rename never switches `activeSkinId` / never `apply`s while focused; palette has sibling mid-edit case — route patch
+- `low` patch — Delete confirm `onConfirm` without `try/finally` — verified: throw before `close()` leaves scrim up — route patch
+- `low` deferred — Delete confirm double-open guard untested — already deferred from build review; reconfirmed by verification-gap
+- `false` — Spec Code Map / status / empty notes — process or fix-would-edit-spec
+- `false` — Rename matrix only Enter for success — Enter calls `blur()`; same `commitRename` path
+- `false` — Confirm deletes wrong Skin if combo changes while scrim open — `onConfirm` closes over open-time id
+- `low` rejected — Escape rename untested; incomplete ARIA tabs; unused `data-skin-delete-id`; duplicate combo label/context-strip asserts; palette-picker skin-name smoke assert; stale name after deleted-while-focused; remount subscribe leak — unlikely everyday or same pattern as sibling panes
+
 ### Review Findings
 
 - [x] [Review][Patch] Rename commits against active Skin at blur, not the id captured on focus [src/sidebar/skin-pane.ts]
 - [x] [Review][Patch] Matrix never asserts stale activeSkinId (set but missing from skins) [scripts/skin-tab-matrix.test.mjs]
 - [x] [Review][Patch] Matrix never asserts Mappings stub stays empty [scripts/skin-tab-matrix.test.mjs]
 - [x] [Review][Defer] Delete confirm double-open guard untested [src/sidebar/skin-delete-confirm.ts] — deferred: single-open paths covered
+- [x] [Review][Patch] Matrix never pins mid-edit rename (focused Skin id + draft survives store tick) [scripts/skin-tab-matrix.test.mjs]
+- [x] [Review][Patch] Delete confirm close must run even if onConfirm throws [src/sidebar/skin-delete-confirm.ts:57]
+- [x] [Review][Defer] Delete confirm double-open guard untested [src/sidebar/skin-delete-confirm.ts] — deferred: already recorded in deferred-work.md from build review
+
+#### Rejected (code review 2026-10-16)
+
+- `false` — Spec Code Map still says pane 3 empty — fix would edit the spec under review
+- `false` — Spec `done` vs sprint `review` — expected while this review runs
+- `false` — Empty Implementation Notes / Spec Change Log — process fill-in, not a product defect
+- `false` — Rename success only via Enter — Enter triggers blur; commit path is covered
+- `false` — Delete confirm may delete wrong Skin if active changes while open — confirm closes over the id captured at open
+- `low` — Escape-cancels-rename untested — blur/Enter already cover commit and empty reject
+- `low` — Incomplete ARIA tab wiring (`aria-controls` / labelledby) — full pattern adds complexity; click segments still work
+- `low` — Unused `data-skin-delete-id` attribute — confirm already closes over the correct id
+- `low` — Duplicate matrix omits combo option label / context-strip text — id listed + name field show `(copy)`
+- `low` — palette-picker asserts `[data-skin-name]` — intentional skip for free-hex walk after Skin tab mount
+- `low` — Stale name text if Skin removed while field focused — blur restores; rare path
+- `low` — Remount without unsubscribe — same pattern as Palette/Picker; production mounts once
 
 ## Verification
 

@@ -504,6 +504,62 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
+  it('rename: mid-edit keeps focused Skin id and draft across store tick', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountChromeWithStore(
+        chrome,
+        model,
+        projectWithActiveSkin(),
+        defaultSession('black-green'),
+      )
+      selectSkinTab(root)
+
+      const name = root.querySelector('[data-skin-name]')
+      assert.ok(name)
+      name.focus()
+      name.value = 'Night/Green'
+
+      // Unrelated store tick while focused must not wipe the draft.
+      const project = store.getState().project
+      store.apply({
+        project: {
+          ...project,
+          palette: project.palette.map((e) =>
+            e.id === 'duoLedYellow' ? { ...e, hex: '#FFDD00' } : e,
+          ),
+        },
+      })
+      assert.equal(name.value, 'Night/Green')
+
+      // Switching active Skin mid-edit must still rename the focused id.
+      store.apply({
+        session: {
+          ...store.getState().session,
+          activeSkinId: 'cream-green',
+        },
+      })
+      assert.equal(name.value, 'Night/Green')
+      name.blur()
+
+      const skins = store.getState().project.skins
+      assert.equal(
+        skins.find((s) => s.id === 'black-green')?.displayName,
+        'Night/Green',
+      )
+      assert.equal(
+        skins.find((s) => s.id === 'cream-green')?.displayName,
+        'Cream/Green',
+      )
+    } finally {
+      restore()
+    }
+  })
+
   it('duplicate: new id, deep-copied mappings, (copy) name, activates copy, combo lists it', async () => {
     const restore = installMinimalDocument()
     try {

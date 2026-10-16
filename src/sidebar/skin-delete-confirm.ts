@@ -55,8 +55,11 @@ export function openSkinDeleteConfirm(
   })
 
   confirmButton.addEventListener('click', () => {
-    onConfirm()
-    close()
+    try {
+      onConfirm()
+    } finally {
+      close()
+    }
   })
 
   actions.append(cancelButton, confirmButton)
