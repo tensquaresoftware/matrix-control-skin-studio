@@ -76,7 +76,7 @@ export function mountChromeShell(
   root.append(shell)
 
   mountCanvas(canvasHost, { storage })
-  mountSidebar(sidebarHost, { storage })
+  mountSidebar(sidebarHost, { storage, store })
 }
 
 function buildTopBar(

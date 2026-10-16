@@ -1,6 +1,10 @@
+import type { ProjectStore } from '../model/store'
 import { loadPrefs, savePrefs } from '../persist/prefs'
 import type { PersistStorage } from '../persist/storage'
 import { getBrowserStorage } from '../persist/storage'
+import { mountPalettePane } from './palette-pane'
+import { createPaletteSelection } from './palette-selection'
+import { mountPickerPane } from './picker-pane'
 
 /** Mock-canonical picker height (PANE_DEFAULTS = MOCK) — fixed, not in prefs. */
 export const PICKER_PANE_HEIGHT_PX = 220
@@ -19,6 +23,8 @@ export type SidebarPaneHeights = {
 
 export type MountSidebarOptions = {
   storage?: PersistStorage
+  /** When provided, mounts Palette rows + Picker live recolour (story 3-1). */
+  store?: ProjectStore
 }
 
 const PANE_IDS = ['palette', 'mappings', 'unbound'] as const
@@ -50,12 +56,20 @@ export function mountSidebar(
   const splitter1 = createSplitter(1)
   const splitter2 = createSplitter(2)
 
-  host.append(picker, splitter0, palette, splitter1, mappings, splitter2, unbound)
+  host.append(
+    picker.pane,
+    splitter0,
+    palette.pane,
+    splitter1,
+    mappings.pane,
+    splitter2,
+    unbound.pane,
+  )
 
   const paneEls = {
-    palette,
-    mappings,
-    unbound,
+    palette: palette.pane,
+    mappings: mappings.pane,
+    unbound: unbound.pane,
   }
 
   applyHeights(paneEls, heights)
@@ -66,6 +80,12 @@ export function mountSidebar(
     paneEls,
     storage,
   })
+
+  if (options.store) {
+    const selection = createPaletteSelection()
+    mountPickerPane(picker.body, options.store, selection)
+    mountPalettePane(palette.body, options.store, selection)
+  }
 }
 
 /**
@@ -133,7 +153,7 @@ function createPane(
   title: string,
   heightPx: number,
   fixed: boolean,
-): HTMLElement {
+): { pane: HTMLElement; body: HTMLElement } {
   const pane = document.createElement('div')
   pane.className = `sidebar-pane sidebar-pane-${id}`
   pane.setAttribute('data-sidebar-pane', id)
@@ -148,9 +168,10 @@ function createPane(
 
   const body = document.createElement('div')
   body.className = 'sidebar-pane-body'
+  body.setAttribute('data-sidebar-pane-body', id)
 
   pane.append(head, body)
-  return pane
+  return { pane, body }
 }
 
 function createSplitter(index: number): HTMLElement {

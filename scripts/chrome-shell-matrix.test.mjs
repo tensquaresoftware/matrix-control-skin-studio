@@ -333,12 +333,13 @@ describe('chrome shell I/O matrix', () => {
   it('fresh shell mount: chrome geometry, four panes, live Zoom/Skin + stub ops', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
     const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
     const sidebar = await importCompiledTs('src/sidebar/index.ts')
     const restoreDoc = installMinimalDocument()
 
     try {
-      const store = model.createStore()
+      const store = model.createStore({ project: seed.createSeedProject() })
       const storage = persist.createMemoryStorage()
       const root = createRoot()
       mountChromeShell(root, store, { storage })
@@ -349,6 +350,8 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-chrome-body]'))
       assert.ok(root.querySelector('[data-canvas-host]'))
       assert.ok(root.querySelector('[data-sidebar]'))
+      assert.ok(root.querySelector('[data-palette-row="duoLedYellow"]'))
+      assert.ok(root.querySelector('[data-picker-hex]'))
 
       // Layout slot classes must survive mountCanvas / mountSidebar (flex:1 + 320px).
       const canvasHost = root.querySelector('[data-canvas-host]')
