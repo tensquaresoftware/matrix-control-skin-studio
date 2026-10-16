@@ -42,11 +42,21 @@ export function mountChromeShell(
   shell.setAttribute('aria-label', 'Skin Studio')
 
   const contextStrip = buildContextStrip()
+  const objectReadout = contextStrip.querySelector('[data-context-value="object"]')
+  const stateReadout = contextStrip.querySelector('[data-context-value="state"]')
   const zoomReadout = contextStrip.querySelector('[data-context-value="zoom"]')
   const skinReadout = contextStrip.querySelector('[data-context-value="skin"]')
-  if (!zoomReadout || !skinReadout) {
-    throw new Error('Context strip Zoom/Skin readouts missing')
+  if (!objectReadout || !stateReadout || !zoomReadout || !skinReadout) {
+    throw new Error('Context strip Object/State/Zoom/Skin readouts missing')
   }
+
+  const syncObjectStateFromStore = (): void => {
+    const { session } = store.getState()
+    objectReadout.textContent = session.selectedObjectTypeId ?? EMPTY_GLYPH
+    stateReadout.textContent = session.selectedStateId ?? EMPTY_GLYPH
+  }
+  syncObjectStateFromStore()
+  store.subscribe(syncObjectStateFromStore)
 
   const topBar = buildTopBar(root, store, storage, zoomReadout, skinReadout)
   const body = document.createElement('div')

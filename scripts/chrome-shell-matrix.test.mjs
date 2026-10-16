@@ -560,7 +560,7 @@ describe('chrome shell I/O matrix', () => {
     }
   })
 
-  it('Skin combo: lists displayNames, null stays empty, switch preserves Object/State', async () => {
+  it('Skin combo: lists displayNames, sticky Object/State strip, prefs isolation', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
     const seed = await importCompiledTs('src/seed/index.ts')
@@ -571,7 +571,7 @@ describe('chrome shell I/O matrix', () => {
       const seedProject = seed.createSeedProject()
       assert.equal(seedProject.skins.length, 5)
 
-      // Null activeSkinId → empty/—; Object/State stay —
+      // Null Object/State/Skin → strip —; Skin switch must not invent selection
       const storageNull = persist.createMemoryStorage()
       const storeNull = model.createStore()
       storeNull.apply({
@@ -602,10 +602,45 @@ describe('chrome shell I/O matrix', () => {
         rootNull.querySelector('[data-context-value="skin"]')?.textContent,
         '—',
       )
+      assert.equal(
+        rootNull.querySelector('[data-context-value="object"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        rootNull.querySelector('[data-context-value="state"]')?.textContent,
+        '—',
+      )
       assert.ok(rootNull.querySelector('[data-chrome-skin]')?.classList.contains('chrome-skin-combo'))
 
-      // Switch skin: only activeSkinId changes; strip shows displayName
+      skinSelectNull.value = 'monochrome'
+      skinSelectNull.dispatchEvent({ type: 'change' })
+      const afterNullSwitch = storeNull.getState().session
+      assert.equal(afterNullSwitch.activeSkinId, 'monochrome')
+      assert.equal(afterNullSwitch.selectedObjectTypeId, null)
+      assert.equal(afterNullSwitch.selectedStateId, null)
+      assert.equal(
+        rootNull.querySelector('[data-context-value="object"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        rootNull.querySelector('[data-context-value="state"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        rootNull.querySelector('[data-context-value="skin"]')?.textContent,
+        'Monochrome',
+      )
+
+      // Sticky switch: Object/State/Zoom/pan prefs preserved; strip shows session ids
       const storage = persist.createMemoryStorage()
+      const stickyPrefs = {
+        zoomStep: '150%',
+        panXY: { x: 12, y: 34 },
+        sidebarPaneHeights: { palette: 160, mappings: 200, unbound: 140 },
+      }
+      storage.setItem(persist.PREFS_KEY, JSON.stringify(stickyPrefs))
+      const prefsBefore = storage.getItem(persist.PREFS_KEY)
+
       const store = model.createStore()
       persist.attachAutosave(store, storage)
       store.apply({
@@ -620,19 +655,24 @@ describe('chrome shell I/O matrix', () => {
 
       const root = createRoot()
       mountChromeShell(root, store, { storage })
+      const objectVal = root.querySelector('[data-context-value="object"]')
+      const stateVal = root.querySelector('[data-context-value="state"]')
+      assert.equal(objectVal?.tagName, 'SPAN')
+      assert.equal(stateVal?.tagName, 'SPAN')
+      assert.equal(objectVal.hasAttribute('contenteditable'), false)
+      assert.equal(stateVal.hasAttribute('contenteditable'), false)
+
       const skinSelect = root.querySelector('[data-chrome-skin-select]')
       assert.equal(skinSelect.value, 'black-green')
       assert.equal(
         root.querySelector('[data-context-value="skin"]')?.textContent,
         'Black/Green',
       )
+      assert.equal(objectVal.textContent, 'ot-1')
+      assert.equal(stateVal.textContent, 'idle')
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        '—',
-      )
-      assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        '150%',
       )
 
       skinSelect.value = 'monochrome'
@@ -646,11 +686,65 @@ describe('chrome shell I/O matrix', () => {
         root.querySelector('[data-context-value="skin"]')?.textContent,
         'Monochrome',
       )
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        'ot-1',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
+        'idle',
+      )
+      assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)), stickyPrefs)
       assert.notEqual(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
       const envelope = JSON.parse(storage.getItem(persist.PROJECT_ENVELOPE_KEY))
       assert.equal(envelope.session.activeSkinId, 'monochrome')
       assert.equal(envelope.session.selectedObjectTypeId, 'ot-1')
+      assert.equal(envelope.session.selectedStateId, 'idle')
       assert.equal(Object.hasOwn(envelope, 'zoomStep'), false)
+      assert.equal(Object.hasOwn(envelope, 'panXY'), false)
+
+      // Live strip sync via store.apply (no selection UI)
+      store.apply({
+        session: {
+          selectedObjectTypeId: 'ot-live',
+          selectedStateId: 'pressed',
+          activeSkinId: 'monochrome',
+        },
+      })
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        'ot-live',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
+        'pressed',
+      )
+
+      store.apply({
+        session: {
+          selectedObjectTypeId: null,
+          selectedStateId: null,
+          activeSkinId: 'monochrome',
+        },
+      })
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
+        '—',
+      )
+
+      // Restore sticky ids for clear-skin path
+      store.apply({
+        session: {
+          selectedObjectTypeId: 'ot-1',
+          selectedStateId: 'idle',
+          activeSkinId: 'monochrome',
+        },
+      })
 
       // Unknown id ignored
       const beforeUnknown = store.getState().session
@@ -671,8 +765,17 @@ describe('chrome shell I/O matrix', () => {
         root.querySelector('[data-context-value="skin"]')?.textContent,
         '—',
       )
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        'ot-1',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
+        'idle',
+      )
+      assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
 
-      // Orphan activeSkinId on mount → session cleared; combo still lists — + skins
+      // Orphan activeSkinId on mount → Skin cleared; Object/State sticky + live on strip
       const storageOrphan = persist.createMemoryStorage()
       const storeOrphan = model.createStore()
       storeOrphan.apply({
@@ -694,6 +797,14 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(
         rootOrphan.querySelector('[data-context-value="skin"]')?.textContent,
         '—',
+      )
+      assert.equal(
+        rootOrphan.querySelector('[data-context-value="object"]')?.textContent,
+        'ot-orphan',
+      )
+      assert.equal(
+        rootOrphan.querySelector('[data-context-value="state"]')?.textContent,
+        'state-orphan',
       )
       const orphanLabels = skinSelectOrphan.children
         .filter((c) => c.tagName === 'OPTION')
@@ -1330,6 +1441,14 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(root.querySelector('[data-chrome-skin-select]')?.value, '')
       assert.equal(
         root.querySelector('[data-context-value="skin"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
         '—',
       )
     } finally {
