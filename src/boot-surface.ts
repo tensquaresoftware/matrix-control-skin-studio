@@ -20,10 +20,12 @@ export function mountBootSurface(
   root.replaceChildren()
 
   const title = document.createElement('h1')
+  title.className = 'boot-title'
   title.textContent = 'Skin Studio'
 
   const newButton = document.createElement('button')
   newButton.type = 'button'
+  newButton.className = 'boot-new-button'
   newButton.textContent = 'New'
 
   root.append(title, newButton)
@@ -39,27 +41,27 @@ function openNewConfirmModal(root: HTMLElement, store: ProjectStore): void {
 
   const scrim = document.createElement('div')
   scrim.setAttribute('data-boot-confirm', '')
-  scrim.style.cssText =
-    'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:1000'
+  scrim.className = 'boot-confirm-scrim'
 
   const panel = document.createElement('div')
-  panel.style.cssText =
-    'background:#fff;color:#111;padding:1.25rem 1.5rem;max-width:28rem;box-shadow:0 8px 24px rgba(0,0,0,0.25)'
+  panel.className = 'boot-confirm-panel'
 
   const body = document.createElement('p')
+  body.className = 'boot-confirm-body'
   body.textContent = NEW_CONFIRM_BODY
 
   const actions = document.createElement('div')
-  actions.style.cssText = 'display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem'
+  actions.className = 'boot-confirm-actions'
 
   const cancelButton = document.createElement('button')
   cancelButton.type = 'button'
+  cancelButton.className = 'boot-confirm-secondary'
   cancelButton.textContent = 'Cancel'
 
   const confirmButton = document.createElement('button')
   confirmButton.type = 'button'
+  confirmButton.className = 'boot-confirm-primary-destructive'
   confirmButton.textContent = 'New'
-  confirmButton.style.cssText = 'background:#b00020;color:#fff;border:none;padding:0.4rem 0.85rem'
 
   const close = (): void => {
     scrim.remove()

@@ -10,10 +10,14 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --test scripts/scaffold-matrix.test.mjs scripts/store-matrix.test.mjs scripts/seed-matrix.test.mjs scripts/persist-matrix.test.mjs scripts/boot-seed-matrix.test.mjs"
+    "test": "node --test scripts/scaffold-matrix.test.mjs scripts/store-matrix.test.mjs scripts/seed-matrix.test.mjs scripts/persist-matrix.test.mjs scripts/boot-seed-matrix.test.mjs scripts/styles-matrix.test.mjs"
   },
   "devDependencies": {
     "typescript": "7.0.2",
     "vite": "8.3.4"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0"
   }
 }
