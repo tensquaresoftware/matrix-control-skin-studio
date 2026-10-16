@@ -81,8 +81,11 @@ context:
 - No `base.css` change — three action buttons wrap with existing styles.
 - Preserve / Create matrix cases live in `scripts/skin-tab-matrix.test.mjs` (seed-matrix unchanged).
 - Review patch: Create happy-path mounts `projectWithActiveSkin()` so empty-mappings cannot pass by copying Duplicate.
+- Review patch (pass 2): happy-path re-asserts `black-green` mappings via `fixtureMappings()`; open-Skin-tab pins `Create Skin` textContent.
 
 ## Spec Change Log
+
+- 2026-10-16 — Code-review pass 2: pin existing-skin mappings after Create; assert Create Skin label.
 
 ## Review Triage Log
 
@@ -100,10 +103,27 @@ context:
 - `false` — Preserve checks display names not seed skin ids — verified: `applyCreate` only appends; never mutates existing skins
 - `false` — Create enabled after successful create untested — verified: `createBtn.disabled = false` always; no disable path
 - Edge Case Hunter — no findings
+- `medium` patch — Create happy-path never re-asserts existing Skin mappings after append — verified: pre-click mappings snapshot unused after click; wiping existing mappings would still pass — route patch
+- `low` patch — Create Skin English label never asserted — verified: matrix only checks `disabled` / click; wrong `textContent` would stay green — route patch
+- Edge Case Hunter (pass 2) — empty findings → layer marked failed; other layers used for triage
 
 ### Review Findings
 
 - [x] [Review][Patch] Create empty-mappings only asserted against empty-mapping skins [scripts/skin-tab-matrix.test.mjs]
+- [x] [Review][Patch] Create happy-path never re-asserts existing Skin mappings after append [scripts/skin-tab-matrix.test.mjs:770]
+- [x] [Review][Patch] Create Skin English label is never asserted [scripts/skin-tab-matrix.test.mjs:431]
+
+#### Rejected (code review pass 2)
+
+- `false` — Spec `done` vs sprint `review`: expected during code-review; not a product defect
+- rejected — AC omit CREATE_WITHOUT_ACTIVE: fix would edit this build’s acceptance bullets
+- `false` — No assert Create absent from top-bar combo: chrome unchanged; Create only on Skin tab by construction
+- `low` rejected — Gap-fill create omits id/mappings/activate asserts: naming-only case; happy-path covers those
+- `false` — Vacuous objectTypes colour-field loop: `assert.deepEqual(objectTypes, [])` already fails if Create baked accents
+- `false` — Duo LED calibratable only via store.apply not Picker UI: same model hex write-through; Picker path covered in palette-picker-matrix
+- `false` — Create during in-progress rename unspecified: blur still commits `editingSkinId` (old Skin); Create only appends + activates new
+- `false` — Empty Spec Change Log: process fill-in, not a product defect
+- `false` — Preserve checks display names not seed skin ids alone: subsumed by patch on happy-path existing-mappings pin; `applyCreate` is append-only today
 
 ## Verification
 

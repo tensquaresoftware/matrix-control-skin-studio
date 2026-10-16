@@ -447,7 +447,9 @@ describe('skin tab I/O matrix', () => {
       assert.ok(name)
       assert.equal(name.value, 'Black/Green')
       assert.equal(name.disabled, false)
-      assert.equal(host.querySelector('[data-skin-create]')?.disabled, false)
+      const createBtn = host.querySelector('[data-skin-create]')
+      assert.equal(createBtn?.textContent, 'Create Skin')
+      assert.equal(createBtn?.disabled, false)
       assert.equal(host.querySelector('[data-skin-duplicate]')?.disabled, false)
       assert.equal(host.querySelector('[data-skin-delete]')?.disabled, false)
     } finally {
@@ -800,6 +802,11 @@ describe('skin tab I/O matrix', () => {
       assert.equal(created.displayName, 'Skin 1')
       assert.deepEqual(created.mappings, [])
       assert.notDeepEqual(created.mappings, sourceMappings)
+      // Append-only: existing Skin mappings must remain unchanged after Create.
+      assert.deepEqual(
+        project.skins.find((s) => s.id === 'black-green')?.mappings,
+        fixtureMappings(),
+      )
       assert.equal(session.activeSkinId, created.id)
       assert.ok(skinOptionValues(root).includes(created.id))
       assert.equal(root.querySelector('[data-chrome-skin-select]')?.value, created.id)
