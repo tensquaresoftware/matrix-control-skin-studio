@@ -350,6 +350,14 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-canvas-host]'))
       assert.ok(root.querySelector('[data-sidebar]'))
 
+      // Layout slot classes must survive mountCanvas / mountSidebar (flex:1 + 320px).
+      const canvasHost = root.querySelector('[data-canvas-host]')
+      const sidebarHost = root.querySelector('[data-sidebar]')
+      assert.ok(canvasHost.classList.contains('chrome-canvas-slot'))
+      assert.ok(canvasHost.classList.contains('canvas-host'))
+      assert.ok(sidebarHost.classList.contains('chrome-sidebar-slot'))
+      assert.ok(sidebarHost.classList.contains('sidebar'))
+
       assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
       assert.equal(paneHeight(root, 'palette'), `${sidebar.DEFAULT_PALETTE_HEIGHT_PX}px`)
       assert.equal(paneHeight(root, 'mappings'), `${sidebar.MIN_MAPPINGS_HEIGHT_PX}px`)
@@ -1287,6 +1295,10 @@ describe('chrome shell I/O matrix', () => {
       // Cancel must not commit prefs (spec: write on pointer-up only).
       assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)), prefsBefore)
       assert.equal(splitter1.classList.contains('is-dragging'), false)
+      // Live heights must snap back (same contract as canvas pan cancel).
+      assert.equal(paneHeight(root, 'palette'), '140px')
+      assert.equal(paneHeight(root, 'mappings'), '220px')
+      assert.equal(paneHeight(root, 'unbound'), '180px')
 
       // Remount from saved prefs; a full pointerup cycle must commit.
       const root2 = createRoot()

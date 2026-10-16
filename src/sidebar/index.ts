@@ -34,7 +34,8 @@ export function mountSidebar(
 ): void {
   const storage = options.storage ?? getBrowserStorage()
   host.replaceChildren()
-  host.className = 'sidebar'
+  // Keep chrome slot layout classes (320px / flex-shrink:0) — never clobber.
+  host.classList.add('sidebar')
   host.setAttribute('data-sidebar', '')
 
   const saved = loadPrefs(storage).sidebarPaneHeights
@@ -261,6 +262,9 @@ function wireSplitters({ splitters, paneEls, storage }: SplitterWire): void {
 
       if (shouldPersist) {
         persistHeights(readCurrentHeights(paneEls), storage)
+      } else {
+        // Cancel / lost capture: restore live heights (mirror canvas pan cancel).
+        applyHeights(paneEls, startHeights)
       }
     }
 

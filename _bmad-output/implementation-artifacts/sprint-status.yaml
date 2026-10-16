@@ -38,7 +38,7 @@
 #   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
 #   to fill SM-1. Definitive JSON field freeze waits on Collect.
 generated: 10-15-2026 22:25
-last_updated: 10-16-2026 17:55
+last_updated: 10-16-2026 18:08
 project: Matrix-Control-Skin-Studio
 project_key: NOKEY
 tracking_system: file-system

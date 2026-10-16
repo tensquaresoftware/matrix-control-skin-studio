@@ -103,6 +103,8 @@ function isPrefsDocument(value: unknown): value is PrefsDocument {
   if (o.panXY === null || typeof o.panXY !== 'object') return false
   const pan = o.panXY as Record<string, unknown>
   if (typeof pan.x !== 'number' || typeof pan.y !== 'number') return false
+  // Reject NaN / Infinity — typeof NaN === 'number' and would poison canvas transform.
+  if (!Number.isFinite(pan.x) || !Number.isFinite(pan.y)) return false
   if (o.sidebarPaneHeights === null || typeof o.sidebarPaneHeights !== 'object') {
     return false
   }

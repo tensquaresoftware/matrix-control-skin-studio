@@ -41,7 +41,8 @@ export function mountCanvas(
 ): void {
   const storage = options.storage ?? getBrowserStorage()
   host.replaceChildren()
-  host.className = 'canvas-host'
+  // Keep chrome slot layout classes (flex:1) — never clobber with assignment.
+  host.classList.add('canvas-host')
   host.setAttribute('data-canvas-host', '')
   host.tabIndex = 0
   host.setAttribute('tabindex', '0')

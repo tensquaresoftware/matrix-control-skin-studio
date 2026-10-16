@@ -276,6 +276,31 @@ describe('persist I/O matrix', () => {
     }
   })
 
+  it('corrupt panXY (NaN / Infinity): loadPrefs falls back to defaults', async () => {
+    const { createMemoryStorage, loadPrefs, getDefaultPrefs, PREFS_KEY } =
+      await importCompiledTs('src/persist/index.ts')
+
+    const cases = [
+      { zoomStep: '100%', panXY: { x: Number.NaN, y: 0 }, sidebarPaneHeights: {} },
+      { zoomStep: '100%', panXY: { x: 0, y: Number.POSITIVE_INFINITY }, sidebarPaneHeights: {} },
+      {
+        zoomStep: '125%',
+        panXY: { x: Number.NEGATIVE_INFINITY, y: Number.NaN },
+        sidebarPaneHeights: { palette: 140 },
+      },
+    ]
+
+    for (const bad of cases) {
+      const storage = createMemoryStorage()
+      storage.setItem(PREFS_KEY, JSON.stringify(bad))
+      assert.deepEqual(
+        loadPrefs(storage),
+        getDefaultPrefs(),
+        `expected defaults for panXY=${JSON.stringify(bad.panXY)}`,
+      )
+    }
+  })
+
   it('session extras stripped on restore: only allow-listed session fields apply', async () => {
     const { createStore } = await importCompiledTs('src/model/index.ts')
     const {
