@@ -43,7 +43,7 @@
 ## Deferred from: code review of spec-3-1-palette-selection-and-picker-recolour.md (2026-10-16)
 
 - Selected palette id removed from store never asserted to clear selection — orphan-clear exists in palette pane; not in 3-1 I/O matrix; cover with New-after-custom-select or when 3.2 delete makes missing-id common.
-- Epic 3 context still documents ~400 ms coalesce while 3-1 uses immediate `store.apply` — fix would edit planning/epic context outside this story; frozen 3-1 intent already defers coalesce to 5-1.
+- ~~Epic 3 context still documents ~400 ms coalesce while 3-1 uses immediate `store.apply`~~ — **Resolved (2026-10-17):** `epic-3-context.md` mutation path now states immediate `store.apply`; coalesce / `history.execute` remain story 5-1.
 
 ## Deferred from: code review of spec-3-2-palette-create-rename-and-referenced-delete.md (2026-10-16)
 

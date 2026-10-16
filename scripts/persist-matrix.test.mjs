@@ -252,6 +252,39 @@ describe('persist I/O matrix', () => {
         },
         session: sampleSession(),
       }),
+      // bare hex-shaped Mapping.paletteEntryId (no #) must CLEAR
+      JSON.stringify({
+        project: {
+          formatVersion: 1,
+          palette: [{ id: 'duoLedYellow', hex: '#FFCC00' }],
+          skins: [
+            {
+              id: 'black-duo',
+              displayName: 'Black/Duo',
+              mappings: [
+                {
+                  objectTypeId: 'ot',
+                  stateId: 'idle',
+                  propertyId: 'led',
+                  paletteEntryId: 'FFCC00',
+                },
+              ],
+            },
+          ],
+          inventory: { objectTypes: [] },
+        },
+        session: sampleSession(),
+      }),
+      // invalid PaletteEntry.hex must CLEAR
+      JSON.stringify({
+        project: {
+          formatVersion: 1,
+          palette: [{ id: 'duoLedYellow', hex: 'yellow' }],
+          skins: [],
+          inventory: { objectTypes: [] },
+        },
+        session: sampleSession(),
+      }),
       'null',
       '"string"',
     ]

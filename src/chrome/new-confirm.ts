@@ -1,5 +1,6 @@
 import type { ProjectStore } from '../model/store'
 import { applySeedBaseline } from '../seed/index'
+import { dismissDeleteConfirms } from './dismiss-project-confirms'
 
 export const NEW_CONFIRM_BODY =
   'Replace the current project with the seed baseline? The saved browser project will be replaced. Preferences stay unchanged.'
@@ -45,6 +46,9 @@ export function openNewConfirmModal(root: HTMLElement, store: ProjectStore): voi
   })
 
   confirmButton.addEventListener('click', () => {
+    // Drop sibling delete confirms before seed-replace so a leftover
+    // Confirm cannot mutate the fresh seed by a captured id.
+    dismissDeleteConfirms(root)
     applySeedBaseline(store)
     close()
   })

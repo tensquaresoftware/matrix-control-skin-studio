@@ -1,17 +1,11 @@
-/** Opaque `#RRGGBB` only — uppercase on success; case-insensitive parse. */
-const OPAQUE_HEX_RE = /^#([0-9A-Fa-f]{6})$/
+import { parseOpaqueHex } from '../model/opaque-hex'
+
+export { parseOpaqueHex } from '../model/opaque-hex'
 
 export type Hsv = {
   h: number
   s: number
   v: number
-}
-
-/** Parse operator input into normalized `#RRGGBB`, or null if invalid. */
-export function parseOpaqueHex(raw: string): string | null {
-  const match = OPAQUE_HEX_RE.exec(raw.trim())
-  if (!match) return null
-  return `#${match[1].toUpperCase()}`
 }
 
 export function hexToHsv(hex: string): Hsv {

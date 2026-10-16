@@ -1,3 +1,7 @@
+import {
+  looksLikeOpaqueHexToken,
+  parseOpaqueHex,
+} from '../model/opaque-hex'
 import type { ProjectDocument, SessionUiState } from '../model/types'
 import { PROJECT_ENVELOPE_KEY } from './keys'
 import type { PersistStorage } from './storage'
@@ -55,19 +59,33 @@ export function clearEnvelopeKey(storage: PersistStorage): void {
 }
 
 /**
- * One-notch envelope gate (Epic 1 → 2 readiness):
- * formatVersion 1 + array runtime shapes + no raw hex on Mapping.paletteEntryId.
+ * Envelope gate: formatVersion 1 + array shapes + opaque palette hex +
+ * Mapping.paletteEntryId is id-or-null (never hex-shaped, with or without `#`).
  */
 function isProjectDocument(value: unknown): value is ProjectDocument {
   if (value === null || typeof value !== 'object') return false
   const p = value as Record<string, unknown>
   if (p.formatVersion !== 1) return false
-  if (!Array.isArray(p.palette)) return false
+  if (!isValidPalette(p.palette)) return false
   if (!Array.isArray(p.skins)) return false
   if (p.inventory === null || typeof p.inventory !== 'object') return false
   const inventory = p.inventory as Record<string, unknown>
   if (!Array.isArray(inventory.objectTypes)) return false
   return skinsHaveValidMappings(p.skins)
+}
+
+function isValidPalette(palette: unknown): boolean {
+  if (!Array.isArray(palette)) return false
+  for (const entry of palette) {
+    if (entry === null || typeof entry !== 'object') return false
+    const e = entry as Record<string, unknown>
+    if (typeof e.id !== 'string' || e.id.length === 0) return false
+    if (typeof e.hex !== 'string' || parseOpaqueHex(e.hex) === null) return false
+    if (e.constantName !== undefined && typeof e.constantName !== 'string') {
+      return false
+    }
+  }
+  return true
 }
 
 function skinsHaveValidMappings(skins: unknown[]): boolean {
@@ -82,13 +100,13 @@ function skinsHaveValidMappings(skins: unknown[]): boolean {
   return true
 }
 
-/** Mapping values are palette entry id or null — never raw `#RRGGBB`. */
+/** Mapping values are palette entry id or null — never raw / bare hex tokens. */
 function isValidMappingPaletteEntryId(mapping: unknown): boolean {
   if (mapping === null || typeof mapping !== 'object') return false
   const id = (mapping as Record<string, unknown>).paletteEntryId
   if (id === null) return true
-  if (typeof id !== 'string') return false
-  return !id.startsWith('#')
+  if (typeof id !== 'string' || id.length === 0) return false
+  return !looksLikeOpaqueHexToken(id)
 }
 
 function isSessionUiState(value: unknown): value is SessionUiState {

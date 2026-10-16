@@ -6,6 +6,13 @@ type SkinSegment = 'mappings' | 'skin'
 
 const SKIN_NAME_RE = /^Skin (\d+)$/
 
+/** FR-15 rejected v1 aliases — blocked on rename (seed already excludes them). */
+const REJECTED_SKIN_NAMES = new Set([
+  'Black/Two-tone',
+  'Cream/Two-tone',
+  'Split',
+])
+
 /**
  * Pane 3 host: segmented [Mappings | Skin] (Mappings default).
  * Skin tab creates / renames / duplicates / deletes Skins.
@@ -164,6 +171,10 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
       nameInput.value = target.displayName
       return
     }
+    if (REJECTED_SKIN_NAMES.has(trimmed)) {
+      nameInput.value = target.displayName
+      return
+    }
     applyRename(store, target.id, trimmed)
   }
 
@@ -211,6 +222,10 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
       skinId: active.id,
       displayName: active.displayName,
       onConfirm: () => {
+        const stillThere = store
+          .getState()
+          .project.skins.some((skin) => skin.id === active.id)
+        if (!stillThere) return
         applyDelete(store, active.id)
       },
     })
@@ -303,12 +318,16 @@ function nextSkinName(skins: readonly Skin[]): string {
 }
 
 function applyDelete(store: ProjectStore, skinId: string): void {
-  const { project } = store.getState()
-  const next: ProjectDocument = {
+  const { project, session } = store.getState()
+  const nextProject: ProjectDocument = {
     ...project,
     skins: project.skins.filter((skin) => skin.id !== skinId),
   }
-  store.apply({ project: next })
+  const nextSession: SessionUiState =
+    session.activeSkinId === skinId
+      ? { ...session, activeSkinId: null }
+      : session
+  store.apply({ project: nextProject, session: nextSession })
 }
 
 function deepCopyMappings(mappings: readonly Mapping[]): Mapping[] {

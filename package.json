@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --test scripts/scaffold-matrix.test.mjs scripts/store-matrix.test.mjs scripts/seed-matrix.test.mjs scripts/persist-matrix.test.mjs scripts/boot-seed-matrix.test.mjs scripts/styles-matrix.test.mjs scripts/chrome-shell-matrix.test.mjs scripts/palette-picker-matrix.test.mjs scripts/skin-tab-matrix.test.mjs"
+    "test": "node --test scripts/scaffold-matrix.test.mjs scripts/store-matrix.test.mjs scripts/seed-matrix.test.mjs scripts/persist-matrix.test.mjs scripts/boot-seed-matrix.test.mjs scripts/styles-matrix.test.mjs scripts/chrome-shell-matrix.test.mjs scripts/palette-picker-matrix.test.mjs scripts/skin-tab-matrix.test.mjs scripts/model-palette-helpers-matrix.test.mjs scripts/epic-3-crossflow-matrix.test.mjs"
   },
   "devDependencies": {
     "typescript": "7.0.2",

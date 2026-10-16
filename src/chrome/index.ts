@@ -11,6 +11,10 @@ import {
 import { mountSidebar } from '../sidebar/index'
 import { openNewConfirmModal } from './new-confirm'
 
+export {
+  dismissDeleteConfirms,
+  dismissProjectConfirms,
+} from './dismiss-project-confirms'
 export { NEW_CONFIRM_BODY, openNewConfirmModal } from './new-confirm'
 
 const EMPTY_GLYPH = '—'

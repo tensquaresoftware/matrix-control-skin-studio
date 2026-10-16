@@ -600,6 +600,62 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
+  it('duplicate: preserves Unbound null paletteEntryId (no hex substitute)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const unboundMappings = [
+        {
+          objectTypeId: 'headerLed',
+          stateId: 'on',
+          propertyId: 'fill',
+          paletteEntryId: null,
+        },
+        {
+          objectTypeId: 'knob',
+          stateId: 'normal',
+          propertyId: 'ring',
+          paletteEntryId: 'duoLedYellow',
+        },
+      ]
+      const { store, root } = mountChromeWithStore(
+        chrome,
+        model,
+        projectWithActiveSkin({
+          skins: [
+            {
+              id: 'black-green',
+              displayName: 'Black/Green',
+              mappings: unboundMappings,
+            },
+            {
+              id: 'cream-green',
+              displayName: 'Cream/Green',
+              mappings: [],
+            },
+          ],
+        }),
+        defaultSession('black-green'),
+      )
+      selectSkinTab(root)
+      const beforeIds = new Set(store.getState().project.skins.map((s) => s.id))
+      root.querySelector('[data-skin-duplicate]').click()
+
+      const copy = store
+        .getState()
+        .project.skins.find((s) => !beforeIds.has(s.id))
+      assert.ok(copy)
+      assert.equal(copy.mappings[0].paletteEntryId, null)
+      assert.equal(copy.mappings[1].paletteEntryId, 'duoLedYellow')
+      assert.equal('hex' in copy.mappings[0], false)
+    } finally {
+      restore()
+    }
+  })
+
   it('delete cancel: modal closes; project.skins unchanged', async () => {
     const restore = installMinimalDocument()
     try {
@@ -640,7 +696,7 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
-  it('delete confirm: removes skin; combo refreshes; activeSkinId cleared by chrome', async () => {
+  it('delete confirm: removes skin; combo refreshes; activeSkinId cleared in same apply', async () => {
     const restore = installMinimalDocument()
     try {
       const [chrome, model] = await Promise.all([
@@ -935,15 +991,13 @@ describe('skin tab I/O matrix', () => {
       assert.equal(duo.hex, '#FFCC00')
       assert.equal(duo.constantName, 'kDuoLedYellow')
 
-      // Calibratable: hex write-through on that id still works after create.
-      store.apply({
-        project: {
-          ...project,
-          palette: project.palette.map((e) =>
-            e.id === 'duoLedYellow' ? { ...e, hex: '#AABB00' } : e,
-          ),
-        },
-      })
+      // Calibratable via Picker path after Create (not a store.apply tautology).
+      root.querySelector('[data-palette-row="duoLedYellow"]').click()
+      const hexField = root.querySelector('[data-picker-hex]')
+      assert.ok(hexField)
+      hexField.focus()
+      hexField.value = '#AABB00'
+      hexField.dispatchEvent({ type: 'input' })
       assert.equal(
         store.getState().project.palette.find((e) => e.id === 'duoLedYellow')
           ?.hex,

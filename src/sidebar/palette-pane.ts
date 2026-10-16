@@ -1,3 +1,4 @@
+import { looksLikeOpaqueHexToken } from '../model/opaque-hex'
 import type { ProjectStore } from '../model/store'
 import type { PaletteEntry, ProjectDocument } from '../model/types'
 import {
@@ -141,6 +142,11 @@ export function mountPalettePane(
       displayName,
       refs,
       onConfirm: () => {
+        const { project: live } = store.getState()
+        if (!live.palette.some((e) => e.id === selectedId)) return
+        const liveRefs = collectPaletteRefs(live, selectedId)
+        // Stale list (mappings changed while modal open) → abort; operator re-opens Delete.
+        if (liveRefs.length !== refs.length) return
         applyDeleteAndUnbind(store, selectedId)
       },
     })
@@ -277,6 +283,11 @@ function startInlineRename(
         return
       }
       if (trimmed === previousLabel) {
+        label.textContent = previousLabel
+        return
+      }
+      // Hex belongs on the mono field — reject hex-shaped constant names.
+      if (looksLikeOpaqueHexToken(trimmed)) {
         label.textContent = previousLabel
         return
       }

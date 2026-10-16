@@ -356,6 +356,48 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('select + recolour: mapped entry keeps Mapping.paletteEntryId (no hex on mappings)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const project = {
+        formatVersion: 1,
+        palette: [{ id: 'shared', hex: '#FFCC00', constantName: 'led_duo' }],
+        skins: [
+          {
+            id: 'black-duo',
+            displayName: 'Black/Duo',
+            mappings: [
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: 'shared',
+              },
+            ],
+          },
+        ],
+        inventory: { objectTypes: [] },
+      }
+      const { store, host } = mountWithProject(sidebar, model, project)
+      host.querySelector('[data-palette-row="shared"]').click()
+      const hexField = host.querySelector('[data-picker-hex]')
+      hexField.focus()
+      hexField.value = '#112233'
+      hexField.dispatchEvent({ type: 'input' })
+
+      assert.equal(paletteHex(store, 'shared'), '#112233')
+      const mapping = store.getState().project.skins[0].mappings[0]
+      assert.equal(mapping.paletteEntryId, 'shared')
+      assert.equal('hex' in mapping, false)
+    } finally {
+      restore()
+    }
+  })
+
   it('row label: constantName when present, else id', async () => {
     const restore = installMinimalDocument()
     try {
