@@ -4,9 +4,11 @@ import { openSkinDeleteConfirm } from './skin-delete-confirm'
 
 type SkinSegment = 'mappings' | 'skin'
 
+const SKIN_NAME_RE = /^Skin (\d+)$/
+
 /**
  * Pane 3 host: segmented [Mappings | Skin] (Mappings default).
- * Skin tab renames / duplicates / deletes the active Skin only.
+ * Skin tab creates / renames / duplicates / deletes Skins.
  */
 export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
   body.classList.add('skin-pane-body')
@@ -52,6 +54,12 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
   const actions = document.createElement('div')
   actions.className = 'skin-actions'
 
+  const createBtn = document.createElement('button')
+  createBtn.type = 'button'
+  createBtn.className = 'skin-action-btn'
+  createBtn.setAttribute('data-skin-create', '')
+  createBtn.textContent = 'Create Skin'
+
   const duplicateBtn = document.createElement('button')
   duplicateBtn.type = 'button'
   duplicateBtn.className = 'skin-action-btn'
@@ -64,7 +72,7 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
   deleteBtn.setAttribute('data-skin-delete', '')
   deleteBtn.textContent = 'Delete Skin…'
 
-  actions.append(duplicateBtn, deleteBtn)
+  actions.append(createBtn, duplicateBtn, deleteBtn)
 
   const reminder = document.createElement('p')
   reminder.className = 'skin-reminder'
@@ -128,6 +136,8 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
   const render = (): void => {
     const active = resolveActiveSkin()
     const enabled = active != null
+    // CREATE_WITHOUT_ACTIVE = ALWAYS_ENABLED — Create stays on with no active / empty list.
+    createBtn.disabled = false
     duplicateBtn.disabled = !enabled
     deleteBtn.disabled = !enabled
     nameInput.disabled = !enabled
@@ -183,6 +193,10 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
     editingSkinId = null
   })
 
+  createBtn.addEventListener('click', () => {
+    applyCreate(store)
+  })
+
   duplicateBtn.addEventListener('click', () => {
     if (duplicateBtn.disabled) return
     applyDuplicate(store)
@@ -234,6 +248,24 @@ function applyRename(
   store.apply({ project: next })
 }
 
+function applyCreate(store: ProjectStore): void {
+  const { project, session } = store.getState()
+  const created: Skin = {
+    id: allocateSkinId(project.skins),
+    displayName: nextSkinName(project.skins),
+    mappings: [],
+  }
+  const nextProject: ProjectDocument = {
+    ...project,
+    skins: [...project.skins, created],
+  }
+  const nextSession: SessionUiState = {
+    ...session,
+    activeSkinId: created.id,
+  }
+  store.apply({ project: nextProject, session: nextSession })
+}
+
 function applyDuplicate(store: ProjectStore): void {
   const { project, session } = store.getState()
   const sourceId = session.activeSkinId
@@ -256,6 +288,18 @@ function applyDuplicate(store: ProjectStore): void {
     activeSkinId: copy.id,
   }
   store.apply({ project: nextProject, session: nextSession })
+}
+
+/** Smallest unused positive integer among existing `Skin {n}` display names. */
+function nextSkinName(skins: readonly Skin[]): string {
+  const used = new Set<number>()
+  for (const skin of skins) {
+    const match = SKIN_NAME_RE.exec(skin.displayName)
+    if (match) used.add(Number(match[1]))
+  }
+  let n = 1
+  while (used.has(n)) n += 1
+  return `Skin ${n}`
 }
 
 function applyDelete(store: ProjectStore, skinId: string): void {

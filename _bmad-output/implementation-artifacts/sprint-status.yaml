@@ -38,7 +38,7 @@
 #   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
 #   to fill SM-1. Definitive JSON field freeze waits on Collect.
 generated: 10-15-2026 22:25
-last_updated: 10-16-2026 19:30
+last_updated: 10-16-2026 19:40
 project: Matrix-Control-Skin-Studio
 project_key: NOKEY
 tracking_system: file-system
@@ -71,7 +71,7 @@ development_status:
   3-2-palette-create-rename-and-referenced-delete: done
   3-3-skin-tab-rename-duplicate-delete: done
   # Collect-dep: Duo LED #FFCC00 is a palette entry; Header LED green confirm awaits Collect
-  3-4-create-skin-and-preserve-v1-duo-led-entry: backlog
+  3-4-create-skin-and-preserve-v1-duo-led-entry: review
   epic-3-retrospective: optional
 
   # --- Epic 4: Mapping / preview (MVP) ---

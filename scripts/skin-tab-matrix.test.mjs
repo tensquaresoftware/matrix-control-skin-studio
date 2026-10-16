@@ -428,7 +428,7 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
-  it('open Skin tab: name shows active displayName; Duplicate / Delete enabled', async () => {
+  it('open Skin tab: name shows active displayName; Create / Duplicate / Delete enabled', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model] = await Promise.all([
@@ -447,6 +447,7 @@ describe('skin tab I/O matrix', () => {
       assert.ok(name)
       assert.equal(name.value, 'Black/Green')
       assert.equal(name.disabled, false)
+      assert.equal(host.querySelector('[data-skin-create]')?.disabled, false)
       assert.equal(host.querySelector('[data-skin-duplicate]')?.disabled, false)
       assert.equal(host.querySelector('[data-skin-delete]')?.disabled, false)
     } finally {
@@ -670,7 +671,7 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
-  it('no active Skin: name empty/disabled; Duplicate / Delete disabled', async () => {
+  it('no active Skin: name empty/disabled; Create enabled; Duplicate / Delete disabled', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model] = await Promise.all([
@@ -689,6 +690,7 @@ describe('skin tab I/O matrix', () => {
       assert.ok(name)
       assert.equal(name.value, '')
       assert.equal(name.disabled, true)
+      assert.equal(host.querySelector('[data-skin-create]')?.disabled, false)
       assert.equal(host.querySelector('[data-skin-duplicate]')?.disabled, true)
       assert.equal(host.querySelector('[data-skin-delete]')?.disabled, true)
     } finally {
@@ -696,7 +698,7 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
-  it('stale activeSkinId: missing from skins → name empty/disabled; actions disabled', async () => {
+  it('stale activeSkinId: missing from skins → name empty/disabled; Create enabled; Duplicate / Delete disabled', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model] = await Promise.all([
@@ -715,6 +717,7 @@ describe('skin tab I/O matrix', () => {
       assert.ok(name)
       assert.equal(name.value, '')
       assert.equal(name.disabled, true)
+      assert.equal(host.querySelector('[data-skin-create]')?.disabled, false)
       assert.equal(host.querySelector('[data-skin-duplicate]')?.disabled, true)
       assert.equal(host.querySelector('[data-skin-delete]')?.disabled, true)
     } finally {
@@ -722,7 +725,7 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
-  it('last skin delete: skins empty; combo empty; activeSkinId null', async () => {
+  it('last skin delete: skins empty; combo empty; activeSkinId null; Create still enabled', async () => {
     const restore = installMinimalDocument()
     try {
       const [chrome, model] = await Promise.all([
@@ -756,8 +759,196 @@ describe('skin tab I/O matrix', () => {
       assert.deepEqual(skinOptionValues(root), [])
       assert.equal(root.querySelector('[data-chrome-skin-select]')?.value, '')
       assert.equal(root.querySelector('[data-skin-name]')?.disabled, true)
+      assert.equal(root.querySelector('[data-skin-create]')?.disabled, false)
       assert.equal(root.querySelector('[data-skin-duplicate]')?.disabled, true)
       assert.equal(root.querySelector('[data-skin-delete]')?.disabled, true)
+    } finally {
+      restore()
+    }
+  })
+
+  it('create: appends Skin {n}, unique id, empty mappings, activates, combo lists it', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      // Non-empty active mappings — Create must not copy them (unlike Duplicate).
+      const { store, root } = mountChromeWithStore(
+        chrome,
+        model,
+        projectWithActiveSkin(),
+        defaultSession('black-green'),
+      )
+      selectSkinTab(root)
+
+      const sourceMappings = store
+        .getState()
+        .project.skins.find((s) => s.id === 'black-green')?.mappings
+      assert.ok(sourceMappings)
+      assert.equal(sourceMappings.length > 0, true)
+
+      const beforeIds = new Set(store.getState().project.skins.map((s) => s.id))
+      const beforeCount = store.getState().project.skins.length
+      root.querySelector('[data-skin-create]').click()
+
+      const { project, session } = store.getState()
+      assert.equal(project.skins.length, beforeCount + 1)
+      const created = project.skins.find((s) => !beforeIds.has(s.id))
+      assert.ok(created)
+      assert.equal(created.displayName, 'Skin 1')
+      assert.deepEqual(created.mappings, [])
+      assert.notDeepEqual(created.mappings, sourceMappings)
+      assert.equal(session.activeSkinId, created.id)
+      assert.ok(skinOptionValues(root).includes(created.id))
+      assert.equal(root.querySelector('[data-chrome-skin-select]')?.value, created.id)
+      assert.equal(root.querySelector('[data-skin-name]')?.value, 'Skin 1')
+    } finally {
+      restore()
+    }
+  })
+
+  it('create: Skin {n} gap-fill uses smallest unused positive integer', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountChromeWithStore(
+        chrome,
+        model,
+        {
+          formatVersion: 1,
+          palette: [],
+          skins: [
+            { id: 's1', displayName: 'Skin 1', mappings: [] },
+            { id: 's3', displayName: 'Skin 3', mappings: [] },
+          ],
+          inventory: { objectTypes: [] },
+        },
+        defaultSession('s1'),
+      )
+      selectSkinTab(root)
+      root.querySelector('[data-skin-create]').click()
+
+      const created = store
+        .getState()
+        .project.skins.find((s) => s.id !== 's1' && s.id !== 's3')
+      assert.ok(created)
+      assert.equal(created.displayName, 'Skin 2')
+    } finally {
+      restore()
+    }
+  })
+
+  it('create without active / empty list: Create enabled; recovers with one activated Skin', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountChromeWithStore(
+        chrome,
+        model,
+        {
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        },
+        defaultSession(null),
+      )
+      selectSkinTab(root)
+
+      assert.equal(root.querySelector('[data-skin-create]')?.disabled, false)
+      assert.equal(root.querySelector('[data-skin-duplicate]')?.disabled, true)
+      assert.equal(root.querySelector('[data-skin-delete]')?.disabled, true)
+
+      root.querySelector('[data-skin-create]').click()
+
+      const { project, session } = store.getState()
+      assert.equal(project.skins.length, 1)
+      const created = project.skins[0]
+      assert.equal(created.displayName, 'Skin 1')
+      assert.deepEqual(created.mappings, [])
+      assert.equal(session.activeSkinId, created.id)
+      assert.deepEqual(skinOptionValues(root), [created.id])
+      assert.equal(root.querySelector('[data-skin-name]')?.value, 'Skin 1')
+      assert.equal(root.querySelector('[data-skin-name]')?.disabled, false)
+    } finally {
+      restore()
+    }
+  })
+
+  it('create: preserves v1 display names, rejects rejected names, Duo LED, empty objectTypes', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model, seed] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const V1_DISPLAY_NAMES = [
+        'Black/Green',
+        'Cream/Green',
+        'Black/Duo',
+        'Cream/Duo',
+        'Monochrome',
+      ]
+      const REJECTED_NAMES = ['Black/Two-tone', 'Cream/Two-tone', 'Split']
+
+      const seeded = seed.createSeedProject()
+      const { store, root } = mountChromeWithStore(
+        chrome,
+        model,
+        seeded,
+        defaultSession(seeded.skins[0].id),
+      )
+      selectSkinTab(root)
+      root.querySelector('[data-skin-create]').click()
+
+      const { project } = store.getState()
+      const names = project.skins.map((s) => s.displayName)
+      for (const v1 of V1_DISPLAY_NAMES) {
+        assert.ok(names.includes(v1), `missing v1 name after create: ${v1}`)
+      }
+      for (const rejected of REJECTED_NAMES) {
+        assert.equal(
+          names.includes(rejected),
+          false,
+          `rejected name introduced by create: ${rejected}`,
+        )
+      }
+
+      const duo = project.palette.find((e) => e.id === 'duoLedYellow')
+      assert.ok(duo)
+      assert.equal(duo.hex, '#FFCC00')
+      assert.equal(duo.constantName, 'kDuoLedYellow')
+
+      // Calibratable: hex write-through on that id still works after create.
+      store.apply({
+        project: {
+          ...project,
+          palette: project.palette.map((e) =>
+            e.id === 'duoLedYellow' ? { ...e, hex: '#AABB00' } : e,
+          ),
+        },
+      })
+      assert.equal(
+        store.getState().project.palette.find((e) => e.id === 'duoLedYellow')
+          ?.hex,
+        '#AABB00',
+      )
+
+      assert.deepEqual(store.getState().project.inventory.objectTypes, [])
+      for (const ot of store.getState().project.inventory.objectTypes) {
+        assert.equal('hex' in ot, false)
+        assert.equal('colour' in ot, false)
+        assert.equal('color' in ot, false)
+      }
     } finally {
       restore()
     }
