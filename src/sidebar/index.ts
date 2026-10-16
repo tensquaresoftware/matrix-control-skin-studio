@@ -5,6 +5,7 @@ import { getBrowserStorage } from '../persist/storage'
 import { mountPalettePane } from './palette-pane'
 import { createPaletteSelection } from './palette-selection'
 import { mountPickerPane } from './picker-pane'
+import { mountSkinPane } from './skin-pane'
 
 /** Mock-canonical picker height (PANE_DEFAULTS = MOCK) — fixed, not in prefs. */
 export const PICKER_PANE_HEIGHT_PX = 220
@@ -85,6 +86,7 @@ export function mountSidebar(
     const selection = createPaletteSelection()
     mountPickerPane(picker.body, options.store, selection)
     mountPalettePane(palette.body, options.store, selection)
+    mountSkinPane(mappings.body, options.store)
   }
 }
 

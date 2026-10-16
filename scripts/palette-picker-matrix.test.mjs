@@ -548,8 +548,11 @@ describe('palette picker I/O matrix', () => {
       const mappingsBody = host.querySelector('[data-sidebar-pane-body="mappings"]')
       assert.ok(mappingsBody)
 
+      // Skin tab may host a rename text field (story 3-3); Mapping bind UI
+      // must still not accept free #RRGGBB typed into a mapping slot.
       const freeHexInputs = []
       const walk = (el) => {
+        if (el.getAttribute?.('data-skin-name') != null) return
         if (el.tagName === 'INPUT') {
           const type = (el.type || el.getAttribute('type') || 'text').toLowerCase()
           if (type === 'text' || type === 'color' || type === '') {
@@ -561,6 +564,7 @@ describe('palette picker I/O matrix', () => {
       }
       walk(mappingsBody)
       assert.equal(freeHexInputs.length, 0)
+      assert.ok(mappingsBody.querySelector('[data-skin-name]'))
 
       // SessionUiState remains Object / State / Skin only (no palette selection).
       const session = model.createEmptySession()

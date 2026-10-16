@@ -48,3 +48,9 @@
 ## Deferred from: code review of spec-3-2-palette-create-rename-and-referenced-delete.md (2026-10-16)
 
 - Delete-colour confirm reuses New-confirm scrim/buttons but does not set `role="dialog"` / `aria-modal` or move focus — deferred as pre-existing New-confirm pattern; story required reuse rather than inventing a richer dialog layer.
+
+## Deferred from: build review of spec-3-3-skin-tab-rename-duplicate-delete.md (2026-10-16)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-3-skin-tab-rename-duplicate-delete.md`
+  summary: Assert Skin delete confirm one-deep guard (second Delete click does not stack another scrim).
+  evidence: Early return exists in `openSkinDeleteConfirm`; single-open cancel/confirm already covered; double-open is an edge interaction not worth blocking this change.
