@@ -80,6 +80,24 @@ context:
 - Given Zoom or Skin changes, when the context strip is read, then Zoom/Skin values match the combos while Object/State stay `—`.
 - Given mount, when inspecting ops, then New still confirms seed; Import/Export/Undo/Redo are present, disabled, and ordered; labels are English (`Zoom`, `Skin`, `New`, `Import`, `Export`).
 
+### Review Findings
+
+- [x] [Review][Patch] Orphan `activeSkinId` on mount clears session then returns before rebuilding Skin options — select stays empty (no `—`, no skins) because first sync runs before `subscribe` [src/chrome/index.ts:193-234]
+- [x] [Review][Patch] Skin clear-to-null via empty/`—` option never asserted after a real skin pick [scripts/chrome-shell-matrix.test.mjs:563-664]
+- [x] [Review][Defer] English Zoom/Skin visible label text unasserted — deferred: static chrome copy; already tracked from build review of this spec
+- [x] [Review][Defer] boot-seed vs chrome-shell `matchesSelector` / DOM harness drift — deferred: pre-existing shared-harness debt (Epic 1 / 2-2 / build review)
+
+#### Rejected
+
+- `false` — Spec `status: done` vs sprint `review` / empty Implementation Notes / Code Map wording — process or would only edit this build’s spec
+- `false` — Prefs isolation missing pan-field envelope assert — Zoom path never writes pan into the envelope; `zoomStep` absence already asserted
+- `false` — Empty-string skin `id` collides with `—` placeholder — seed skins always have non-empty ids; unreachable in current product path
+- `false` — Hard-coded `chrome-zoom-select` / `chrome-skin-select` ids — production mounts a single `#app` shell; product label association holds
+- `false` — Zoom `savePrefs` fail-soft leaves UI ahead of storage — intentional fail-soft per spec; matrix already asserts no throw + strip update
+- `low` rejected — `store.subscribe` never unsubscribed on remount — product path mounts chrome once; fix needs teardown surface beyond a direct correction
+- `low` rejected — native-select CSS missing `appearance` normalization — cosmetic cross-browser polish; everyday chrome already styled
+- `false` — I/O matrix silence on clear-to-null as a product hole — reject (would only edit this build’s spec); missing test kept as patch above
+
 ## Implementation Notes
 
 ## Spec Change Log

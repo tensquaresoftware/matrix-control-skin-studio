@@ -25,3 +25,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-top-bar-ops-zoom-and-skin-combo.md`
   summary: Deduplicate boot-seed vs chrome-shell minimal DOM harness / matchesSelector helpers.
   evidence: Pre-existing shared-harness debt also deferred from Epic 1 and story 2-2; not a product defect of Zoom/Skin wiring.
+
+## Deferred from: code review of spec-2-3-top-bar-ops-zoom-and-skin-combo.md (2026-10-16)
+
+- English Zoom/Skin visible labels unasserted in the chrome-shell matrix — already tracked under the build-review defer for this spec; static copy, low everyday harm.
+- boot-seed vs chrome-shell minimal DOM harness / `matchesSelector` divergence — already tracked as shared-harness debt (Epic 1 / 2-2 / build review); not a product defect of Zoom/Skin.

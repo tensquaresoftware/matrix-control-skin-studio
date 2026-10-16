@@ -188,7 +188,7 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
   select.setAttribute('data-chrome-skin-select', '')
 
   const syncSkinFromStore = (): void => {
-    const { project, session } = store.getState()
+    let { project, session } = store.getState()
 
     if (
       session.activeSkinId !== null &&
@@ -201,7 +201,7 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
           activeSkinId: null,
         },
       })
-      return
+      ;({ project, session } = store.getState())
     }
 
     select.replaceChildren()

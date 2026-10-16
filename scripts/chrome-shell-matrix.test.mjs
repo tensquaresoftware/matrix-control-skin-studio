@@ -658,6 +658,52 @@ describe('chrome shell I/O matrix', () => {
       skinSelect.dispatchEvent({ type: 'change' })
       assert.deepEqual(store.getState().session, beforeUnknown)
       assert.equal(skinSelect.value, 'monochrome')
+
+      // Clear to null via empty/— after a real skin
+      skinSelect.value = ''
+      skinSelect.dispatchEvent({ type: 'change' })
+      const afterClear = store.getState().session
+      assert.equal(afterClear.activeSkinId, null)
+      assert.equal(afterClear.selectedObjectTypeId, 'ot-1')
+      assert.equal(afterClear.selectedStateId, 'idle')
+      assert.equal(skinSelect.value, '')
+      assert.equal(
+        root.querySelector('[data-context-value="skin"]')?.textContent,
+        '—',
+      )
+
+      // Orphan activeSkinId on mount → session cleared; combo still lists — + skins
+      const storageOrphan = persist.createMemoryStorage()
+      const storeOrphan = model.createStore()
+      storeOrphan.apply({
+        project: seedProject,
+        session: {
+          selectedObjectTypeId: 'ot-orphan',
+          selectedStateId: 'state-orphan',
+          activeSkinId: 'missing-skin-id',
+        },
+      })
+      const rootOrphan = createRoot()
+      mountChromeShell(rootOrphan, storeOrphan, { storage: storageOrphan })
+      const skinSelectOrphan = rootOrphan.querySelector('[data-chrome-skin-select]')
+      const orphanSession = storeOrphan.getState().session
+      assert.equal(orphanSession.activeSkinId, null)
+      assert.equal(orphanSession.selectedObjectTypeId, 'ot-orphan')
+      assert.equal(orphanSession.selectedStateId, 'state-orphan')
+      assert.equal(skinSelectOrphan.value, '')
+      assert.equal(
+        rootOrphan.querySelector('[data-context-value="skin"]')?.textContent,
+        '—',
+      )
+      const orphanLabels = skinSelectOrphan.children
+        .filter((c) => c.tagName === 'OPTION')
+        .map((o) => ({ value: o.value, label: o.textContent }))
+      assert.equal(orphanLabels[0].value, '')
+      assert.equal(orphanLabels[0].label, '—')
+      assert.deepEqual(
+        orphanLabels.slice(1).map((o) => o.label),
+        seedProject.skins.map((s) => s.displayName),
+      )
     } finally {
       restoreDoc()
     }
