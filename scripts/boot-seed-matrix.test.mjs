@@ -66,18 +66,61 @@ async function importCompiledTs(relPath) {
   }
 }
 
+function matchesSelector(el, selector) {
+  const attrEq = /^\[([^=\]]+)="([^"]*)"\]$/.exec(selector)
+  if (attrEq) return el.getAttribute(attrEq[1]) === attrEq[2]
+  const attr = /^\[([^\]]+)\]$/.exec(selector)
+  if (attr) return el.getAttribute(attr[1]) !== null
+  return false
+}
+
 function createElement(tagName) {
   const attrs = new Map()
   const listeners = new Map()
+  const classSet = new Set()
+  let valueProp = ''
   const node = {
     tagName: String(tagName).toUpperCase(),
     type: '',
     textContent: '',
-    style: { cssText: '' },
+    disabled: false,
+    clientHeight: 0,
+    style: { cssText: '', height: '' },
     children: [],
     parent: null,
+    classList: {
+      add(...names) {
+        for (const n of names) classSet.add(n)
+      },
+      remove(...names) {
+        for (const n of names) classSet.delete(n)
+      },
+      contains(name) {
+        return classSet.has(name)
+      },
+    },
+    set className(value) {
+      classSet.clear()
+      for (const n of String(value).split(/\s+/).filter(Boolean)) classSet.add(n)
+    },
+    get className() {
+      return [...classSet].join(' ')
+    },
+    get id() {
+      return attrs.get('id') ?? ''
+    },
+    set id(value) {
+      attrs.set('id', String(value))
+    },
+    get value() {
+      return valueProp
+    },
+    set value(next) {
+      valueProp = String(next)
+    },
     setAttribute(name, value) {
       attrs.set(name, String(value))
+      if (name === 'value') valueProp = String(value)
     },
     getAttribute(name) {
       return attrs.has(name) ? attrs.get(name) : null
@@ -103,9 +146,8 @@ function createElement(tagName) {
       node.parent = null
     },
     querySelector(selector) {
-      const matchAttr = /^\[([^\]]+)\]$/.exec(selector)
       const walk = (el) => {
-        if (matchAttr && el.getAttribute(matchAttr[1]) !== null) return el
+        if (el !== node && matchesSelector(el, selector)) return el
         for (const child of el.children) {
           const found = walk(child)
           if (found) return found
@@ -121,6 +163,8 @@ function createElement(tagName) {
     click() {
       for (const fn of listeners.get('click') || []) fn()
     },
+    setPointerCapture() {},
+    releasePointerCapture() {},
   }
   return node
 }

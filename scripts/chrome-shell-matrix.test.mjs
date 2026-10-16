@@ -73,6 +73,7 @@ function createElement(tagName) {
   const attrs = new Map()
   const listeners = new Map()
   const classSet = new Set()
+  let valueProp = ''
   const node = {
     tagName: String(tagName).toUpperCase(),
     type: '',
@@ -103,8 +104,21 @@ function createElement(tagName) {
     get className() {
       return [...classSet].join(' ')
     },
+    get id() {
+      return attrs.get('id') ?? ''
+    },
+    set id(value) {
+      attrs.set('id', String(value))
+    },
+    get value() {
+      return valueProp
+    },
+    set value(next) {
+      valueProp = String(next)
+    },
     setAttribute(name, value) {
       attrs.set(name, String(value))
+      if (name === 'value') valueProp = String(value)
     },
     getAttribute(name) {
       return attrs.has(name) ? attrs.get(name) : null
@@ -169,6 +183,9 @@ function matchesSelector(el, selector) {
   if (attrEq) return el.getAttribute(attrEq[1]) === attrEq[2]
   const attr = /^\[([^\]]+)\]$/.exec(selector)
   if (attr) return el.getAttribute(attr[1]) !== null
+  if (/^[a-zA-Z][\w-]*$/.test(selector)) {
+    return el.tagName === selector.toUpperCase()
+  }
   return false
 }
 
@@ -298,7 +315,7 @@ describe('chrome shell I/O matrix', () => {
     )
   })
 
-  it('fresh shell mount: chrome geometry, four panes, inert AD-11 + static context', async () => {
+  it('fresh shell mount: chrome geometry, four panes, live Zoom/Skin + stub ops', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
     const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
@@ -328,8 +345,10 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-chrome-inert="export"]'))
       assert.ok(root.querySelector('[data-chrome-inert="undo"]'))
       assert.ok(root.querySelector('[data-chrome-inert="redo"]'))
-      assert.ok(root.querySelector('[data-chrome-inert="zoom"]'))
-      assert.ok(root.querySelector('[data-chrome-inert="skin"]'))
+      assert.equal(root.querySelector('[data-chrome-inert="zoom"]'), null)
+      assert.equal(root.querySelector('[data-chrome-inert="skin"]'), null)
+      assert.ok(root.querySelector('[data-chrome-zoom-select]'))
+      assert.ok(root.querySelector('[data-chrome-skin-select]'))
 
       assert.equal(
         root.querySelector('[data-context-value="object"]')?.textContent,
@@ -341,7 +360,7 @@ describe('chrome shell I/O matrix', () => {
       )
       assert.equal(
         root.querySelector('[data-context-value="zoom"]')?.textContent,
-        '—',
+        '100%',
       )
       assert.equal(
         root.querySelector('[data-context-value="skin"]')?.textContent,
@@ -355,6 +374,290 @@ describe('chrome shell I/O matrix', () => {
         () => mountChromeShell(null, store, { storage }),
         /Chrome root #app is missing/,
       )
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('top-bar order: New Import Export · Undo Redo · Zoom · spacer · Skin', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const root = createRoot()
+      mountChromeShell(root, model.createStore(), {
+        storage: persist.createMemoryStorage(),
+      })
+      const topBar = root.querySelector('[data-chrome-top-bar]')
+      assert.ok(topBar)
+      const markers = topBar.children.map((child) => {
+        if (child.getAttribute('data-chrome-new') !== null) return 'new'
+        if (child.getAttribute('data-chrome-inert') === 'import') return 'import'
+        if (child.getAttribute('data-chrome-inert') === 'export') return 'export'
+        if (child.classList.contains('chrome-top-sep')) return 'sep'
+        if (child.getAttribute('data-chrome-inert') === 'undo') return 'undo'
+        if (child.getAttribute('data-chrome-inert') === 'redo') return 'redo'
+        if (child.getAttribute('data-chrome-zoom') !== null) return 'zoom'
+        if (child.getAttribute('data-chrome-spacer') !== null) return 'spacer'
+        if (child.getAttribute('data-chrome-skin') !== null) return 'skin'
+        return 'other'
+      })
+      assert.deepEqual(markers, [
+        'new',
+        'import',
+        'export',
+        'sep',
+        'undo',
+        'redo',
+        'zoom',
+        'spacer',
+        'skin',
+      ])
+      assert.equal(findButtonByLabel(root, 'New')?.disabled, false)
+      assert.equal(findButtonByLabel(root, 'Import')?.disabled, true)
+      assert.equal(findButtonByLabel(root, 'Export')?.disabled, true)
+      assert.equal(findButtonByLabel(root, 'Undo')?.disabled, true)
+      assert.equal(findButtonByLabel(root, 'Redo')?.disabled, true)
+      assert.match(baseCss, /\.chrome-combo-select\b/)
+      assert.doesNotMatch(baseCss, /\.chrome-combo-value\b/)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Zoom combo: steps, default 100%, prefs round-trip, corrupt clamp, envelope isolation', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const { bootProjectStore } = await importCompiledTs('src/boot-project.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      assert.deepEqual([...persist.ZOOM_STEPS], [
+        '50%',
+        '75%',
+        '100%',
+        '125%',
+        '150%',
+        '175%',
+        '200%',
+      ])
+      assert.equal(persist.clampZoomStep('bogus'), '100%')
+      assert.equal(persist.clampZoomStep('150%'), '150%')
+
+      const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '100%',
+          panXY: { x: 9, y: 8 },
+          sidebarPaneHeights: { palette: 140, mappings: 160, unbound: 120 },
+        }),
+      )
+      const store = model.createStore()
+      bootProjectStore(store, storage)
+      const envelopeBefore = storage.getItem(persist.PROJECT_ENVELOPE_KEY)
+      assert.notEqual(envelopeBefore, null)
+      const sessionBefore = store.getState().session
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      const zoomSelect = root.querySelector('[data-chrome-zoom-select]')
+      assert.ok(zoomSelect)
+      assert.equal(zoomSelect.tagName, 'SELECT')
+      assert.equal(zoomSelect.value, '100%')
+      assert.equal(
+        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        '100%',
+      )
+
+      const stepOptions = zoomSelect.children
+        .filter((c) => c.tagName === 'OPTION')
+        .map((o) => o.value)
+      assert.deepEqual(stepOptions, [...persist.ZOOM_STEPS])
+
+      zoomSelect.value = '150%'
+      zoomSelect.dispatchEvent({ type: 'change' })
+
+      const prefs = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.equal(prefs.zoomStep, '150%')
+      assert.deepEqual(prefs.panXY, { x: 9, y: 8 })
+      assert.deepEqual(prefs.sidebarPaneHeights, {
+        palette: 140,
+        mappings: 160,
+        unbound: 120,
+      })
+      assert.equal(
+        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        '150%',
+      )
+      assert.equal(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
+      assert.deepEqual(store.getState().session, sessionBefore)
+      const envelope = JSON.parse(envelopeBefore)
+      assert.equal(Object.hasOwn(envelope, 'zoomStep'), false)
+      assert.equal(Object.hasOwn(envelope.project ?? {}, 'zoomStep'), false)
+      assert.deepEqual(envelope.project, seed.createSeedProject())
+
+      // Corrupt stored zoomStep → combo + strip clamp to 100% (no throw; write on next change).
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: 'not-a-step',
+          panXY: { x: 0, y: 0 },
+          sidebarPaneHeights: {},
+        }),
+      )
+      const rootCorrupt = createRoot()
+      mountChromeShell(rootCorrupt, model.createStore(), { storage })
+      const corruptSelect = rootCorrupt.querySelector('[data-chrome-zoom-select]')
+      assert.equal(corruptSelect.value, '100%')
+      assert.equal(
+        rootCorrupt.querySelector('[data-context-value="zoom"]')?.textContent,
+        '100%',
+      )
+      assert.equal(
+        JSON.parse(storage.getItem(persist.PREFS_KEY)).zoomStep,
+        'not-a-step',
+      )
+      corruptSelect.value = '125%'
+      corruptSelect.dispatchEvent({ type: 'change' })
+      assert.equal(JSON.parse(storage.getItem(persist.PREFS_KEY)).zoomStep, '125%')
+
+      // savePrefs fail-soft on Zoom change
+      const throwingStorage = {
+        getItem(key) {
+          if (key === persist.PREFS_KEY) {
+            return JSON.stringify({
+              zoomStep: '100%',
+              panXY: { x: 0, y: 0 },
+              sidebarPaneHeights: {},
+            })
+          }
+          return null
+        },
+        setItem() {
+          throw new Error('quota exceeded')
+        },
+        removeItem() {},
+      }
+      const rootThrow = createRoot()
+      mountChromeShell(rootThrow, model.createStore(), { storage: throwingStorage })
+      const throwSelect = rootThrow.querySelector('[data-chrome-zoom-select]')
+      assert.doesNotThrow(() => {
+        throwSelect.value = '200%'
+        throwSelect.dispatchEvent({ type: 'change' })
+      })
+      assert.equal(
+        rootThrow.querySelector('[data-context-value="zoom"]')?.textContent,
+        '200%',
+      )
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Skin combo: lists displayNames, null stays empty, switch preserves Object/State', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const seedProject = seed.createSeedProject()
+      assert.equal(seedProject.skins.length, 5)
+
+      // Null activeSkinId → empty/—; Object/State stay —
+      const storageNull = persist.createMemoryStorage()
+      const storeNull = model.createStore()
+      storeNull.apply({
+        project: seedProject,
+        session: model.createEmptySession(),
+      })
+      const rootNull = createRoot()
+      mountChromeShell(rootNull, storeNull, { storage: storageNull })
+
+      const skinSelectNull = rootNull.querySelector('[data-chrome-skin-select]')
+      assert.ok(skinSelectNull)
+      assert.equal(skinSelectNull.tagName, 'SELECT')
+      assert.equal(skinSelectNull.value, '')
+      const optionLabels = skinSelectNull.children
+        .filter((c) => c.tagName === 'OPTION')
+        .map((o) => ({ value: o.value, label: o.textContent }))
+      assert.equal(optionLabels[0].value, '')
+      assert.equal(optionLabels[0].label, '—')
+      assert.deepEqual(
+        optionLabels.slice(1).map((o) => o.label),
+        seedProject.skins.map((s) => s.displayName),
+      )
+      assert.deepEqual(
+        optionLabels.slice(1).map((o) => o.value),
+        seedProject.skins.map((s) => s.id),
+      )
+      assert.equal(
+        rootNull.querySelector('[data-context-value="skin"]')?.textContent,
+        '—',
+      )
+      assert.ok(rootNull.querySelector('[data-chrome-skin]')?.classList.contains('chrome-skin-combo'))
+
+      // Switch skin: only activeSkinId changes; strip shows displayName
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      persist.attachAutosave(store, storage)
+      store.apply({
+        project: seedProject,
+        session: {
+          selectedObjectTypeId: 'ot-1',
+          selectedStateId: 'idle',
+          activeSkinId: 'black-green',
+        },
+      })
+      const envelopeBefore = storage.getItem(persist.PROJECT_ENVELOPE_KEY)
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+      const skinSelect = root.querySelector('[data-chrome-skin-select]')
+      assert.equal(skinSelect.value, 'black-green')
+      assert.equal(
+        root.querySelector('[data-context-value="skin"]')?.textContent,
+        'Black/Green',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        '—',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
+        '—',
+      )
+
+      skinSelect.value = 'monochrome'
+      skinSelect.dispatchEvent({ type: 'change' })
+
+      const after = store.getState().session
+      assert.equal(after.activeSkinId, 'monochrome')
+      assert.equal(after.selectedObjectTypeId, 'ot-1')
+      assert.equal(after.selectedStateId, 'idle')
+      assert.equal(
+        root.querySelector('[data-context-value="skin"]')?.textContent,
+        'Monochrome',
+      )
+      assert.notEqual(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
+      const envelope = JSON.parse(storage.getItem(persist.PROJECT_ENVELOPE_KEY))
+      assert.equal(envelope.session.activeSkinId, 'monochrome')
+      assert.equal(envelope.session.selectedObjectTypeId, 'ot-1')
+      assert.equal(Object.hasOwn(envelope, 'zoomStep'), false)
+
+      // Unknown id ignored
+      const beforeUnknown = store.getState().session
+      skinSelect.value = 'no-such-skin'
+      skinSelect.dispatchEvent({ type: 'change' })
+      assert.deepEqual(store.getState().session, beforeUnknown)
+      assert.equal(skinSelect.value, 'monochrome')
     } finally {
       restoreDoc()
     }
@@ -572,6 +875,11 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(paneHeight(root, 'mappings'), '200px')
       assert.equal(paneHeight(root, 'unbound'), '150px')
       assert.equal(paneHeight(root, 'picker'), '220px')
+      assert.equal(root.querySelector('[data-chrome-zoom-select]')?.value, '125%')
+      assert.equal(
+        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        '125%',
+      )
 
       // Below-min prefs → clamp to mins.
       storage.setItem(
@@ -973,6 +1281,11 @@ describe('chrome shell I/O matrix', () => {
       assert.deepEqual(store.getState().project, seed.createSeedProject())
       assert.deepEqual(store.getState().session, model.createEmptySession())
       assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
+      assert.equal(root.querySelector('[data-chrome-skin-select]')?.value, '')
+      assert.equal(
+        root.querySelector('[data-context-value="skin"]')?.textContent,
+        '—',
+      )
     } finally {
       restoreDoc()
     }

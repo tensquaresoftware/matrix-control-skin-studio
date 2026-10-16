@@ -288,19 +288,21 @@ body {
   color: var(--color-text-secondary);
 }
 
-.chrome-combo-value {
+.chrome-combo-select {
   height: 26px;
   min-width: 72px;
   padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-default);
   background: var(--color-surface-sunken);
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--type-ui-font-size);
+  line-height: 1;
+  cursor: pointer;
 }
 
-.chrome-skin-combo .chrome-combo-value {
+.chrome-skin-combo .chrome-combo-select {
   min-width: 120px;
 }
 

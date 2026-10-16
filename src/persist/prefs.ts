@@ -15,6 +15,26 @@ export const DEFAULT_PREFS: PrefsDocument = {
   sidebarPaneHeights: {},
 }
 
+/** Discrete Zoom steps only (FR-11 / AD-8). */
+export const ZOOM_STEPS = [
+  '50%',
+  '75%',
+  '100%',
+  '125%',
+  '150%',
+  '175%',
+  '200%',
+] as const
+
+export type ZoomStep = (typeof ZOOM_STEPS)[number]
+
+/** Unknown / invalid stored zoomStep → fresh default `100%`. */
+export function clampZoomStep(zoomStep: string): ZoomStep {
+  return (ZOOM_STEPS as readonly string[]).includes(zoomStep)
+    ? (zoomStep as ZoomStep)
+    : (DEFAULT_PREFS.zoomStep as ZoomStep)
+}
+
 export function getDefaultPrefs(): PrefsDocument {
   return {
     zoomStep: DEFAULT_PREFS.zoomStep,

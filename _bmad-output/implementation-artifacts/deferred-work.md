@@ -16,3 +16,12 @@
 ## Deferred from: code review of spec-2-2-chrome-shell-layout.md (2026-10-16)
 
 - Chrome-shell matrix duplicates `importCompiledTs` / minimal DOM harness already copied across Epic 1 suites — deferred as the same shared-harness debt tracked from stories 1.2–1.4; not a product defect of the chrome shell itself.
+
+## Deferred from: build review of spec-2-3-top-bar-ops-zoom-and-skin-combo.md (2026-10-16)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-top-bar-ops-zoom-and-skin-combo.md`
+  summary: Assert English Zoom/Skin visible labels (or aria-label) in the chrome-shell matrix top-bar row.
+  evidence: Static chrome copy; order/structure already covered; everyday product harm unlikely until copy drifts.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-top-bar-ops-zoom-and-skin-combo.md`
+  summary: Deduplicate boot-seed vs chrome-shell minimal DOM harness / matchesSelector helpers.
+  evidence: Pre-existing shared-harness debt also deferred from Epic 1 and story 2-2; not a product defect of Zoom/Skin wiring.

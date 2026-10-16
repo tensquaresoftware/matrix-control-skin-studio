@@ -1,11 +1,19 @@
 import { mountCanvas } from '../canvas/index'
 import type { ProjectStore } from '../model/store'
-import type { PersistStorage } from '../persist/storage'
-import { getBrowserStorage } from '../persist/storage'
+import {
+  clampZoomStep,
+  getBrowserStorage,
+  loadPrefs,
+  savePrefs,
+  ZOOM_STEPS,
+  type PersistStorage,
+} from '../persist/index'
 import { mountSidebar } from '../sidebar/index'
 import { openNewConfirmModal } from './new-confirm'
 
 export { NEW_CONFIRM_BODY, openNewConfirmModal } from './new-confirm'
+
+const EMPTY_GLYPH = '—'
 
 export type MountChromeShellOptions = {
   storage?: PersistStorage
@@ -13,7 +21,8 @@ export type MountChromeShellOptions = {
 
 /**
  * Locked desktop chrome: top bar (40px) + context strip (28px) + body
- * (canvas flex:1 + sidebar 320px). New is live; other AD-11 controls are inert.
+ * (canvas flex:1 + sidebar 320px). New + Zoom + Skin live; other AD-11
+ * controls remain ordered disabled stubs.
  */
 export function mountChromeShell(
   root: HTMLElement | null,
@@ -32,8 +41,14 @@ export function mountChromeShell(
   shell.setAttribute('data-chrome-shell', '')
   shell.setAttribute('aria-label', 'Skin Studio')
 
-  const topBar = buildTopBar(root, store)
   const contextStrip = buildContextStrip()
+  const zoomReadout = contextStrip.querySelector('[data-context-value="zoom"]')
+  const skinReadout = contextStrip.querySelector('[data-context-value="skin"]')
+  if (!zoomReadout || !skinReadout) {
+    throw new Error('Context strip Zoom/Skin readouts missing')
+  }
+
+  const topBar = buildTopBar(root, store, storage, zoomReadout, skinReadout)
   const body = document.createElement('div')
   body.className = 'chrome-body'
   body.setAttribute('data-chrome-body', '')
@@ -54,7 +69,13 @@ export function mountChromeShell(
   mountSidebar(sidebarHost, { storage })
 }
 
-function buildTopBar(modalRoot: HTMLElement, store: ProjectStore): HTMLElement {
+function buildTopBar(
+  modalRoot: HTMLElement,
+  store: ProjectStore,
+  storage: PersistStorage,
+  zoomReadout: Element,
+  skinReadout: Element,
+): HTMLElement {
   const topBar = document.createElement('div')
   topBar.className = 'chrome-top-bar'
   topBar.setAttribute('data-chrome-top-bar', '')
@@ -73,11 +94,11 @@ function buildTopBar(modalRoot: HTMLElement, store: ProjectStore): HTMLElement {
   const sep1 = separator()
   const undoBtn = inertButton('Undo', 'chrome-top-btn chrome-top-btn-ghost')
   const redoBtn = inertButton('Redo', 'chrome-top-btn chrome-top-btn-ghost')
-  const zoom = inertCombo('Zoom', '—')
+  const zoom = buildZoomCombo(storage, zoomReadout)
   const spacer = document.createElement('span')
   spacer.className = 'chrome-top-spacer'
   spacer.setAttribute('data-chrome-spacer', '')
-  const skin = inertCombo('Skin', '—', true)
+  const skin = buildSkinCombo(store, skinReadout)
 
   topBar.append(
     newButton,
@@ -110,25 +131,127 @@ function separator(): HTMLElement {
   return sep
 }
 
-function inertCombo(
-  label: string,
-  value: string,
-  skin = false,
-): HTMLElement {
+function buildZoomCombo(storage: PersistStorage, zoomReadout: Element): HTMLElement {
   const wrap = document.createElement('span')
-  wrap.className = skin ? 'chrome-combo chrome-skin-combo' : 'chrome-combo'
-  wrap.setAttribute('data-chrome-inert', label.toLowerCase())
+  wrap.className = 'chrome-combo'
+  wrap.setAttribute('data-chrome-zoom', '')
 
-  const lbl = document.createElement('span')
+  const selectId = 'chrome-zoom-select'
+  const lbl = document.createElement('label')
   lbl.className = 'chrome-combo-label'
-  lbl.textContent = `${label}:`
+  lbl.setAttribute('for', selectId)
+  lbl.textContent = 'Zoom:'
 
-  const val = document.createElement('span')
-  val.className = 'chrome-combo-value'
-  val.textContent = value
-  val.setAttribute('aria-disabled', 'true')
+  const select = document.createElement('select')
+  select.id = selectId
+  select.className = 'chrome-combo-select'
+  select.setAttribute('data-chrome-zoom-select', '')
 
-  wrap.append(lbl, val)
+  for (const step of ZOOM_STEPS) {
+    const option = document.createElement('option')
+    option.value = step
+    option.textContent = step
+    select.append(option)
+  }
+
+  const zoomStep = clampZoomStep(loadPrefs(storage).zoomStep)
+  select.value = zoomStep
+  zoomReadout.textContent = zoomStep
+
+  select.addEventListener('change', () => {
+    const next = clampZoomStep(select.value)
+    select.value = next
+    const prefs = loadPrefs(storage)
+    prefs.zoomStep = next
+    savePrefs(prefs, storage)
+    zoomReadout.textContent = next
+  })
+
+  wrap.append(lbl, select)
+  return wrap
+}
+
+function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement {
+  const wrap = document.createElement('span')
+  wrap.className = 'chrome-combo chrome-skin-combo'
+  wrap.setAttribute('data-chrome-skin', '')
+
+  const selectId = 'chrome-skin-select'
+  const lbl = document.createElement('label')
+  lbl.className = 'chrome-combo-label'
+  lbl.setAttribute('for', selectId)
+  lbl.textContent = 'Skin:'
+
+  const select = document.createElement('select')
+  select.id = selectId
+  select.className = 'chrome-combo-select'
+  select.setAttribute('data-chrome-skin-select', '')
+
+  const syncSkinFromStore = (): void => {
+    const { project, session } = store.getState()
+
+    if (
+      session.activeSkinId !== null &&
+      !project.skins.some((s) => s.id === session.activeSkinId)
+    ) {
+      store.apply({
+        session: {
+          selectedObjectTypeId: session.selectedObjectTypeId,
+          selectedStateId: session.selectedStateId,
+          activeSkinId: null,
+        },
+      })
+      return
+    }
+
+    select.replaceChildren()
+    const emptyOption = document.createElement('option')
+    emptyOption.value = ''
+    emptyOption.textContent = EMPTY_GLYPH
+    select.append(emptyOption)
+    for (const skin of project.skins) {
+      const option = document.createElement('option')
+      option.value = skin.id
+      option.textContent = skin.displayName
+      select.append(option)
+    }
+
+    const activeSkin =
+      session.activeSkinId === null
+        ? undefined
+        : project.skins.find((s) => s.id === session.activeSkinId)
+
+    if (activeSkin) {
+      select.value = activeSkin.id
+      skinReadout.textContent = activeSkin.displayName
+    } else {
+      select.value = ''
+      skinReadout.textContent = EMPTY_GLYPH
+    }
+  }
+
+  syncSkinFromStore()
+  store.subscribe(syncSkinFromStore)
+
+  select.addEventListener('change', () => {
+    const nextId = select.value === '' ? null : select.value
+    const { project: currentProject, session: currentSession } = store.getState()
+
+    if (nextId !== null && !currentProject.skins.some((s) => s.id === nextId)) {
+      syncSkinFromStore()
+      return
+    }
+
+    store.apply({
+      session: {
+        selectedObjectTypeId: currentSession.selectedObjectTypeId,
+        selectedStateId: currentSession.selectedStateId,
+        activeSkinId: nextId,
+      },
+    })
+  })
+
+  wrap.append(lbl, select)
   return wrap
 }
 
@@ -137,12 +260,11 @@ function buildContextStrip(): HTMLElement {
   strip.className = 'chrome-context-strip type-context'
   strip.setAttribute('data-chrome-context-strip', '')
 
-  const empty = '—'
   strip.append(
-    contextField('Object', empty),
-    contextField('State', empty),
-    contextField('Zoom', empty),
-    contextField('Skin', empty),
+    contextField('Object', EMPTY_GLYPH),
+    contextField('State', EMPTY_GLYPH),
+    contextField('Zoom', EMPTY_GLYPH),
+    contextField('Skin', EMPTY_GLYPH),
   )
   return strip
 }

@@ -2,16 +2,24 @@ import type { ProjectStore, Unsubscribe } from '../model/store'
 import { clearEnvelopeKey, parseEnvelope, writeEnvelope } from './envelope'
 import type { ProjectEnvelope } from './envelope'
 import { PROJECT_ENVELOPE_KEY, PREFS_KEY } from './keys'
-import { DEFAULT_PREFS, getDefaultPrefs, loadPrefs, savePrefs } from './prefs'
-import type { PrefsDocument } from './prefs'
+import {
+  clampZoomStep,
+  DEFAULT_PREFS,
+  getDefaultPrefs,
+  loadPrefs,
+  savePrefs,
+  ZOOM_STEPS,
+} from './prefs'
+import type { PrefsDocument, ZoomStep } from './prefs'
 import {
   createMemoryStorage,
   getBrowserStorage,
   type PersistStorage,
 } from './storage'
 
-export type { PersistStorage, PrefsDocument, ProjectEnvelope }
+export type { PersistStorage, PrefsDocument, ProjectEnvelope, ZoomStep }
 export {
+  clampZoomStep,
   createMemoryStorage,
   DEFAULT_PREFS,
   getBrowserStorage,
@@ -20,6 +28,7 @@ export {
   PREFS_KEY,
   PROJECT_ENVELOPE_KEY,
   savePrefs,
+  ZOOM_STEPS,
 }
 
 /**
