@@ -1,4 +1,4 @@
-import { mountCanvas } from '../canvas/index'
+import { applyCanvasViewFromPrefs, mountCanvas } from '../canvas/index'
 import type { ProjectStore } from '../model/store'
 import {
   clampZoomStep,
@@ -58,14 +58,14 @@ export function mountChromeShell(
   syncObjectStateFromStore()
   store.subscribe(syncObjectStateFromStore)
 
-  const topBar = buildTopBar(root, store, storage, zoomReadout, skinReadout)
-  const body = document.createElement('div')
-  body.className = 'chrome-body'
-  body.setAttribute('data-chrome-body', '')
-
   const canvasHost = document.createElement('main')
   canvasHost.className = 'chrome-canvas-slot'
   canvasHost.setAttribute('data-chrome-canvas-slot', '')
+
+  const topBar = buildTopBar(root, store, storage, zoomReadout, skinReadout, canvasHost)
+  const body = document.createElement('div')
+  body.className = 'chrome-body'
+  body.setAttribute('data-chrome-body', '')
 
   const sidebarHost = document.createElement('aside')
   sidebarHost.className = 'chrome-sidebar-slot'
@@ -75,7 +75,7 @@ export function mountChromeShell(
   shell.append(topBar, contextStrip, body)
   root.append(shell)
 
-  mountCanvas(canvasHost)
+  mountCanvas(canvasHost, { storage })
   mountSidebar(sidebarHost, { storage })
 }
 
@@ -85,6 +85,7 @@ function buildTopBar(
   storage: PersistStorage,
   zoomReadout: Element,
   skinReadout: Element,
+  canvasHost: HTMLElement,
 ): HTMLElement {
   const topBar = document.createElement('div')
   topBar.className = 'chrome-top-bar'
@@ -104,7 +105,7 @@ function buildTopBar(
   const sep1 = separator()
   const undoBtn = inertButton('Undo', 'chrome-top-btn chrome-top-btn-ghost')
   const redoBtn = inertButton('Redo', 'chrome-top-btn chrome-top-btn-ghost')
-  const zoom = buildZoomCombo(storage, zoomReadout)
+  const zoom = buildZoomCombo(storage, zoomReadout, canvasHost)
   const spacer = document.createElement('span')
   spacer.className = 'chrome-top-spacer'
   spacer.setAttribute('data-chrome-spacer', '')
@@ -141,7 +142,11 @@ function separator(): HTMLElement {
   return sep
 }
 
-function buildZoomCombo(storage: PersistStorage, zoomReadout: Element): HTMLElement {
+function buildZoomCombo(
+  storage: PersistStorage,
+  zoomReadout: Element,
+  canvasHost: HTMLElement,
+): HTMLElement {
   const wrap = document.createElement('span')
   wrap.className = 'chrome-combo'
   wrap.setAttribute('data-chrome-zoom', '')
@@ -175,6 +180,7 @@ function buildZoomCombo(storage: PersistStorage, zoomReadout: Element): HTMLElem
     prefs.zoomStep = next
     savePrefs(prefs, storage)
     zoomReadout.textContent = next
+    applyCanvasViewFromPrefs(canvasHost, storage)
   })
 
   wrap.append(lbl, select)

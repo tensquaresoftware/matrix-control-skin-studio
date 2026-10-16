@@ -354,7 +354,7 @@ body {
   min-height: 0;
 }
 
-/* Canvas GUI-view placeholder */
+/* Canvas GUI-view — focusable pan/zoom surface */
 .canvas-host {
   display: flex;
   align-items: stretch;
@@ -362,6 +362,21 @@ body {
   height: 100%;
   background: var(--color-surface-app);
   position: relative;
+  overflow: hidden;
+  outline: none;
+  cursor: grab;
+}
+
+.canvas-host:active {
+  cursor: grabbing;
+}
+
+.canvas-host:focus,
+.canvas-host:focus-visible,
+[data-canvas-host]:focus,
+[data-canvas-host]:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
 }
 
 .canvas-surface {
@@ -373,6 +388,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transform-origin: top left;
 }
 
 .canvas-placeholder-label {

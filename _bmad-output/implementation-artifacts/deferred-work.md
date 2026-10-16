@@ -30,3 +30,12 @@
 
 - English Zoom/Skin visible labels unasserted in the chrome-shell matrix — already tracked under the build-review defer for this spec; static copy, low everyday harm.
 - boot-seed vs chrome-shell minimal DOM harness / `matchesSelector` divergence — already tracked as shared-harness debt (Epic 1 / 2-2 / build review); not a product defect of Zoom/Skin.
+
+## Deferred from: build review of spec-2-5-canvas-pan-and-prefs-persistence.md (2026-10-16)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5-canvas-pan-and-prefs-persistence.md`
+  summary: Add `touch-action: none` on the canvas host so touch gestures do not steal pan drags.
+  evidence: Desktop-first MVP; browser may steal touch pans without it; reopen when touch canvas work is in scope.
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5-canvas-pan-and-prefs-persistence.md`
+  summary: Assert non-primary pointer buttons do not start canvas pan in the chrome-shell matrix.
+  evidence: Primary click-drag is covered; secondary-button ignore is real but outside everyday I/O rows until context-menu work lands on the canvas.

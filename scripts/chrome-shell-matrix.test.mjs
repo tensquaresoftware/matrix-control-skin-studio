@@ -83,7 +83,10 @@ function createElement(tagName) {
     style: {
       cssText: '',
       height: '',
+      transform: '',
+      transformOrigin: '',
     },
+    tabIndex: -1,
     children: [],
     parent: null,
     classList: {
@@ -172,10 +175,22 @@ function createElement(tagName) {
     click() {
       for (const fn of listeners.get('click') || []) fn()
     },
+    focus() {
+      node._focused = true
+    },
+    blur() {
+      node._focused = false
+    },
     setPointerCapture() {},
     releasePointerCapture() {},
   }
   return node
+}
+
+function canvasSurfaceTransform(root) {
+  const surface = root.querySelector('[data-canvas-surface]')
+  assert.ok(surface, 'expected [data-canvas-surface]')
+  return surface.style.transform
 }
 
 function matchesSelector(el, selector) {
@@ -1450,6 +1465,299 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(
         root.querySelector('[data-context-value="state"]')?.textContent,
         '—',
+      )
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('canvas pan drag + arrow: prefs merge-write, transform live, envelope isolation', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const canvas = await importCompiledTs('src/canvas/index.ts')
+    const { bootProjectStore } = await importCompiledTs('src/boot-project.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      assert.match(baseCss, /\[data-canvas-host\]:focus/)
+      assert.match(baseCss, /\.canvas-host\s*\{[^}]*overflow:\s*hidden/s)
+
+      const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '100%',
+          panXY: { x: 10, y: 20 },
+          sidebarPaneHeights: { palette: 140, mappings: 160, unbound: 120 },
+        }),
+      )
+      const store = model.createStore()
+      bootProjectStore(store, storage)
+      const envelopeBefore = storage.getItem(persist.PROJECT_ENVELOPE_KEY)
+      assert.notEqual(envelopeBefore, null)
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      const canvasHost = root.querySelector('[data-canvas-host]')
+      assert.ok(canvasHost)
+      assert.equal(canvasHost.tabIndex, 0)
+      assert.equal(
+        canvasSurfaceTransform(root),
+        'translate(10px, 20px) scale(1)',
+      )
+
+      // Click-drag pan: visual updates on move; prefs commit on pointer-up only.
+      canvasHost.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      assert.equal(canvasHost._focused, true)
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientX: 130,
+        clientY: 115,
+        pointerId: 1,
+      })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        'translate(40px, 35px) scale(1)',
+      )
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 10,
+        y: 20,
+      })
+
+      globalThis.window.dispatchEvent({
+        type: 'pointerup',
+        clientX: 130,
+        clientY: 115,
+        pointerId: 1,
+      })
+
+      const afterDrag = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.deepEqual(afterDrag.panXY, { x: 40, y: 35 })
+      assert.equal(afterDrag.zoomStep, '100%')
+      assert.deepEqual(afterDrag.sidebarPaneHeights, {
+        palette: 140,
+        mappings: 160,
+        unbound: 120,
+      })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        'translate(40px, 35px) scale(1)',
+      )
+      assert.equal(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
+
+      // Arrow pan when focused: ±16px, preventDefault, prefs commit each step.
+      let prevented = false
+      canvasHost.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowRight',
+        preventDefault() {
+          prevented = true
+        },
+      })
+      assert.equal(prevented, true)
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 40 + canvas.ARROW_PAN_STEP_PX,
+        y: 35,
+      })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        `translate(${40 + canvas.ARROW_PAN_STEP_PX}px, 35px) scale(1)`,
+      )
+
+      canvasHost.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowUp',
+        preventDefault() {},
+      })
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 40 + canvas.ARROW_PAN_STEP_PX,
+        y: 35 - canvas.ARROW_PAN_STEP_PX,
+      })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        `translate(${40 + canvas.ARROW_PAN_STEP_PX}px, ${35 - canvas.ARROW_PAN_STEP_PX}px) scale(1)`,
+      )
+
+      canvasHost.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowLeft',
+        preventDefault() {},
+      })
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 40,
+        y: 35 - canvas.ARROW_PAN_STEP_PX,
+      })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        `translate(40px, ${35 - canvas.ARROW_PAN_STEP_PX}px) scale(1)`,
+      )
+
+      canvasHost.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowDown',
+        preventDefault() {},
+      })
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 40,
+        y: 35,
+      })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        'translate(40px, 35px) scale(1)',
+      )
+
+      // Non-arrow key must not pan.
+      const panBeforeOther = JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY
+      canvasHost.dispatchEvent({
+        type: 'keydown',
+        key: 'a',
+        preventDefault() {},
+      })
+      assert.deepEqual(
+        JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY,
+        panBeforeOther,
+      )
+
+      // Unfocused arrows: keydown on another focusable must not pan the canvas.
+      const panBeforeUnfocused = JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY
+      const zoomSelect = root.querySelector('[data-chrome-zoom-select]')
+      assert.ok(zoomSelect)
+      zoomSelect.focus?.()
+      zoomSelect.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowRight',
+        preventDefault() {},
+      })
+      assert.deepEqual(
+        JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY,
+        panBeforeUnfocused,
+      )
+
+      // Envelope isolation after pan writes.
+      const envelope = JSON.parse(storage.getItem(persist.PROJECT_ENVELOPE_KEY))
+      assert.equal(Object.hasOwn(envelope, 'zoomStep'), false)
+      assert.equal(Object.hasOwn(envelope, 'panXY'), false)
+      assert.deepEqual(envelope.project, seed.createSeedProject())
+
+      // Drag that never reaches pointer-up (cancel) must not commit.
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '100%',
+          panXY: { x: 0, y: 0 },
+          sidebarPaneHeights: {},
+        }),
+      )
+      const rootCancel = createRoot()
+      mountChromeShell(rootCancel, model.createStore(), { storage })
+      const hostCancel = rootCancel.querySelector('[data-canvas-host]')
+      hostCancel.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 2,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientX: 50,
+        clientY: 50,
+        pointerId: 2,
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointercancel',
+        clientX: 50,
+        clientY: 50,
+        pointerId: 2,
+      })
+      assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)).panXY, {
+        x: 0,
+        y: 0,
+      })
+      assert.equal(
+        canvasSurfaceTransform(rootCancel),
+        'translate(0px, 0px) scale(1)',
+      )
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('canvas Zoom live scale + strip + reopen restore of pan/Zoom transform', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { bootProjectStore } = await importCompiledTs('src/boot-project.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '100%',
+          panXY: { x: 12, y: 34 },
+          sidebarPaneHeights: { palette: 140, mappings: 160, unbound: 120 },
+        }),
+      )
+      const store = model.createStore()
+      bootProjectStore(store, storage)
+      const envelopeBefore = storage.getItem(persist.PROJECT_ENVELOPE_KEY)
+      const sessionBefore = store.getState().session
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+      assert.equal(
+        canvasSurfaceTransform(root),
+        'translate(12px, 34px) scale(1)',
+      )
+
+      const zoomSelect = root.querySelector('[data-chrome-zoom-select]')
+      zoomSelect.value = '150%'
+      zoomSelect.dispatchEvent({ type: 'change' })
+
+      assert.equal(
+        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        '150%',
+      )
+      assert.equal(
+        canvasSurfaceTransform(root),
+        'translate(12px, 34px) scale(1.5)',
+      )
+      const prefs = JSON.parse(storage.getItem(persist.PREFS_KEY))
+      assert.equal(prefs.zoomStep, '150%')
+      assert.deepEqual(prefs.panXY, { x: 12, y: 34 })
+      assert.equal(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
+      assert.deepEqual(store.getState().session, sessionBefore)
+      const envelope = JSON.parse(envelopeBefore)
+      assert.equal(Object.hasOwn(envelope, 'zoomStep'), false)
+      assert.equal(Object.hasOwn(envelope, 'panXY'), false)
+
+      // Cold reopen: same transform restored from prefs.
+      const remount = createRoot()
+      mountChromeShell(remount, model.createStore(), { storage })
+      assert.equal(
+        remount.querySelector('[data-chrome-zoom-select]')?.value,
+        '150%',
+      )
+      assert.equal(
+        remount.querySelector('[data-context-value="zoom"]')?.textContent,
+        '150%',
+      )
+      assert.equal(
+        canvasSurfaceTransform(remount),
+        'translate(12px, 34px) scale(1.5)',
       )
     } finally {
       restoreDoc()
