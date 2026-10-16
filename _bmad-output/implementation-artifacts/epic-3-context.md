@@ -2,6 +2,8 @@
 
 <!-- Compiled from planning artifacts. Edit freely. Regenerate with compile-epic-context if planning docs change. -->
 
+**Status:** closed (`sprint-status.yaml` → `epic-3: done`, 2026-10-17). Stories 3.1–3.4 complete; retrospective remains optional. Next MVP queue: Epic 4 (mappings / preview).
+
 ## Epic 4 entry (readiness)
 
 Stories 3.1–3.4 ship Palette/Skin CRUD on the locked chrome (the fixed editor shell from Epic 2). **Epic 4 may assume:**
