@@ -157,6 +157,14 @@ function createElement(tagName) {
       walkCollect(node, selector, out)
       return out
     },
+    closest(selector) {
+      let el = node
+      while (el) {
+        if (matchesSelector(el, selector)) return el
+        el = el.parent
+      }
+      return null
+    },
     addEventListener(type, fn) {
       if (!listeners.has(type)) listeners.set(type, [])
       listeners.get(type).push(fn)
@@ -170,10 +178,18 @@ function createElement(tagName) {
       )
     },
     dispatchEvent(event) {
-      for (const fn of listeners.get(event.type) || []) fn(event)
+      const ev = event && typeof event === 'object' ? event : { type: event }
+      if (typeof ev.preventDefault !== 'function') {
+        ev.preventDefault = () => {}
+      }
+      if (typeof ev.stopPropagation !== 'function') {
+        ev.stopPropagation = () => {}
+      }
+      for (const fn of listeners.get(ev.type) || []) fn(ev)
     },
     click() {
-      for (const fn of listeners.get('click') || []) fn()
+      if (node.disabled) return
+      node.dispatchEvent({ type: 'click' })
     },
     focus() {
       node._focused = true
@@ -183,6 +199,7 @@ function createElement(tagName) {
       node._focused = false
       node.dispatchEvent({ type: 'blur' })
     },
+    select() {},
     setPointerCapture() {},
     releasePointerCapture() {},
   }
@@ -574,6 +591,493 @@ describe('palette picker I/O matrix', () => {
 
       // Golden opaque hex for HSV (200, 50, 60) — not derived from hsvToHex under test.
       assert.equal(paletteHex(store, 'duoLedYellow'), '#4C7F99')
+    } finally {
+      restore()
+    }
+  })
+
+  it('create: + Add appends Colour {n} #808080, unique id, and selects it', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      const beforeIds = new Set(store.getState().project.palette.map((e) => e.id))
+      const addBtn = host.querySelector('[data-palette-add]')
+      assert.ok(addBtn)
+      assert.equal(addBtn.textContent, '+ Add')
+      addBtn.click()
+
+      const palette = store.getState().project.palette
+      assert.equal(palette.length, beforeIds.size + 1)
+      const created = palette[palette.length - 1]
+      assert.ok(created.id)
+      assert.equal(beforeIds.has(created.id), false)
+      assert.equal(created.hex, '#808080')
+      assert.equal(created.constantName, 'Colour 1')
+
+      const row = host.querySelector(`[data-palette-row="${created.id}"]`)
+      assert.ok(row?.classList.contains('is-selected'))
+      const hexField = host.querySelector('[data-picker-hex]')
+      assert.equal(hexField.value, '#808080')
+
+      // Sequential create fills Colour 2 next.
+      addBtn.click()
+      const second = store.getState().project.palette.at(-1)
+      assert.equal(second.constantName, 'Colour 2')
+      assert.equal(second.hex, '#808080')
+      assert.notEqual(second.id, created.id)
+    } finally {
+      restore()
+    }
+  })
+
+  it('create: Colour {n} gap-fill uses smallest unused positive integer', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'c1', hex: '#111111', constantName: 'Colour 1' },
+          { id: 'c3', hex: '#333333', constantName: 'Colour 3' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      host.querySelector('[data-palette-add]').click()
+      const created = store.getState().project.palette.at(-1)
+      assert.equal(created.constantName, 'Colour 2')
+      assert.equal(created.hex, '#808080')
+    } finally {
+      restore()
+    }
+  })
+
+  it('rename: double-click label updates constantName; id and hex stay stable', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [{ id: 'accentId', hex: '#AABBCC', constantName: 'OldName' }],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      const label = host
+        .querySelector('[data-palette-row="accentId"]')
+        ?.querySelector('[data-palette-label]')
+      assert.ok(label)
+      label.dispatchEvent({ type: 'dblclick' })
+
+      const input = host.querySelector('[data-palette-rename]')
+      assert.ok(input)
+      input.value = 'Accent'
+      input.dispatchEvent({ type: 'keydown', key: 'Enter' })
+
+      const entry = store.getState().project.palette.find((e) => e.id === 'accentId')
+      assert.ok(entry)
+      assert.equal(entry.id, 'accentId')
+      assert.equal(entry.hex, '#AABBCC')
+      assert.equal(entry.constantName, 'Accent')
+      assert.equal(
+        host
+          .querySelector('[data-palette-row="accentId"]')
+          ?.querySelector('[data-palette-label]')?.textContent,
+        'Accent',
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('rename: empty/whitespace rejected; prior label restored', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [{ id: 'keepId', hex: '#111111', constantName: 'KeepMe' }],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      const label = host
+        .querySelector('[data-palette-row="keepId"]')
+        ?.querySelector('[data-palette-label]')
+      label.dispatchEvent({ type: 'dblclick' })
+      const input = host.querySelector('[data-palette-rename]')
+      input.value = '   '
+      input.dispatchEvent({ type: 'blur' })
+
+      const entry = store.getState().project.palette.find((e) => e.id === 'keepId')
+      assert.equal(entry.constantName, 'KeepMe')
+      assert.equal(
+        host
+          .querySelector('[data-palette-row="keepId"]')
+          ?.querySelector('[data-palette-label]')?.textContent,
+        'KeepMe',
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('delete unreferenced: removes entry, clears selection, no modal', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'keep', hex: '#111111', constantName: 'Keep' },
+          { id: 'gone', hex: '#222222', constantName: 'Gone' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      host.querySelector('[data-palette-row="gone"]').click()
+      assert.ok(
+        host.querySelector('[data-palette-row="gone"]')?.classList.contains(
+          'is-selected',
+        ),
+      )
+      host.querySelector('[data-palette-delete]').click()
+
+      assert.equal(host.querySelector('[data-palette-delete-confirm]'), null)
+      assert.equal(
+        store.getState().project.palette.some((e) => e.id === 'gone'),
+        false,
+      )
+      assert.equal(host.querySelector('[data-palette-row="gone"]'), null)
+      assert.equal(host.querySelector('.is-selected'), null)
+      assert.equal(host.querySelector('[data-palette-delete]').disabled, true)
+    } finally {
+      restore()
+    }
+  })
+
+  it('delete referenced cancel: modal lists n; Cancel leaves palette + mappings', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const project = {
+        formatVersion: 1,
+        palette: [{ id: 'shared', hex: '#FFCC00', constantName: 'led_duo' }],
+        skins: [
+          {
+            id: 'black-green',
+            displayName: 'Black/Green',
+            mappings: [
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'led_on',
+                paletteEntryId: 'shared',
+              },
+              {
+                objectTypeId: 'led',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: 'shared',
+              },
+            ],
+          },
+        ],
+        inventory: { objectTypes: [] },
+      }
+      const { store, host } = mountWithProject(sidebar, model, project)
+      host.querySelector('[data-palette-row="shared"]').click()
+      host.querySelector('[data-palette-delete]').click()
+
+      const modal = host.querySelector('[data-palette-delete-confirm]')
+      assert.ok(modal)
+      assert.equal(
+        modal.querySelector('[data-palette-delete-title]')?.textContent,
+        'Delete colour “led_duo”?',
+      )
+      assert.equal(
+        modal.querySelector('[data-palette-delete-body]')?.textContent,
+        '2 mapping(s) will become Unbound:',
+      )
+      const refList = modal.querySelector('[data-palette-delete-refs]')
+      assert.ok(refList)
+      assert.equal(refList.children.length, 2)
+      assert.equal(
+        refList.children[0].textContent,
+        'Black/Green · knobLarge · led_on',
+      )
+      assert.equal(refList.children[1].textContent, 'Black/Green · led · fill')
+      assert.equal(
+        modal.querySelector('[data-palette-delete-cancel]')?.textContent,
+        'Cancel',
+      )
+      assert.equal(
+        modal.querySelector('[data-palette-delete-apply]')?.textContent,
+        'Delete and unbind',
+      )
+
+      modal.querySelector('[data-palette-delete-cancel]').click()
+      assert.equal(host.querySelector('[data-palette-delete-confirm]'), null)
+      assert.ok(store.getState().project.palette.some((e) => e.id === 'shared'))
+      const mappings = store.getState().project.skins[0].mappings
+      assert.equal(mappings[0].paletteEntryId, 'shared')
+      assert.equal(mappings[1].paletteEntryId, 'shared')
+    } finally {
+      restore()
+    }
+  })
+
+  it('delete referenced: list includes stateId when needed to disambiguate', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const project = {
+        formatVersion: 1,
+        palette: [{ id: 'shared', hex: '#FFCC00', constantName: 'led_duo' }],
+        skins: [
+          {
+            id: 'black-green',
+            displayName: 'Black/Green',
+            mappings: [
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'fill',
+                paletteEntryId: 'shared',
+              },
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'hover',
+                propertyId: 'fill',
+                paletteEntryId: 'shared',
+              },
+            ],
+          },
+        ],
+        inventory: { objectTypes: [] },
+      }
+      const { host } = mountWithProject(sidebar, model, project)
+      host.querySelector('[data-palette-row="shared"]').click()
+      host.querySelector('[data-palette-delete]').click()
+
+      const refList = host.querySelector('[data-palette-delete-refs]')
+      assert.ok(refList)
+      assert.equal(refList.children.length, 2)
+      assert.equal(
+        refList.children[0].textContent,
+        'Black/Green · knobLarge · normal · fill',
+      )
+      assert.equal(
+        refList.children[1].textContent,
+        'Black/Green · knobLarge · hover · fill',
+      )
+      assert.equal(
+        host.querySelector('[data-palette-delete-cancel]')?.textContent,
+        'Cancel',
+      )
+      assert.equal(
+        host.querySelector('[data-palette-delete-apply]')?.textContent,
+        'Delete and unbind',
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('delete referenced title uses id when constantName is missing', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const project = {
+        formatVersion: 1,
+        palette: [{ id: 'rawIdOnly', hex: '#112233' }],
+        skins: [
+          {
+            id: 'black-green',
+            displayName: 'Black/Green',
+            mappings: [
+              {
+                objectTypeId: 'led',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: 'rawIdOnly',
+              },
+            ],
+          },
+        ],
+        inventory: { objectTypes: [] },
+      }
+      const { host } = mountWithProject(sidebar, model, project)
+      host.querySelector('[data-palette-row="rawIdOnly"]').click()
+      host.querySelector('[data-palette-delete]').click()
+
+      assert.equal(
+        host.querySelector('[data-palette-delete-title]')?.textContent,
+        'Delete colour “rawIdOnly”?',
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('delete referenced confirm: removes entry, nulls paletteEntryId, no hex on mappings', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const project = {
+        formatVersion: 1,
+        palette: [
+          { id: 'shared', hex: '#FFCC00', constantName: 'led_duo' },
+          { id: 'other', hex: '#00AA55', constantName: 'accent' },
+        ],
+        skins: [
+          {
+            id: 'black-green',
+            displayName: 'Black/Green',
+            mappings: [
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'led_on',
+                paletteEntryId: 'shared',
+              },
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'ring',
+                paletteEntryId: 'other',
+              },
+            ],
+          },
+          {
+            id: 'cream-duo',
+            displayName: 'Cream/Duo',
+            mappings: [
+              {
+                objectTypeId: 'led',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: 'shared',
+              },
+            ],
+          },
+        ],
+        inventory: { objectTypes: [] },
+      }
+      const { store, host } = mountWithProject(sidebar, model, project)
+      host.querySelector('[data-palette-row="shared"]').click()
+      host.querySelector('[data-palette-delete]').click()
+
+      const modal = host.querySelector('[data-palette-delete-confirm]')
+      assert.ok(modal)
+      modal.querySelector('[data-palette-delete-apply]').click()
+
+      assert.equal(host.querySelector('[data-palette-delete-confirm]'), null)
+      assert.equal(
+        store.getState().project.palette.some((e) => e.id === 'shared'),
+        false,
+      )
+      assert.ok(store.getState().project.palette.some((e) => e.id === 'other'))
+      const blackGreen = store.getState().project.skins[0].mappings
+      assert.equal(blackGreen[0].paletteEntryId, null)
+      assert.equal(blackGreen[1].paletteEntryId, 'other')
+      assert.equal('hex' in blackGreen[0], false)
+      assert.equal('hex' in blackGreen[1], false)
+      assert.equal(store.getState().project.skins[1].mappings[0].paletteEntryId, null)
+      assert.equal(host.querySelector('.is-selected'), null)
+    } finally {
+      restore()
+    }
+  })
+
+  it('delete disabled: no selection → Delete… disabled / no-op', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      const deleteBtn = host.querySelector('[data-palette-delete]')
+      assert.ok(deleteBtn)
+      assert.equal(deleteBtn.disabled, true)
+      assert.equal(host.querySelector('.is-selected'), null)
+      const before = store.getState().project.palette.length
+      deleteBtn.click()
+      assert.equal(store.getState().project.palette.length, before)
+      assert.equal(host.querySelector('[data-palette-delete-confirm]'), null)
+    } finally {
+      restore()
+    }
+  })
+
+  it('orphan selection: after delete, selection clears and picker stays idle', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'a', hex: '#111111', constantName: 'A' },
+          { id: 'orphan', hex: '#222222', constantName: 'Orphan' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      host.querySelector('[data-palette-row="orphan"]').click()
+      const hexField = host.querySelector('[data-picker-hex]')
+      assert.equal(hexField.value, '#222222')
+
+      host.querySelector('[data-palette-delete]').click()
+
+      assert.equal(host.querySelector('.is-selected'), null)
+      assert.equal(hexField.value, '#000000')
+      hexField.value = '#ABCDEF'
+      hexField.dispatchEvent({ type: 'input' })
+      assert.equal(paletteHex(store, 'a'), '#111111')
+      assert.equal(
+        store.getState().project.palette.some((e) => e.id === 'orphan'),
+        false,
+      )
     } finally {
       restore()
     }

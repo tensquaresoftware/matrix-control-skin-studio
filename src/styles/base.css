@@ -573,6 +573,92 @@ body {
   line-height: var(--comp-palette-swatch-typography-hex-line-height);
 }
 
+.palette-swatch-label-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--comp-palette-swatch-label);
+  font-family: var(--comp-palette-swatch-typography-label);
+  font-size: var(--comp-palette-swatch-typography-label-font-size);
+  font-weight: var(--comp-palette-swatch-typography-label-font-weight);
+  line-height: var(--comp-palette-swatch-typography-label-line-height);
+}
+
+.palette-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.palette-action-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-default);
+  background: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--type-ui-font-size);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.palette-action-btn-ghost {
+  background: transparent;
+}
+
+.palette-action-btn:disabled {
+  background: var(--comp-export-disabled-background);
+  color: var(--comp-export-disabled-text);
+  border-color: var(--comp-export-disabled-border);
+  opacity: var(--comp-export-disabled-opacity);
+  cursor: default;
+}
+
+.palette-action-btn-ghost:disabled {
+  background: transparent;
+}
+
+.palette-delete-title {
+  margin: 0 0 var(--space-3);
+  color: var(--comp-modal-confirm-title);
+  font-family: var(--type-ui-font-family);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.palette-delete-ref-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2);
+  max-height: 160px;
+  overflow: auto;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.palette-delete-ref-item {
+  padding: 6px 8px;
+  color: var(--color-text-primary);
+  font-family: var(--type-ui-font-family);
+  font-size: var(--type-ui-font-size);
+  font-weight: var(--type-ui-font-weight);
+  line-height: var(--type-ui-line-height);
+  border-radius: var(--radius-sm);
+}
+
+.palette-delete-ref-item + .palette-delete-ref-item {
+  margin-top: 2px;
+}
+
 .sidebar-splitter {
   position: relative;
   flex-shrink: 0;
