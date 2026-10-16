@@ -8,9 +8,9 @@ import './canvas'
 import './sidebar'
 import './styles'
 import { bootProjectStore } from './boot-project'
-import { mountBootSurface } from './boot-surface'
+import { mountChromeShell } from './chrome'
 import { initProjectStore } from './model'
 
 const projectStore = initProjectStore()
 bootProjectStore(projectStore)
-mountBootSurface(document.querySelector<HTMLDivElement>('#app'), projectStore)
+mountChromeShell(document.querySelector<HTMLDivElement>('#app'), projectStore)

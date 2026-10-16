@@ -2,7 +2,7 @@ import type { ProjectStore, Unsubscribe } from '../model/store'
 import { clearEnvelopeKey, parseEnvelope, writeEnvelope } from './envelope'
 import type { ProjectEnvelope } from './envelope'
 import { PROJECT_ENVELOPE_KEY, PREFS_KEY } from './keys'
-import { DEFAULT_PREFS, getDefaultPrefs, loadPrefs } from './prefs'
+import { DEFAULT_PREFS, getDefaultPrefs, loadPrefs, savePrefs } from './prefs'
 import type { PrefsDocument } from './prefs'
 import {
   createMemoryStorage,
@@ -19,6 +19,7 @@ export {
   loadPrefs,
   PREFS_KEY,
   PROJECT_ENVELOPE_KEY,
+  savePrefs,
 }
 
 /**

@@ -54,6 +54,28 @@ export function loadPrefs(storage: PersistStorage = getBrowserStorage()): PrefsD
   }
 }
 
+/**
+ * Persist the full prefs document under `skin-studio:prefs`.
+ * Write failures fail soft (no throw into UI). Never touches the project envelope.
+ */
+export function savePrefs(
+  prefs: PrefsDocument,
+  storage: PersistStorage = getBrowserStorage(),
+): void {
+  try {
+    storage.setItem(
+      PREFS_KEY,
+      JSON.stringify({
+        zoomStep: prefs.zoomStep,
+        panXY: { x: prefs.panXY.x, y: prefs.panXY.y },
+        sidebarPaneHeights: { ...prefs.sidebarPaneHeights },
+      }),
+    )
+  } catch {
+    // fail soft — chrome must not throw into the operator UI
+  }
+}
+
 function isPrefsDocument(value: unknown): value is PrefsDocument {
   if (value === null || typeof value !== 'object') return false
   const o = value as Record<string, unknown>

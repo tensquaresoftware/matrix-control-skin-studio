@@ -81,18 +81,35 @@ async function importCompiledTs(relPath) {
   }
 }
 
-/** Minimal DOM so mountBootSurface can run under Node without a browser. */
+/** Minimal DOM so mountChromeShell can run under Node without a browser. */
 function installMinimalDocument() {
   function createElement(tagName) {
     const attrs = new Map()
     const listeners = new Map()
+    const classSet = new Set()
     const node = {
       tagName: String(tagName).toUpperCase(),
       type: '',
       textContent: '',
-      style: { cssText: '' },
+      disabled: false,
+      style: { cssText: '', height: '' },
       children: [],
       parent: null,
+      classList: {
+        add(...names) {
+          for (const n of names) classSet.add(n)
+        },
+        remove(...names) {
+          for (const n of names) classSet.delete(n)
+        },
+      },
+      set className(value) {
+        classSet.clear()
+        for (const n of String(value).split(/\s+/).filter(Boolean)) classSet.add(n)
+      },
+      get className() {
+        return [...classSet].join(' ')
+      },
       setAttribute(name, value) {
         attrs.set(name, String(value))
       },
@@ -120,8 +137,10 @@ function installMinimalDocument() {
         node.parent = null
       },
       querySelector(selector) {
-        const matchAttr = /^\[([^\]]+)\]$/.exec(selector)
+        const attrEq = /^\[([^=\]]+)="([^"]*)"\]$/.exec(selector)
+        const matchAttr = attrEq ? null : /^\[([^\]]+)\]$/.exec(selector)
         const walk = (el) => {
+          if (attrEq && el.getAttribute(attrEq[1]) === attrEq[2]) return el
           if (matchAttr && el.getAttribute(matchAttr[1]) !== null) return el
           for (const child of el.children) {
             const found = walk(child)
@@ -138,15 +157,24 @@ function installMinimalDocument() {
       click() {
         for (const fn of listeners.get('click') || []) fn()
       },
+      setPointerCapture() {},
+      releasePointerCapture() {},
     }
     return node
   }
 
   const previous = globalThis.document
+  const previousWindow = globalThis.window
   globalThis.document = { createElement }
+  globalThis.window = {
+    addEventListener() {},
+    removeEventListener() {},
+  }
   return () => {
     if (previous === undefined) delete globalThis.document
     else globalThis.document = previous
+    if (previousWindow === undefined) delete globalThis.window
+    else globalThis.window = previousWindow
   }
 }
 
@@ -165,7 +193,7 @@ describe('scaffold I/O matrix', () => {
     assert.equal(pkg.engines?.node, '^20.19.0 || >=22.12.0')
   })
 
-  it('happy-path boot row: pins, no UI framework, module stubs, boot surface', async () => {
+  it('happy-path boot row: pins, no UI framework, module stubs, chrome shell', async () => {
     assert.equal(pkg.scripts?.dev, 'vite')
     assert.equal(pkg.scripts?.preview, 'vite preview')
     assert.match(pkg.scripts?.test ?? '', /scaffold-matrix\.test\.mjs/)
@@ -173,6 +201,7 @@ describe('scaffold I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /seed-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /persist-matrix\.test\.mjs/)
     assert.match(pkg.scripts?.test ?? '', /boot-seed-matrix\.test\.mjs/)
+    assert.match(pkg.scripts?.test ?? '', /chrome-shell-matrix\.test\.mjs/)
     assert.equal(deps.vite, '8.3.4')
     assert.equal(deps.typescript, '7.0.2')
     for (const name of frameworks) {
@@ -204,9 +233,10 @@ describe('scaffold I/O matrix', () => {
     )
     assert.match(
       main,
-      /(?:const|let)\s+(\w+)\s*=\s*initProjectStore\s*\(\s*\)\s*;?\s*bootProjectStore\s*\(\s*\1\s*\)\s*;?\s*mountBootSurface\s*\(\s*document\.querySelector(?:<[^>]+>)?\s*\(\s*['"]#app['"]\s*\)\s*,\s*\1\s*\)/,
+      /(?:const|let)\s+(\w+)\s*=\s*initProjectStore\s*\(\s*\)\s*;?\s*bootProjectStore\s*\(\s*\1\s*\)\s*;?\s*mountChromeShell\s*\(\s*document\.querySelector(?:<[^>]+>)?\s*\(\s*['"]#app['"]\s*\)\s*,\s*\1\s*\)/,
     )
     assert.doesNotMatch(main, /if\s*\(\s*app\s*\)/)
+    assert.doesNotMatch(main, /mountBootSurface/)
 
     assert.ok(existsSync(join(root, 'src/styles/base.css')))
     const stylesIndex = readFileSync(join(root, 'src/styles/index.ts'), 'utf8')
@@ -223,7 +253,7 @@ describe('scaffold I/O matrix', () => {
       )
       const { createSeedProject } = await importCompiledTs('src/seed/index.ts')
       const { bootProjectStore } = await importCompiledTs('src/boot-project.ts')
-      const { mountBootSurface } = await importCompiledTs('src/boot-surface.ts')
+      const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
 
       const storage = createMemoryStorage()
       const store = createStore()
@@ -244,10 +274,10 @@ describe('scaffold I/O matrix', () => {
           return null
         },
       }
-      mountBootSurface(/** @type {HTMLElement} */ (el), createStore())
-      assert.equal(el.children[0]?.textContent, 'Skin Studio')
-      assert.equal(el.children[1]?.textContent, 'New')
-      assert.throws(() => mountBootSurface(null, createStore()))
+      mountChromeShell(/** @type {HTMLElement} */ (el), createStore(), { storage })
+      assert.equal(el.children[0]?.getAttribute?.('data-chrome-shell'), '')
+      assert.ok(el.children[0]?.querySelector?.('[data-chrome-top-bar]'))
+      assert.throws(() => mountChromeShell(null, createStore()))
     } finally {
       restoreDoc()
     }

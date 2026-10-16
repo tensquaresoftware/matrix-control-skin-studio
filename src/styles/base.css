@@ -208,6 +208,247 @@ body {
 
 #app {
   min-height: 100vh;
+  height: 100vh;
+}
+
+/* Desktop chrome shell — UX-DR3 / FR-8 */
+.chrome-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+  background: var(--color-surface-app);
+  color: var(--color-text-primary);
+}
+
+.chrome-top-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--space-top-bar-height);
+  padding: 0 var(--comp-top-bar-padding-x);
+  gap: var(--comp-top-bar-control-gap);
+  background: var(--comp-top-bar-background);
+  border-bottom: 1px solid var(--comp-top-bar-border-bottom);
+  color: var(--comp-top-bar-text);
+}
+
+.chrome-top-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-default);
+  background: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--type-ui-font-size);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chrome-top-btn:disabled {
+  background: var(--comp-export-disabled-background);
+  color: var(--comp-export-disabled-text);
+  border-color: var(--comp-export-disabled-border);
+  opacity: var(--comp-export-disabled-opacity);
+  cursor: default;
+}
+
+.chrome-top-btn-ghost {
+  background: transparent;
+}
+
+.chrome-top-btn-ghost:disabled {
+  background: transparent;
+}
+
+.chrome-top-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--comp-top-bar-group-separator);
+  flex-shrink: 0;
+}
+
+.chrome-top-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.chrome-combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-ui-font-size);
+}
+
+.chrome-combo-label {
+  color: var(--color-text-secondary);
+}
+
+.chrome-combo-value {
+  height: 26px;
+  min-width: 72px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.chrome-skin-combo .chrome-combo-value {
+  min-width: 120px;
+}
+
+.chrome-context-strip {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--space-context-strip-height);
+  padding: 0 var(--space-chrome-pad-x);
+  gap: 20px;
+  background: var(--comp-context-strip-background);
+  border-bottom: 1px solid var(--comp-context-strip-border-bottom);
+  color: var(--comp-context-strip-text);
+  font-family: var(--comp-context-strip-typography);
+  font-size: var(--comp-context-strip-typography-font-size);
+  font-weight: var(--comp-context-strip-typography-font-weight);
+  line-height: var(--comp-context-strip-typography-line-height);
+}
+
+.chrome-context-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.chrome-context-label {
+  color: var(--comp-context-strip-label);
+}
+
+.chrome-context-value {
+  color: var(--comp-context-strip-value);
+}
+
+.chrome-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.chrome-canvas-slot {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.chrome-sidebar-slot {
+  width: var(--space-sidebar-width);
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+/* Canvas GUI-view placeholder */
+.canvas-host {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  height: 100%;
+  background: var(--color-surface-app);
+  position: relative;
+}
+
+.canvas-surface {
+  flex: 1;
+  margin: var(--space-6);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-placeholder-label {
+  color: var(--color-text-muted);
+  font-family: var(--type-label-font-family);
+  font-size: var(--type-label-font-size);
+  font-weight: var(--type-label-font-weight);
+  letter-spacing: var(--type-label-letter-spacing);
+  text-transform: uppercase;
+}
+
+/* Sidebar — UX-DR6 / FR-10 */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  background: var(--color-surface-panel);
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.sidebar-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-pane-picker {
+  flex-shrink: 0;
+}
+
+.sidebar-pane-unbound {
+  border-top: 1px solid var(--comp-unbound-pane-border-top);
+  background: var(--comp-unbound-pane-background);
+}
+
+.sidebar-pane-head {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.sidebar-pane-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  overflow: hidden;
+}
+
+.sidebar-splitter {
+  position: relative;
+  flex-shrink: 0;
+  height: 1px;
+  background: var(--comp-sidebar-splitter-track);
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.sidebar-splitter::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  height: var(--comp-sidebar-splitter-hit-height);
+}
+
+.sidebar-splitter:hover,
+.sidebar-splitter.is-dragging {
+  background: var(--comp-sidebar-splitter-hover);
+}
+
+.sidebar-splitter.is-dragging {
+  background: var(--comp-sidebar-splitter-active);
 }
 
 /* Typography role hooks for later chrome */
@@ -329,21 +570,3 @@ textarea:focus-visible,
   cursor: pointer;
 }
 
-.boot-title {
-  margin: 0 0 var(--space-3);
-  font-family: var(--type-title-bar-font-family);
-  font-size: var(--type-title-bar-font-size);
-  font-weight: var(--type-title-bar-font-weight);
-  line-height: var(--type-title-bar-line-height);
-  color: var(--color-text-primary);
-}
-
-.boot-new-button {
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-panel);
-  color: var(--color-text-primary);
-  font: inherit;
-  cursor: pointer;
-}

@@ -322,29 +322,27 @@ describe('styles I/O matrix', () => {
   })
 
   it('boot modal restyle: New confirm uses modal-confirm tokens (no light inline hex)', () => {
-    const bootSurface = readFileSync(join(root, 'src/boot-surface.ts'), 'utf8')
-    assert.match(bootSurface, /className\s*=\s*'boot-title'/)
-    assert.match(bootSurface, /className\s*=\s*'boot-new-button'/)
-    assert.match(bootSurface, /className\s*=\s*'boot-confirm-scrim'/)
-    assert.match(bootSurface, /className\s*=\s*'boot-confirm-panel'/)
-    assert.match(bootSurface, /className\s*=\s*'boot-confirm-body'/)
-    assert.match(bootSurface, /className\s*=\s*'boot-confirm-actions'/)
-    assert.match(bootSurface, /className\s*=\s*'boot-confirm-secondary'/)
+    const newConfirm = readFileSync(join(root, 'src/chrome/new-confirm.ts'), 'utf8')
+    assert.match(newConfirm, /className\s*=\s*'boot-confirm-scrim'/)
+    assert.match(newConfirm, /className\s*=\s*'boot-confirm-panel'/)
+    assert.match(newConfirm, /className\s*=\s*'boot-confirm-body'/)
+    assert.match(newConfirm, /className\s*=\s*'boot-confirm-actions'/)
+    assert.match(newConfirm, /className\s*=\s*'boot-confirm-secondary'/)
     assert.match(
-      bootSurface,
+      newConfirm,
       /className\s*=\s*'boot-confirm-primary-destructive'/,
     )
-    assert.doesNotMatch(bootSurface, /style\.cssText/)
-    assert.doesNotMatch(bootSurface, /\.style\b/)
-    assert.doesNotMatch(bootSurface, /background:\s*#fff/i)
+    assert.doesNotMatch(newConfirm, /style\.cssText/)
+    assert.doesNotMatch(newConfirm, /\.style\b/)
+    assert.doesNotMatch(newConfirm, /background:\s*#fff/i)
+
+    const chromeIndex = readFileSync(join(root, 'src/chrome/index.ts'), 'utf8')
+    assert.match(chromeIndex, /className\s*=\s*'chrome-top-btn'/)
+    assert.doesNotMatch(chromeIndex, /style\.cssText/)
 
     assert.match(
       baseCss,
-      /\.boot-title\s*\{[^}]*font-family:\s*var\(--type-title-bar-font-family\)/s,
-    )
-    assert.match(
-      baseCss,
-      /\.boot-new-button\s*\{[^}]*background:\s*var\(--color-surface-panel\)/s,
+      /\.chrome-top-btn\s*\{[^}]*background:\s*var\(--color-surface-panel\)/s,
     )
     assert.match(
       baseCss,

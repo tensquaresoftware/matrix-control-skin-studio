@@ -267,7 +267,7 @@ describe('boot seed I/O matrix', () => {
     const restoreDoc = installMinimalDocument()
 
     try {
-      const { mountBootSurface } = await importCompiledTs('src/boot-surface.ts')
+      const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
       const storage = persist.createMemoryStorage()
       storage.setItem(
         persist.PREFS_KEY,
@@ -288,7 +288,7 @@ describe('boot seed I/O matrix', () => {
       const before = store.getState()
 
       const root = createRoot()
-      mountBootSurface(root, store)
+      mountChromeShell(root, store, { storage })
 
       const newButton = findButtonByLabel(root, 'New')
       assert.ok(newButton, 'expected New control')
@@ -325,7 +325,7 @@ describe('boot seed I/O matrix', () => {
     const restoreDoc = installMinimalDocument()
 
     try {
-      const { mountBootSurface } = await importCompiledTs('src/boot-surface.ts')
+      const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
       const storage = persist.createMemoryStorage()
       const store = model.createStore()
       persist.attachAutosave(store, storage)
@@ -337,7 +337,7 @@ describe('boot seed I/O matrix', () => {
       const envelopeBefore = storage.getItem(persist.PROJECT_ENVELOPE_KEY)
 
       const root = createRoot()
-      mountBootSurface(root, store)
+      mountChromeShell(root, store, { storage })
       findButtonByLabel(root, 'New').click()
 
       assert.ok(root.querySelector('[data-boot-confirm]'))
