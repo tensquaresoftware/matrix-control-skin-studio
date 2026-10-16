@@ -22,6 +22,20 @@ const COLOR_SAMPLES = {
   '--color-focus-ring': '#7aa8ff',
 }
 
+/** Layout / radius samples from DESIGN.md that must stay pinned. */
+const SPACE_SAMPLES = {
+  '--space-top-bar-height': '40px',
+  '--space-context-strip-height': '28px',
+  '--space-sidebar-width': '320px',
+  '--space-unit': '4px',
+}
+
+const RADIUS_SAMPLES = {
+  '--radius-sm': '2px',
+  '--radius-default': '4px',
+  '--radius-md': '6px',
+}
+
 const REQUIRED_COLOR_VARS = [
   '--color-surface-app',
   '--color-surface-chrome',
@@ -86,18 +100,92 @@ const TYPE_ROLES = [
   'context',
 ]
 
-const REQUIRED_COMP_PREFIXES = [
-  '--comp-top-bar-',
-  '--comp-context-strip-',
-  '--comp-canvas-selection-',
-  '--comp-sidebar-splitter-',
-  '--comp-picker-pane-',
-  '--comp-palette-swatch-',
-  '--comp-mapping-row-',
-  '--comp-unbound-pane-',
-  '--comp-export-disabled-',
-  '--comp-modal-confirm-',
-  '--comp-pulse-highlight-',
+const REQUIRED_COMP_VARS = [
+  '--comp-top-bar-background',
+  '--comp-top-bar-border-bottom',
+  '--comp-top-bar-height',
+  '--comp-top-bar-padding-x',
+  '--comp-top-bar-text',
+  '--comp-top-bar-control-gap',
+  '--comp-top-bar-group-separator',
+  '--comp-context-strip-background',
+  '--comp-context-strip-border-bottom',
+  '--comp-context-strip-height',
+  '--comp-context-strip-text',
+  '--comp-context-strip-label',
+  '--comp-context-strip-value',
+  '--comp-context-strip-typography',
+  '--comp-context-strip-typography-font-size',
+  '--comp-context-strip-typography-font-weight',
+  '--comp-context-strip-typography-line-height',
+  '--comp-canvas-selection-outline',
+  '--comp-canvas-selection-outline-width',
+  '--comp-canvas-selection-outline-offset',
+  '--comp-canvas-selection-fill',
+  '--comp-sidebar-splitter-track',
+  '--comp-sidebar-splitter-hover',
+  '--comp-sidebar-splitter-active',
+  '--comp-sidebar-splitter-hit-height',
+  '--comp-picker-pane-background',
+  '--comp-picker-pane-padding',
+  '--comp-picker-pane-slider-track',
+  '--comp-picker-pane-slider-fill',
+  '--comp-picker-pane-hex-field-bg',
+  '--comp-picker-pane-hex-text',
+  '--comp-picker-pane-typography-hex',
+  '--comp-picker-pane-typography-hex-font-size',
+  '--comp-picker-pane-typography-hex-font-weight',
+  '--comp-picker-pane-typography-hex-line-height',
+  '--comp-palette-swatch-size',
+  '--comp-palette-swatch-radius',
+  '--comp-palette-swatch-border',
+  '--comp-palette-swatch-selected-ring',
+  '--comp-palette-swatch-label',
+  '--comp-palette-swatch-hex',
+  '--comp-palette-swatch-row-hover',
+  '--comp-palette-swatch-typography-label',
+  '--comp-palette-swatch-typography-label-font-size',
+  '--comp-palette-swatch-typography-label-font-weight',
+  '--comp-palette-swatch-typography-label-line-height',
+  '--comp-palette-swatch-typography-hex',
+  '--comp-palette-swatch-typography-hex-font-size',
+  '--comp-palette-swatch-typography-hex-font-weight',
+  '--comp-palette-swatch-typography-hex-line-height',
+  '--comp-mapping-row-background',
+  '--comp-mapping-row-hover',
+  '--comp-mapping-row-selected',
+  '--comp-mapping-row-unbound-marker',
+  '--comp-mapping-row-property-text',
+  '--comp-mapping-row-palette-text',
+  '--comp-mapping-row-typography',
+  '--comp-mapping-row-typography-font-size',
+  '--comp-mapping-row-typography-font-weight',
+  '--comp-mapping-row-typography-line-height',
+  '--comp-unbound-pane-background',
+  '--comp-unbound-pane-count-color',
+  '--comp-unbound-pane-count-bg',
+  '--comp-unbound-pane-row-text',
+  '--comp-unbound-pane-empty-text',
+  '--comp-unbound-pane-border-top',
+  '--comp-export-disabled-background',
+  '--comp-export-disabled-text',
+  '--comp-export-disabled-border',
+  '--comp-export-disabled-opacity',
+  '--comp-modal-confirm-scrim',
+  '--comp-modal-confirm-surface',
+  '--comp-modal-confirm-border',
+  '--comp-modal-confirm-title',
+  '--comp-modal-confirm-body',
+  '--comp-modal-confirm-primary-destructive-bg',
+  '--comp-modal-confirm-primary-destructive-text',
+  '--comp-modal-confirm-secondary-bg',
+  '--comp-modal-confirm-secondary-text',
+  '--comp-modal-confirm-radius',
+  '--comp-pulse-highlight-outline',
+  '--comp-pulse-highlight-outline-width',
+  '--comp-pulse-highlight-duration',
+  '--comp-pulse-highlight-repeats',
+  '--comp-pulse-highlight-easing',
 ]
 
 function declareVar(name) {
@@ -125,8 +213,28 @@ describe('styles I/O matrix', () => {
     for (const name of REQUIRED_SPACE_VARS) {
       assert.match(baseCss, declareVar(name), `missing space token ${name}`)
     }
+    for (const [name, value] of Object.entries(SPACE_SAMPLES)) {
+      assert.match(
+        baseCss,
+        new RegExp(
+          `${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*${value}`,
+          'i',
+        ),
+        `expected ${name} = ${value}`,
+      )
+    }
     for (const name of REQUIRED_RADIUS_VARS) {
       assert.match(baseCss, declareVar(name), `missing radius token ${name}`)
+    }
+    for (const [name, value] of Object.entries(RADIUS_SAMPLES)) {
+      assert.match(
+        baseCss,
+        new RegExp(
+          `${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*${value}`,
+          'i',
+        ),
+        `expected ${name} = ${value}`,
+      )
     }
     for (const role of TYPE_ROLES) {
       assert.match(
@@ -144,16 +252,18 @@ describe('styles I/O matrix', () => {
         declareVar(`--type-${role}-font-weight`),
         `missing type weight for ${role}`,
       )
+      assert.match(
+        baseCss,
+        declareVar(`--type-${role}-line-height`),
+        `missing type line-height for ${role}`,
+      )
     }
+    assert.match(baseCss, declareVar('--type-label-letter-spacing'))
     assert.match(baseCss, /--type-label-font-weight\s*:\s*500/)
     assert.match(baseCss, /--type-title-bar-font-weight\s*:\s*500/)
     assert.match(baseCss, /--type-ui-strong-font-weight\s*:\s*600/)
-    for (const prefix of REQUIRED_COMP_PREFIXES) {
-      assert.match(
-        baseCss,
-        new RegExp(prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-        `missing component tokens ${prefix}*`,
-      )
+    for (const name of REQUIRED_COMP_VARS) {
+      assert.match(baseCss, declareVar(name), `missing component token ${name}`)
     }
     assert.match(
       baseCss,
@@ -176,8 +286,12 @@ describe('styles I/O matrix', () => {
 
     assert.match(baseCss, /IBM Plex Sans/)
     assert.match(baseCss, /IBM Plex Mono/)
-    assert.match(baseCss, /body\s*\{[^}]*font-family:\s*var\(--type-ui-font-family\)/s)
     assert.match(baseCss, /body\s*\{[^}]*background:\s*var\(--color-surface-app\)/s)
+    assert.match(baseCss, /body\s*\{[^}]*color:\s*var\(--color-text-primary\)/s)
+    assert.match(baseCss, /body\s*\{[^}]*font-family:\s*var\(--type-ui-font-family\)/s)
+    assert.match(baseCss, /body\s*\{[^}]*font-size:\s*var\(--type-ui-font-size\)/s)
+    assert.match(baseCss, /body\s*\{[^}]*font-weight:\s*var\(--type-ui-font-weight\)/s)
+    assert.match(baseCss, /body\s*\{[^}]*line-height:\s*var\(--type-ui-line-height\)/s)
 
     for (const role of TYPE_ROLES) {
       assert.match(
@@ -221,6 +335,7 @@ describe('styles I/O matrix', () => {
       /className\s*=\s*'boot-confirm-primary-destructive'/,
     )
     assert.doesNotMatch(bootSurface, /style\.cssText/)
+    assert.doesNotMatch(bootSurface, /\.style\b/)
     assert.doesNotMatch(bootSurface, /background:\s*#fff/i)
 
     assert.match(

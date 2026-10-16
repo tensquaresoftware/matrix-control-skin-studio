@@ -76,6 +76,25 @@ context:
 - Given keyboard focus on focusable chrome controls (boot New / modal actions), when focused, then the visible focus ring uses `{colors.focus-ring}`.
 - Given `npm test` and `npm run build`, when they finish, then both exit 0 with the styles matrix covered.
 
+### Review Findings
+
+- [x] [Review][Decision] pulse-highlight.repeats: DESIGN.md range `1–2` vs CSS integer `2` — resolved: keep `2` (upper bound of DESIGN range; CSS animation-ready)
+- [x] [Review][Patch] Tighten typography/body matrix: assert `--type-*-line-height`, `--type-label-letter-spacing`, and full body chrome defaults (color/size/weight/line-height) [scripts/styles-matrix.test.mjs]
+- [x] [Review][Patch] Replace component prefix-only checks with explicit `--comp-*` leaf list [scripts/styles-matrix.test.mjs]
+- [x] [Review][Patch] Pin spacing/radius DESIGN.md samples (e.g. top-bar 40px, context-strip 28px, sidebar 320px, radius-md 6px) [scripts/styles-matrix.test.mjs]
+- [x] [Review][Patch] Ban `element.style` writes in boot-surface restyle guard (not only `style.cssText`) [scripts/styles-matrix.test.mjs]
+
+#### Rejected
+
+- `false` — spec `done` vs sprint `review` — expected mid-review; presentation sync handles tracking
+- rejected — empty Spec Change Log / `review_loop_iteration: 0` — fix would only edit the spec under review
+- `low` rejected — thin COLOR_SAMPLES coverage — key hexes already pinned; presence list covers deletions; unlikely everyday harm
+- `false` — modal title token without title node — Epic 1 New confirm has no title copy; token reserved for later modals; panel uses it as default color
+- `false` — `.type-*` unused by boot — hooks are for later chrome; boot may use vars directly
+- `false` — styles matrix top-level read fails if fixtures missing — loud fail on unreachable broken tree is correct
+- `false` — focus-visible omits `summary` / `contenteditable` — no such controls in this story; current selectors cover boot + foreseeable chrome
+- `low` rejected — Duo exclusion only hex not rgb/hsl — AC names `#FFCC00`; same stance as prior triage
+
 ## Implementation Notes
 
 - Fontsource `5.3.0`: Sans 400/500/600 + Mono 400 imported from `src/styles/index.ts`.
@@ -83,6 +102,8 @@ context:
 - Boot New confirm uses `.boot-confirm-*` classes on `modal-confirm` tokens; behavior unchanged (boot-seed matrix).
 - Styles matrix covers all I/O rows including boot modal token wiring; New confirm/cancel behavior remains in boot-seed matrix.
 - Review patches: emit DESIGN component typography leaves + pulse repeats; drop dead `.boot-confirm-title`; tighten styles matrix (Fontsource weights, type font-weights, boot class hooks, `button:focus-visible`).
+- Decision (code review): `--comp-pulse-highlight-repeats` stays `2` — upper bound of DESIGN.md `pulse-highlight.repeats: '1–2'`, chosen for a single CSS-ready integer.
+- Review patches (pass 2): styles matrix locks type line-heights + label letter-spacing, full body chrome defaults, explicit `--comp-*` leaves, space/radius samples, and bans `element.style` on boot-surface.
 
 ## Spec Change Log
 
