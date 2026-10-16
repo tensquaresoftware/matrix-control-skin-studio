@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-10-16'
 status: 'done'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 baseline_commit: '594105043bfec1ef85753cd8f441fb50f6a8e3b6'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-3-context.md'
@@ -102,3 +102,23 @@ context:
 - `medium` — Edge-case: Enter/Space on focused row (duplicate of keyboard finding) — same defect — route patch (grouped)
 - `medium` — Edge-case: rename wiped by store/selection render (duplicate) — same defect — route patch (grouped)
 - `low` rejected — Verification-gap other: unused store (already routed as low patch above)
+
+### Review Findings
+
+- [x] [Review][Patch] Space during inline rename is swallowed by row Enter/Space handler [src/sidebar/palette-pane.ts:203]
+- [x] [Review][Patch] Double-click rename can miss when the row is not already selected [src/sidebar/palette-pane.ts:199]
+- [x] [Review][Patch] Orphan clear + rename guard can leave a deleted row on screen [src/sidebar/palette-pane.ts:55]
+- [x] [Review][Patch] Unchanged rename when constantName is missing still writes the store [src/sidebar/palette-pane.ts:244]
+- [x] [Review][Patch] Matrix never asserts Enter/Space selection on swatch rows [scripts/palette-picker-matrix.test.mjs]
+- [x] [Review][Patch] Matrix never pins rename against a mid-edit list rebuild [scripts/palette-picker-matrix.test.mjs]
+- [x] [Review][Patch] Matrix never renames an entry that lacked constantName [scripts/palette-picker-matrix.test.mjs]
+- [x] [Review][Defer] Delete confirm lacks dialog semantics / focus move [src/sidebar/palette-delete-confirm.ts:75] — deferred: pre-existing New-confirm pattern; story required reuse
+
+Rejected:
+- `false` — aria-pressed never false when unselected — code sets `aria-pressed="false"` on the non-selected branch
+- `false` — Diff artifact duplicates new-file hunks — review-temp diff construction, not product code
+- `false` — Add/Delete during rename freezes the list via the rename guard — everyday click blurs first and commits/cancels rename before the action runs
+- `false` / rejected — Spec `status: done` vs sprint `review` — workflow tracking; fix would edit the spec under review
+- `false` / rejected — Empty Implementation Notes / Spec Change Log — process fill-in; fix would edit the spec under review
+- `low` rejected — Raw pixel CSS on palette-actions / delete list — mostly tokenized already; remaining literals low everyday harm; retokenizing adds churn
+- `low` rejected — Unused `data-palette-delete-id` / `palette-delete-panel` — cosmetic dead surface; already rejected in prior triage loop; everyday harm none

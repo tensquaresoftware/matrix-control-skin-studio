@@ -49,6 +49,19 @@ export function mountPalettePane(
   const modalRoot = (): HTMLElement =>
     body.closest('[data-sidebar]') ?? body
 
+  const openRenameFor = (entryId: string): void => {
+    Promise.resolve().then(() => {
+      const row = list.querySelector(`[data-palette-row="${entryId}"]`)
+      const label = row?.querySelector('[data-palette-label]') as HTMLElement | null
+      if (!label) return
+      const entry = store
+        .getState()
+        .project.palette.find((item) => item.id === entryId)
+      if (!entry) return
+      startInlineRename(label, entry, store)
+    })
+  }
+
   const render = (): void => {
     const { project } = store.getState()
     const selectedId = selection.getSelectedId()
@@ -62,13 +75,31 @@ export function mountPalettePane(
     const activeId = selection.getSelectedId()
     deleteBtn.disabled = activeId == null
     // Keep an open inline rename; rebuilding the list would discard the edit.
-    if (list.querySelector('[data-palette-rename]')) return
+    // If the renamed entry was removed, drop the guard and rebuild.
+    const renameInput = list.querySelector('[data-palette-rename]')
+    if (renameInput) {
+      const renameRow = renameInput.closest('[data-palette-row]')
+      const renameId = renameRow?.getAttribute('data-palette-row')
+      if (
+        renameId != null &&
+        project.palette.some((entry) => entry.id === renameId)
+      ) {
+        return
+      }
+    }
     list.replaceChildren()
     for (const entry of project.palette) {
       list.append(
-        buildRow(entry, entry.id === activeId, () => {
-          selection.setSelectedId(entry.id)
-        }, store),
+        buildRow(
+          entry,
+          entry.id === activeId,
+          () => {
+            selection.setSelectedId(entry.id)
+          },
+          () => {
+            openRenameFor(entry.id)
+          },
+        ),
       )
     }
   }
@@ -164,7 +195,7 @@ function buildRow(
   entry: PaletteEntry,
   selected: boolean,
   onSelect: () => void,
-  store: ProjectStore,
+  onRename: () => void,
 ): HTMLElement {
   // div (not button) so inline rename input is valid interactive content
   const row = document.createElement('div')
@@ -202,6 +233,8 @@ function buildRow(
 
   row.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
+    // Ignore keys typed into the inline rename field (Space must insert).
+    if (event.target !== row) return
     event.preventDefault()
     onSelect()
   })
@@ -209,7 +242,9 @@ function buildRow(
   label.addEventListener('dblclick', (event) => {
     event.stopPropagation()
     event.preventDefault()
-    startInlineRename(label, entry, store)
+    // Select first (may rebuild the row); open rename on the post-render label.
+    onSelect()
+    onRename()
   })
 
   return row
@@ -241,7 +276,7 @@ function startInlineRename(
         label.textContent = previousLabel
         return
       }
-      if (trimmed === (entry.constantName ?? '')) {
+      if (trimmed === previousLabel) {
         label.textContent = previousLabel
         return
       }
@@ -270,11 +305,13 @@ function startInlineRename(
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault()
+      event.stopPropagation()
       input.blur()
       return
     }
     if (event.key === 'Escape') {
       event.preventDefault()
+      event.stopPropagation()
       cancelled = true
       input.blur()
     }

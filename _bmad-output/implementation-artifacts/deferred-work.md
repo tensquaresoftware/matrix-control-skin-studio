@@ -44,3 +44,7 @@
 
 - Selected palette id removed from store never asserted to clear selection — orphan-clear exists in palette pane; not in 3-1 I/O matrix; cover with New-after-custom-select or when 3.2 delete makes missing-id common.
 - Epic 3 context still documents ~400 ms coalesce while 3-1 uses immediate `store.apply` — fix would edit planning/epic context outside this story; frozen 3-1 intent already defers coalesce to 5-1.
+
+## Deferred from: code review of spec-3-2-palette-create-rename-and-referenced-delete.md (2026-10-16)
+
+- Delete-colour confirm reuses New-confirm scrim/buttons but does not set `role="dialog"` / `aria-modal` or move focus — deferred as pre-existing New-confirm pattern; story required reuse rather than inventing a richer dialog layer.

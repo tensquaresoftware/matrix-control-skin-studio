@@ -179,13 +179,21 @@ function createElement(tagName) {
     },
     dispatchEvent(event) {
       const ev = event && typeof event === 'object' ? event : { type: event }
+      if (ev.target == null) ev.target = node
       if (typeof ev.preventDefault !== 'function') {
         ev.preventDefault = () => {}
       }
-      if (typeof ev.stopPropagation !== 'function') {
-        ev.stopPropagation = () => {}
+      let stopped = false
+      const priorStop =
+        typeof ev.stopPropagation === 'function' ? ev.stopPropagation : null
+      ev.stopPropagation = () => {
+        stopped = true
+        if (priorStop) priorStop.call(ev)
       }
       for (const fn of listeners.get(ev.type) || []) fn(ev)
+      if (!stopped && node.parent && typeof node.parent.dispatchEvent === 'function') {
+        node.parent.dispatchEvent(ev)
+      }
     },
     click() {
       if (node.disabled) return
@@ -682,6 +690,7 @@ describe('palette picker I/O matrix', () => {
         ?.querySelector('[data-palette-label]')
       assert.ok(label)
       label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
 
       const input = host.querySelector('[data-palette-rename]')
       assert.ok(input)
@@ -721,6 +730,7 @@ describe('palette picker I/O matrix', () => {
         .querySelector('[data-palette-row="keepId"]')
         ?.querySelector('[data-palette-label]')
       label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
       const input = host.querySelector('[data-palette-rename]')
       input.value = '   '
       input.dispatchEvent({ type: 'blur' })
@@ -733,6 +743,228 @@ describe('palette picker I/O matrix', () => {
           ?.querySelector('[data-palette-label]')?.textContent,
         'KeepMe',
       )
+    } finally {
+      restore()
+    }
+  })
+
+  it('rename: unchanged commit when constantName missing does not write', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [{ id: 'rawOnly', hex: '#ABCDEF' }],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      const label = host
+        .querySelector('[data-palette-row="rawOnly"]')
+        ?.querySelector('[data-palette-label]')
+      label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
+      const input = host.querySelector('[data-palette-rename]')
+      assert.ok(input)
+      assert.equal(input.value, 'rawOnly')
+      input.dispatchEvent({ type: 'blur' })
+      const entry = store.getState().project.palette.find((e) => e.id === 'rawOnly')
+      assert.equal(entry.constantName, undefined)
+      assert.equal(entry.hex, '#ABCDEF')
+    } finally {
+      restore()
+    }
+  })
+
+  it('rename: creates constantName when missing', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [{ id: 'rawOnly', hex: '#ABCDEF' }],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      const label = host
+        .querySelector('[data-palette-row="rawOnly"]')
+        ?.querySelector('[data-palette-label]')
+      label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
+      const input = host.querySelector('[data-palette-rename]')
+      assert.ok(input)
+      input.value = 'Accent'
+      input.dispatchEvent({ type: 'blur' })
+
+      const entry = store.getState().project.palette.find((e) => e.id === 'rawOnly')
+      assert.equal(entry.id, 'rawOnly')
+      assert.equal(entry.hex, '#ABCDEF')
+      assert.equal(entry.constantName, 'Accent')
+    } finally {
+      restore()
+    }
+  })
+
+  it('rename: survives mid-edit store rebuild', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'editMe', hex: '#111111', constantName: 'Before' },
+          { id: 'other', hex: '#222222', constantName: 'Other' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      const label = host
+        .querySelector('[data-palette-row="editMe"]')
+        ?.querySelector('[data-palette-label]')
+      label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
+      const input = host.querySelector('[data-palette-rename]')
+      assert.ok(input)
+      input.value = 'After'
+
+      const project = store.getState().project
+      store.apply({
+        project: {
+          ...project,
+          palette: project.palette.map((e) =>
+            e.id === 'other' ? { ...e, hex: '#333333' } : e,
+          ),
+        },
+      })
+      assert.ok(host.querySelector('[data-palette-rename]'))
+      input.dispatchEvent({ type: 'keydown', key: 'Enter' })
+
+      const entry = store.getState().project.palette.find((e) => e.id === 'editMe')
+      assert.equal(entry.constantName, 'After')
+    } finally {
+      restore()
+    }
+  })
+
+  it('keyboard: Enter and Space on focused row select the entry', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'a', hex: '#111111', constantName: 'A' },
+          { id: 'b', hex: '#222222', constantName: 'B' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      const rowB = host.querySelector('[data-palette-row="b"]')
+      assert.ok(rowB)
+      rowB.dispatchEvent({ type: 'keydown', key: 'Enter' })
+      assert.ok(
+        host.querySelector('[data-palette-row="b"]')?.classList.contains(
+          'is-selected',
+        ),
+      )
+
+      const rowA = host.querySelector('[data-palette-row="a"]')
+      rowA.dispatchEvent({ type: 'keydown', key: ' ' })
+      assert.ok(
+        host.querySelector('[data-palette-row="a"]')?.classList.contains(
+          'is-selected',
+        ),
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('keyboard: Space while renaming inserts and does not steal selection', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'a', hex: '#111111', constantName: 'Soft' },
+          { id: 'b', hex: '#222222', constantName: 'B' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      host.querySelector('[data-palette-row="a"]').click()
+      const label = host
+        .querySelector('[data-palette-row="a"]')
+        ?.querySelector('[data-palette-label]')
+      label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
+      const input = host.querySelector('[data-palette-rename]')
+      assert.ok(input)
+      input.value = 'Soft'
+      input.dispatchEvent({ type: 'keydown', key: ' ' })
+      // Harness does not insert characters; assert row handler did not re-select away.
+      assert.ok(
+        host.querySelector('[data-palette-row="a"]')?.classList.contains(
+          'is-selected',
+        ),
+      )
+      input.value = 'Soft Red'
+      input.dispatchEvent({ type: 'keydown', key: 'Enter' })
+      const entry = store.getState().project.palette.find((e) => e.id === 'a')
+      assert.equal(entry.constantName, 'Soft Red')
+    } finally {
+      restore()
+    }
+  })
+
+  it('orphan clear rebuilds list even if rename was open', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountWithProject(sidebar, model, {
+        formatVersion: 1,
+        palette: [
+          { id: 'keep', hex: '#111111', constantName: 'Keep' },
+          { id: 'gone', hex: '#222222', constantName: 'Gone' },
+        ],
+        skins: [],
+        inventory: { objectTypes: [] },
+      })
+      host.querySelector('[data-palette-row="gone"]').click()
+      const label = host
+        .querySelector('[data-palette-row="gone"]')
+        ?.querySelector('[data-palette-label]')
+      label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
+      assert.ok(host.querySelector('[data-palette-rename]'))
+
+      const project = store.getState().project
+      store.apply({
+        project: {
+          ...project,
+          palette: project.palette.filter((e) => e.id !== 'gone'),
+        },
+      })
+      assert.equal(host.querySelector('[data-palette-row="gone"]'), null)
+      assert.equal(host.querySelector('[data-palette-rename]'), null)
     } finally {
       restore()
     }
