@@ -129,3 +129,7 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 ## Deferred from: code review of spec-5-3-hard-export-gate-and-single-project-json.md (2026-10-17)
 
 - Blob URL revoke at `setTimeout(0)` after Export download may still be too early in some browsers — deferred: unverified; settle with a real-browser download of non-trivial JSON (empty or corrupt file ⇒ raise delay).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-4-import-replace-all-with-fail-closed-formatversion.md`
+  summary: Concurrent overlapping Import file-change handlers could race before prior read finishes.
+  evidence: maybe-false / unverified medium — native file picker is usually serial; settle by firing two async change events with delayed text() resolves and asserting a single final modal + project.

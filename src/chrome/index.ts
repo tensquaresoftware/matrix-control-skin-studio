@@ -11,6 +11,7 @@ import {
   downloadProjectJson,
   exportBlockedTooltip,
   isExportBlocked,
+  parseProjectDocument,
   unboundExportCount,
 } from '../io/index'
 import type { ProjectStore } from '../model/store'
@@ -26,12 +27,25 @@ import {
   createCanvasSelectionSync,
   mountSidebar,
 } from '../sidebar/index'
+import {
+  IMPORT_INVALID_PROJECT_ERROR,
+  IMPORT_UNSUPPORTED_VERSION_ERROR,
+  openImportConfirmModal,
+  openImportErrorModal,
+} from './import-confirm'
 import { openNewConfirmModal } from './new-confirm'
 
 export {
   dismissDeleteConfirms,
   dismissProjectConfirms,
 } from './dismiss-project-confirms'
+export {
+  IMPORT_CONFIRM_BODY,
+  IMPORT_INVALID_PROJECT_ERROR,
+  IMPORT_UNSUPPORTED_VERSION_ERROR,
+  openImportConfirmModal,
+  openImportErrorModal,
+} from './import-confirm'
 export { NEW_CONFIRM_BODY, openNewConfirmModal } from './new-confirm'
 
 const EMPTY_GLYPH = '—'
@@ -67,8 +81,8 @@ export type MountChromeShellOptions = {
 
 /**
  * Locked desktop chrome: top bar (40px) + context strip (28px) + body
- * (canvas flex:1 + sidebar 320px). New + Zoom + Skin live; other AD-11
- * controls remain ordered disabled stubs.
+ * (canvas flex:1 + sidebar 320px). New / Import / Export / Undo / Redo /
+ * Zoom / Skin live against store, history, and io contracts.
  */
 export function mountChromeShell(
   root: HTMLElement | null,
@@ -109,7 +123,14 @@ export function mountChromeShell(
   canvasHost.className = 'chrome-canvas-slot'
   canvasHost.setAttribute('data-chrome-canvas-slot', '')
 
-  const topBar = buildTopBar(root, store, storage, zoomReadout, skinReadout, canvasHost)
+  const { topBar, importFileInput } = buildTopBar(
+    root,
+    store,
+    storage,
+    zoomReadout,
+    skinReadout,
+    canvasHost,
+  )
   const body = document.createElement('div')
   body.className = 'chrome-body'
   body.setAttribute('data-chrome-body', '')
@@ -120,7 +141,8 @@ export function mountChromeShell(
 
   body.append(canvasHost, sidebarHost)
   shell.append(topBar, contextStrip, body)
-  root.append(shell)
+  // Shell first so remount / scaffold still see [data-chrome-shell] as children[0].
+  root.append(shell, importFileInput)
 
   const selectionSync = createCanvasSelectionSync()
   mountCanvas(canvasHost, { storage, store, selectionSync })
@@ -134,7 +156,7 @@ function buildTopBar(
   zoomReadout: Element,
   skinReadout: Element,
   canvasHost: HTMLElement,
-): HTMLElement {
+): { topBar: HTMLElement; importFileInput: HTMLInputElement } {
   const topBar = document.createElement('div')
   topBar.className = 'chrome-top-bar'
   topBar.setAttribute('data-chrome-top-bar', '')
@@ -148,7 +170,10 @@ function buildTopBar(
     openNewConfirmModal(modalRoot, store)
   })
 
-  const importBtn = inertButton('Import')
+  const { button: importBtn, fileInput: importFileInput } = buildImportButton(
+    modalRoot,
+    store,
+  )
   const exportBtn = buildExportButton(modalRoot, store)
   const sep1 = separator()
   const undoBtn = buildHistoryButton(modalRoot, store, 'Undo', 'undo', () => {
@@ -174,7 +199,85 @@ function buildTopBar(
     spacer,
     skin,
   )
-  return topBar
+  return { topBar, importFileInput }
+}
+
+/**
+ * Live Import: hidden file picker → io parse/validate → confirm or MODAL_ACK.
+ * Prefs (Zoom/pan) are never read or written on this path.
+ */
+function buildImportButton(
+  modalRoot: HTMLElement,
+  store: ProjectStore,
+): { button: HTMLButtonElement; fileInput: HTMLInputElement } {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'chrome-top-btn'
+  button.textContent = 'Import'
+  button.setAttribute('data-chrome-import', '')
+
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = '.json,application/json'
+  fileInput.hidden = true
+  fileInput.setAttribute('data-chrome-import-file', '')
+
+  button.addEventListener('click', () => {
+    fileInput.click()
+  })
+
+  fileInput.addEventListener('change', () => {
+    void handleImportFilePicked(modalRoot, store, fileInput)
+  })
+
+  return { button, fileInput }
+}
+
+async function handleImportFilePicked(
+  modalRoot: HTMLElement,
+  store: ProjectStore,
+  fileInput: HTMLInputElement,
+): Promise<void> {
+  const file = fileInput.files?.[0] ?? null
+  // Allow re-picking the same path after Cancel / error.
+  fileInput.value = ''
+  if (file == null) return
+
+  let raw: string
+  try {
+    raw = await readPickedFileText(file)
+  } catch {
+    openImportErrorModal(modalRoot, IMPORT_INVALID_PROJECT_ERROR)
+    return
+  }
+
+  const result = parseProjectDocument(raw)
+  if (!result.ok) {
+    const message =
+      result.reason === 'unsupported-format-version'
+        ? IMPORT_UNSUPPORTED_VERSION_ERROR
+        : IMPORT_INVALID_PROJECT_ERROR
+    openImportErrorModal(modalRoot, message)
+    return
+  }
+
+  openImportConfirmModal(modalRoot, store, result.project)
+}
+
+async function readPickedFileText(file: File): Promise<string> {
+  if (typeof file.text === 'function') {
+    return file.text()
+  }
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      resolve(typeof reader.result === 'string' ? reader.result : '')
+    }
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('Failed to read import file'))
+    }
+    reader.readAsText(file)
+  })
 }
 
 /**
@@ -243,16 +346,6 @@ function buildHistoryButton(
     if (button.disabled) return
     onClick()
   })
-  return button
-}
-
-function inertButton(label: string, className = 'chrome-top-btn'): HTMLButtonElement {
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = className
-  button.textContent = label
-  button.disabled = true
-  button.setAttribute('data-chrome-inert', label.toLowerCase())
   return button
 }
 

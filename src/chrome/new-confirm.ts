@@ -14,6 +14,12 @@ export function openNewConfirmModal(root: HTMLElement, store: ProjectStore): voi
   const existing = root.querySelector('[data-boot-confirm]')
   if (existing) return
 
+  // One modal deep — drop Import confirm/error if still open.
+  const importConfirm = root.querySelector('[data-import-confirm]')
+  if (importConfirm) importConfirm.remove()
+  const importError = root.querySelector('[data-import-error]')
+  if (importError) importError.remove()
+
   const scrim = document.createElement('div')
   scrim.setAttribute('data-boot-confirm', '')
   scrim.className = 'boot-confirm-scrim'

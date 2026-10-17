@@ -4,6 +4,8 @@ const DELETE_CONFIRM_SELECTORS = [
 ] as const
 
 const NEW_CONFIRM_SELECTOR = '[data-boot-confirm]'
+const IMPORT_CONFIRM_SELECTOR = '[data-import-confirm]'
+const IMPORT_ERROR_SELECTOR = '[data-import-error]'
 
 function removeAllMatching(root: ParentNode, selector: string): void {
   // Prefer querySelector loop — test DOM mocks often omit querySelectorAll /
@@ -24,10 +26,13 @@ export function dismissDeleteConfirms(root: ParentNode = document): void {
 }
 
 /**
- * Remove all project-scoped confirm scrims (New + delete colour + delete skin).
- * Prefer `dismissDeleteConfirms` from inside the New confirm itself.
+ * Remove all project-scoped confirm/error scrims
+ * (New + Import confirm/error + delete colour + delete skin).
+ * Prefer `dismissDeleteConfirms` from inside New/Import confirm itself.
  */
 export function dismissProjectConfirms(root: ParentNode = document): void {
   removeAllMatching(root, NEW_CONFIRM_SELECTOR)
+  removeAllMatching(root, IMPORT_CONFIRM_SELECTOR)
+  removeAllMatching(root, IMPORT_ERROR_SELECTOR)
   dismissDeleteConfirms(root)
 }

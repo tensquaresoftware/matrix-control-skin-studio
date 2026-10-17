@@ -15,6 +15,15 @@ const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 const NEW_CONFIRM_BODY =
   'Replace the current project with the seed baseline? The saved browser project will be replaced. Preferences stay unchanged.'
 
+const IMPORT_CONFIRM_BODY =
+  'Replace the current project with this file? Unsaved browser state will be overwritten.'
+
+const IMPORT_UNSUPPORTED_VERSION_ERROR =
+  'Import failed — this file uses an unsupported format version.'
+
+const IMPORT_INVALID_PROJECT_ERROR =
+  'Import failed — this file is not a valid Skin Studio project.'
+
 /** Node ESM requires explicit .js on relative specifiers; tsc emit omits them. */
 function addJsExtensionsToRelativeImports(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -415,7 +424,9 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(paneHeight(root, 'unbound'), `${sidebar.MIN_UNBOUND_HEIGHT_PX}px`)
 
       assert.ok(root.querySelector('[data-chrome-new]'))
-      assert.ok(root.querySelector('[data-chrome-inert="import"]'))
+      assert.ok(root.querySelector('[data-chrome-import]'))
+      assert.equal(root.querySelector('[data-chrome-inert="import"]'), null)
+      assert.ok(root.querySelector('[data-chrome-import-file]'))
       assert.ok(root.querySelector('[data-chrome-export]'))
       assert.equal(root.querySelector('[data-chrome-inert="export"]'), null)
       assert.ok(root.querySelector('[data-chrome-undo]'))
@@ -689,7 +700,7 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(topBar)
       const markers = topBar.children.map((child) => {
         if (child.getAttribute('data-chrome-new') !== null) return 'new'
-        if (child.getAttribute('data-chrome-inert') === 'import') return 'import'
+        if (child.getAttribute('data-chrome-import') !== null) return 'import'
         if (child.getAttribute('data-chrome-export') !== null) return 'export'
         if (child.classList.contains('chrome-top-sep')) return 'sep'
         if (child.getAttribute('data-chrome-undo') !== null) return 'undo'
@@ -711,7 +722,7 @@ describe('chrome shell I/O matrix', () => {
         'skin',
       ])
       assert.equal(findButtonByLabel(root, 'New')?.disabled, false)
-      assert.equal(findButtonByLabel(root, 'Import')?.disabled, true)
+      assert.equal(findButtonByLabel(root, 'Import')?.disabled, false)
       // Empty project inventory ⇒ Export enabled (not native disabled).
       const exportBtn = findButtonByLabel(root, 'Export')
       assert.equal(exportBtn?.disabled, false)
@@ -2152,4 +2163,454 @@ describe('chrome shell I/O matrix', () => {
       restoreDoc()
     }
   })
+
+  it('Import confirm: replace-all + empty session + history clear; prefs untouched', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '150%',
+          panXY: { x: 9, y: 8 },
+          sidebarPaneHeights: { palette: 150, mappings: 170, unbound: 130 },
+        }),
+      )
+      const prefsBefore = storage.getItem(persist.PREFS_KEY)
+
+      const store = model.createStore()
+      persist.attachAutosave(store, storage)
+      store.apply({
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      })
+      history.execute(store, {
+        session: {
+          selectedObjectTypeId: 'ot-keep',
+          selectedStateId: 'st-keep',
+          activeSkinId: store.getState().session.activeSkinId,
+        },
+      })
+      assert.equal(history.canUndo(store), true)
+
+      const imported = {
+        formatVersion: 1,
+        palette: [{ id: 'importedYellow', hex: '#FFCC00' }],
+        skins: [
+          {
+            id: 'imported-skin',
+            displayName: 'Imported',
+            mappings: [
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'off',
+                propertyId: 'fill',
+                paletteEntryId: 'importedYellow',
+              },
+            ],
+          },
+        ],
+        inventory: {
+          source: 'import-fixture',
+          objectTypes: [
+            { id: 'headerLed', states: ['off'], properties: ['fill'] },
+          ],
+        },
+      }
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      const importBtn = findButtonByLabel(root, 'Import')
+      assert.ok(importBtn)
+      assert.equal(importBtn.disabled, false)
+      assert.equal(root.querySelector('[data-chrome-inert="import"]'), null)
+
+      await pickImportJson(root, io.serializeProject(imported))
+
+      const scrim = root.querySelector('[data-import-confirm]')
+      assert.ok(scrim)
+      const body = scrim.children[0]?.children[0]
+      assert.equal(body?.textContent, IMPORT_CONFIRM_BODY)
+
+      findButtonByLabel(scrim, 'Import').click()
+
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      assert.deepEqual(store.getState().project, imported)
+      assert.deepEqual(store.getState().session, model.createEmptySession())
+      assert.equal(history.canUndo(store), false)
+      assert.equal(history.canRedo(store), false)
+      assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
+      assert.equal(
+        root.querySelector('[data-chrome-zoom-select]')?.value,
+        '150%',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        '150%',
+      )
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import cancel: store unchanged; prefs untouched', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '125%',
+          panXY: { x: 1, y: 2 },
+          sidebarPaneHeights: { palette: 140, mappings: 160, unbound: 120 },
+        }),
+      )
+      const prefsBefore = storage.getItem(persist.PREFS_KEY)
+
+      const store = model.createStore()
+      const beforeProject = sampleEditedProject(seed.createSeedProject())
+      const beforeSession = sampleSession()
+      store.apply({ project: beforeProject, session: beforeSession })
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      await pickImportJson(
+        root,
+        io.serializeProject({
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      )
+
+      findButtonByLabel(root.querySelector('[data-import-confirm]'), 'Cancel').click()
+
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      assert.deepEqual(store.getState().project, beforeProject)
+      assert.deepEqual(store.getState().session, beforeSession)
+      assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import fail-closed: unsupported formatVersion → MODAL_ACK; no confirm; store unchanged', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      const before = {
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      }
+      store.apply(before)
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      await pickImportJson(
+        root,
+        JSON.stringify({
+          formatVersion: 99,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      )
+
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      const errorScrim = root.querySelector('[data-import-error]')
+      assert.ok(errorScrim)
+      assert.equal(
+        errorScrim.children[0]?.children[0]?.textContent,
+        IMPORT_UNSUPPORTED_VERSION_ERROR,
+      )
+      findButtonByLabel(errorScrim, 'OK').click()
+      assert.equal(root.querySelector('[data-import-error]'), null)
+      assert.deepEqual(store.getState().project, before.project)
+      assert.deepEqual(store.getState().session, before.session)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import fail-closed: envelope / malformed → DISTINCT_INVALID MODAL_ACK', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      const beforeProject = sampleEditedProject(seed.createSeedProject())
+      store.apply({ project: beforeProject, session: sampleSession() })
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      await pickImportJson(
+        root,
+        JSON.stringify({
+          project: beforeProject,
+          session: sampleSession(),
+        }),
+      )
+
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      let errorScrim = root.querySelector('[data-import-error]')
+      assert.ok(errorScrim)
+      assert.equal(
+        errorScrim.children[0]?.children[0]?.textContent,
+        IMPORT_INVALID_PROJECT_ERROR,
+      )
+      findButtonByLabel(errorScrim, 'OK').click()
+
+      await pickImportJson(root, 'not-json{{{')
+      errorScrim = root.querySelector('[data-import-error]')
+      assert.ok(errorScrim)
+      assert.equal(
+        errorScrim.children[0]?.children[0]?.textContent,
+        IMPORT_INVALID_PROJECT_ERROR,
+      )
+      assert.deepEqual(store.getState().project, beforeProject)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import confirm dismisses open Skin delete confirm before apply', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      store.apply({
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      })
+
+      const imported = {
+        formatVersion: 1,
+        palette: [{ id: 'importedYellow', hex: '#FFCC00' }],
+        skins: [
+          {
+            id: 'imported-skin',
+            displayName: 'Imported',
+            mappings: [],
+          },
+        ],
+        inventory: { objectTypes: [] },
+      }
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      // Sibling delete scrim (same selector dismissDeleteConfirms removes).
+      // Planted: chrome mock lacks Element.closest that Skin delete UI needs.
+      const deleteScrim = createElement('div')
+      deleteScrim.setAttribute('data-skin-delete-confirm', '')
+      root.append(deleteScrim)
+      assert.ok(root.querySelector('[data-skin-delete-confirm]'))
+
+      await pickImportJson(root, io.serializeProject(imported))
+      findButtonByLabel(root.querySelector('[data-import-confirm]'), 'Import').click()
+
+      assert.equal(root.querySelector('[data-skin-delete-confirm]'), null)
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      assert.deepEqual(store.getState().project, imported)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('New↔Import one-deep: Import confirm/error dismisses open New', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      store.apply({
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      })
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      findButtonByLabel(root, 'New').click()
+      assert.ok(root.querySelector('[data-boot-confirm]'))
+      await pickImportJson(
+        root,
+        io.serializeProject({
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      )
+      assert.equal(root.querySelector('[data-boot-confirm]'), null)
+      assert.ok(root.querySelector('[data-import-confirm]'))
+      findButtonByLabel(root.querySelector('[data-import-confirm]'), 'Cancel').click()
+
+      findButtonByLabel(root, 'New').click()
+      assert.ok(root.querySelector('[data-boot-confirm]'))
+      await pickImportJson(
+        root,
+        JSON.stringify({
+          formatVersion: 99,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      )
+      assert.equal(root.querySelector('[data-boot-confirm]'), null)
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      assert.ok(root.querySelector('[data-import-error]'))
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('New↔Import one-deep: New dismisses open Import confirm/error', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      store.apply({
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      })
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      await pickImportJson(
+        root,
+        io.serializeProject({
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      )
+      assert.ok(root.querySelector('[data-import-confirm]'))
+      findButtonByLabel(root, 'New').click()
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      assert.ok(root.querySelector('[data-boot-confirm]'))
+      findButtonByLabel(root.querySelector('[data-boot-confirm]'), 'Cancel').click()
+
+      await pickImportJson(
+        root,
+        JSON.stringify({
+          formatVersion: 99,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      )
+      assert.ok(root.querySelector('[data-import-error]'))
+      findButtonByLabel(root, 'New').click()
+      assert.equal(root.querySelector('[data-import-error]'), null)
+      assert.ok(root.querySelector('[data-boot-confirm]'))
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import fail-closed: file.text() reject → DISTINCT_INVALID MODAL_ACK; store unchanged', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      const beforeProject = sampleEditedProject(seed.createSeedProject())
+      const beforeSession = sampleSession()
+      store.apply({ project: beforeProject, session: beforeSession })
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      await pickImportFile(root, {
+        name: 'unreadable.json',
+        async text() {
+          throw new Error('read failed')
+        },
+      })
+
+      assert.equal(root.querySelector('[data-import-confirm]'), null)
+      const errorScrim = root.querySelector('[data-import-error]')
+      assert.ok(errorScrim)
+      assert.equal(
+        errorScrim.children[0]?.children[0]?.textContent,
+        IMPORT_INVALID_PROJECT_ERROR,
+      )
+      assert.deepEqual(store.getState().project, beforeProject)
+      assert.deepEqual(store.getState().session, beforeSession)
+    } finally {
+      restoreDoc()
+    }
+  })
 })
+
+/** Simulate hidden file-input change with a project JSON string. */
+async function pickImportJson(root, text) {
+  await pickImportFile(root, {
+    name: 'matrix-control-skin-studio.json',
+    async text() {
+      return text
+    },
+  })
+}
+
+/** Simulate hidden file-input change with a custom File-like object. */
+async function pickImportFile(root, file) {
+  const input = root.querySelector('[data-chrome-import-file]')
+  assert.ok(input, 'expected [data-chrome-import-file]')
+  input.files = [file]
+  input.dispatchEvent({ type: 'change' })
+  // handleImportFilePicked is async (void); flush microtasks + macrotask.
+  await Promise.resolve()
+  await Promise.resolve()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
