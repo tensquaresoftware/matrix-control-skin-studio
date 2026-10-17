@@ -6,6 +6,8 @@ import {
   collectPaletteRefs,
   openPaletteDeleteConfirm,
 } from './palette-delete-confirm'
+import type { MappingFocusController } from './mapping-focus'
+import { bindFocusedMapping } from './mappings-pane'
 import type { PaletteSelectionController } from './palette-selection'
 
 const DEFAULT_NEW_HEX = '#808080'
@@ -15,11 +17,13 @@ const COLOUR_NAME_RE = /^Colour (\d+)$/
  * Render Palette swatch rows from `project.palette`. Selection is sidebar-local
  * (not SessionUiState). Rows refresh on store and selection changes.
  * Actions: `+ Add`, `Delete…`, inline double-click rename (story 3-2).
+ * When a Mapping row is focused, click binds that Property (ROW_THEN_PALETTE).
  */
 export function mountPalettePane(
   body: HTMLElement,
   store: ProjectStore,
   selection: PaletteSelectionController,
+  mappingFocus?: MappingFocusController,
 ): void {
   body.classList.add('palette-pane-body')
   body.replaceChildren()
@@ -96,6 +100,9 @@ export function mountPalettePane(
           entry.id === activeId,
           () => {
             selection.setSelectedId(entry.id)
+            if (mappingFocus) {
+              bindFocusedMapping(store, mappingFocus, entry.id)
+            }
           },
           () => {
             openRenameFor(entry.id)

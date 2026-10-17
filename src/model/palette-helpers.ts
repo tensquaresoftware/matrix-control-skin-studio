@@ -1,10 +1,16 @@
-import { parseOpaqueHex } from './opaque-hex'
+import { looksLikeOpaqueHexToken, parseOpaqueHex } from './opaque-hex'
 import type { Mapping, ProjectDocument } from './types'
 
 export type UnboundHit = {
   skinId: string
   skinDisplayName: string
   mapping: Mapping
+}
+
+export type MappingTriple = {
+  objectTypeId: string
+  stateId: string
+  propertyId: string
 }
 
 /**
@@ -27,6 +33,48 @@ export function isMappingUnbound(
   mapping: Mapping,
 ): boolean {
   return resolvePaletteHex(project, mapping.paletteEntryId) === null
+}
+
+/** Find the type-level Mapping for `(objectTypeId, stateId, propertyId)`. */
+export function findMapping(
+  mappings: readonly Mapping[],
+  triple: MappingTriple,
+): Mapping | undefined {
+  return mappings.find(
+    (mapping) =>
+      mapping.objectTypeId === triple.objectTypeId &&
+      mapping.stateId === triple.stateId &&
+      mapping.propertyId === triple.propertyId,
+  )
+}
+
+/**
+ * Upsert one Mapping by uniqueness `(objectTypeId, stateId, propertyId)`.
+ * Rejects hex-shaped `paletteEntryId` values (FR-1) — returns `mappings` unchanged.
+ */
+export function upsertMapping(
+  mappings: readonly Mapping[],
+  next: Mapping,
+): Mapping[] {
+  if (
+    next.paletteEntryId != null &&
+    looksLikeOpaqueHexToken(next.paletteEntryId)
+  ) {
+    // Same reference → callers can skip a no-op store write.
+    return mappings as Mapping[]
+  }
+  const index = mappings.findIndex(
+    (mapping) =>
+      mapping.objectTypeId === next.objectTypeId &&
+      mapping.stateId === next.stateId &&
+      mapping.propertyId === next.propertyId,
+  )
+  if (index < 0) {
+    return [...mappings, { ...next }]
+  }
+  return mappings.map((mapping, i) =>
+    i === index ? { ...next } : mapping,
+  )
 }
 
 /**

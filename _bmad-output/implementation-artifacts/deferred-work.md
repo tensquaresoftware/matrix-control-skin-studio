@@ -69,3 +69,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-gui-view-mock-with-orchestrator-zones.md`
   summary: Narrow zone/Palette repaint instead of full mock `replaceChildren` on every store notification (needed before 4.3 selection outline / 4.4 pulse on stable nodes).
   evidence: `renderMockComposition` clears and rebuilds the whole mock on each `store.subscribe` tick; fine for 4.1 band paint, fights later selection/pulse work that needs stable DOM.
+
+## Deferred from: build review of spec-4-2-object-type-state-and-palette-id-mappings.md (2026-10-17)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-object-type-state-and-palette-id-mappings.md`
+  summary: Repair session Object type / State ids when they are missing from the loaded inventory so chrome and selects stay aligned.
+  evidence: Mappings selects show dash while session/chrome can keep stale ids if inventory shrinks; KEEP_EMPTY seed never hits this everyday — Collect or inventory replace will surface it.

@@ -1,5 +1,8 @@
 import type { ProjectStore } from '../model/store'
 import type { Mapping, ProjectDocument, SessionUiState, Skin } from '../model/types'
+import type { MappingFocusController } from './mapping-focus'
+import { createMappingFocus } from './mapping-focus'
+import { mountMappingsPane } from './mappings-pane'
 import { openSkinDeleteConfirm } from './skin-delete-confirm'
 
 type SkinSegment = 'mappings' | 'skin'
@@ -16,8 +19,13 @@ const REJECTED_SKIN_NAMES = new Set([
 /**
  * Pane 3 host: segmented [Mappings | Skin] (Mappings default).
  * Skin tab creates / renames / duplicates / deletes Skins.
+ * Mappings tab mounts Object type / State / Property rows (story 4-2).
  */
-export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
+export function mountSkinPane(
+  body: HTMLElement,
+  store: ProjectStore,
+  mappingFocus: MappingFocusController = createMappingFocus(),
+): void {
   body.classList.add('skin-pane-body')
   body.replaceChildren()
 
@@ -88,6 +96,8 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
 
   skinPanel.append(nameRow, actions, reminder)
   body.append(seg, mappingsPanel, skinPanel)
+
+  mountMappingsPane(mappingsPanel, store, mappingFocus)
 
   const modalRoot = (): HTMLElement =>
     body.closest('[data-sidebar]') ?? body

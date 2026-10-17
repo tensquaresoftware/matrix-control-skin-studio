@@ -416,7 +416,18 @@ describe('skin tab I/O matrix', () => {
       assert.equal(skinBtn?.classList.contains('is-on'), false)
       assert.equal(mappingsPanel?.hidden, false)
       assert.equal(skinPanel?.hidden, true)
-      assert.equal(mappingsPanel?.children.length, 0)
+      // Mappings editor mounts Object type / State / property list (story 4-2).
+      assert.ok(mappingsPanel?.querySelector('[data-mappings-object-type]'))
+      assert.ok(mappingsPanel?.querySelector('[data-mappings-state]'))
+      assert.ok(mappingsPanel?.querySelector('[data-mappings-property-list]'))
+      // Seed inventory stays empty — no invented Object types / property rows.
+      const objectSelect = mappingsPanel.querySelector('[data-mappings-object-type]')
+      assert.equal(objectSelect?.disabled, true)
+      assert.equal(
+        mappingsPanel.querySelector('[data-mappings-property-list]')?.children
+          .length,
+        0,
+      )
 
       selectSkinTab(host)
       assert.equal(mappingsBtn?.classList.contains('is-on'), false)

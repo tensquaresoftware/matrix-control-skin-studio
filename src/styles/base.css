@@ -981,6 +981,142 @@ body {
   line-height: var(--type-ui-line-height);
 }
 
+/* Mappings tab — Object type / State / Property → Palette id (UX-DR9) */
+.mappings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.mappings-control-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mappings-field-label {
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.mappings-select {
+  height: 26px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-family: var(--type-ui-font-family);
+  font-size: var(--type-ui-font-size);
+  font-weight: var(--type-ui-font-weight);
+  line-height: var(--type-ui-line-height);
+}
+
+.mappings-select:disabled {
+  background: var(--comp-export-disabled-background);
+  color: var(--comp-export-disabled-text);
+  border-color: var(--comp-export-disabled-border);
+  opacity: var(--comp-export-disabled-opacity);
+  cursor: default;
+}
+
+.mappings-property-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: var(--space-1);
+  min-height: 0;
+}
+
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  background: var(--comp-mapping-row-background);
+  color: var(--comp-mapping-row-property-text);
+  font-family: var(--comp-mapping-row-typography);
+  font-size: var(--comp-mapping-row-typography-font-size);
+  font-weight: var(--comp-mapping-row-typography-font-weight);
+  line-height: var(--comp-mapping-row-typography-line-height);
+  cursor: pointer;
+  border-radius: var(--radius-default);
+}
+
+.mapping-row:hover {
+  background: var(--comp-mapping-row-hover);
+}
+
+.mapping-row.is-focused {
+  background: var(--comp-mapping-row-selected);
+}
+
+.mapping-row-property {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapping-row-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  color: var(--comp-mapping-row-palette-text);
+  min-width: 0;
+}
+
+.mapping-row-unbound-marker {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--comp-mapping-row-unbound-marker);
+}
+
+.mapping-row-unbound-label {
+  color: var(--comp-mapping-row-palette-text);
+}
+
+.mapping-row-swatch {
+  width: var(--comp-palette-swatch-size);
+  height: var(--comp-palette-swatch-size);
+  border-radius: var(--comp-palette-swatch-radius);
+  border: 1px solid var(--comp-palette-swatch-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.mapping-row-palette-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapping-row-clear {
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 8px;
+  margin: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mapping-row-clear:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-raised);
+}
+
 .sidebar-splitter {
   position: relative;
   flex-shrink: 0;

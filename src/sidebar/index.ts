@@ -2,6 +2,7 @@ import type { ProjectStore } from '../model/store'
 import { loadPrefs, savePrefs } from '../persist/prefs'
 import type { PersistStorage } from '../persist/storage'
 import { getBrowserStorage } from '../persist/storage'
+import { createMappingFocus } from './mapping-focus'
 import { mountPalettePane } from './palette-pane'
 import { createPaletteSelection } from './palette-selection'
 import { mountPickerPane } from './picker-pane'
@@ -84,9 +85,10 @@ export function mountSidebar(
 
   if (options.store) {
     const selection = createPaletteSelection()
+    const mappingFocus = createMappingFocus()
     mountPickerPane(picker.body, options.store, selection)
-    mountPalettePane(palette.body, options.store, selection)
-    mountSkinPane(mappings.body, options.store)
+    mountPalettePane(palette.body, options.store, selection, mappingFocus)
+    mountSkinPane(mappings.body, options.store, mappingFocus)
   }
 }
 
