@@ -255,6 +255,22 @@ body {
   cursor: default;
 }
 
+/* Blocked Export stays in tab order (aria-disabled, not native disabled). */
+.chrome-top-btn[data-chrome-export][aria-disabled='true'] {
+  background: var(--comp-export-disabled-background);
+  color: var(--comp-export-disabled-text);
+  border-color: var(--comp-export-disabled-border);
+  opacity: var(--comp-export-disabled-opacity);
+  cursor: default;
+}
+
+/* Clear Export — primary accent (DESIGN top-bar). */
+.chrome-top-btn-export-ready {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+}
+
 .chrome-top-btn-ghost {
   background: transparent;
 }

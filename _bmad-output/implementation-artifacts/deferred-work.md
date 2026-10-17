@@ -125,3 +125,7 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 ## Deferred from: code review of spec-5-2-unbound-derive-and-unbound-pane.md (2026-10-17)
 
 - Sprint-status comment above 5-2 still says the story must expand “derive + pane + export gate,” but export gating is owned by 5-3 — tracking comment hygiene only; not a product defect of the Unbound pane.
+
+## Deferred from: code review of spec-5-3-hard-export-gate-and-single-project-json.md (2026-10-17)
+
+- Blob URL revoke at `setTimeout(0)` after Export download may still be too early in some browsers — deferred: unverified; settle with a real-browser download of non-trivial JSON (empty or corrupt file ⇒ raise delay).

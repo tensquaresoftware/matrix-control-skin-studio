@@ -7,6 +7,12 @@ import {
   subscribeHistory,
   undo,
 } from '../history/index'
+import {
+  downloadProjectJson,
+  exportBlockedTooltip,
+  isExportBlocked,
+  unboundExportCount,
+} from '../io/index'
 import type { ProjectStore } from '../model/store'
 import {
   clampZoomStep,
@@ -143,7 +149,7 @@ function buildTopBar(
   })
 
   const importBtn = inertButton('Import')
-  const exportBtn = inertButton('Export')
+  const exportBtn = buildExportButton(modalRoot, store)
   const sep1 = separator()
   const undoBtn = buildHistoryButton(modalRoot, store, 'Undo', 'undo', () => {
     undo(store)
@@ -169,6 +175,49 @@ function buildTopBar(
     skin,
   )
   return topBar
+}
+
+/**
+ * Live Export: hard-gated by project-total unbound (aria-disabled in tab order).
+ * When clear, accent styling + download project-only JSON.
+ */
+function buildExportButton(
+  root: HTMLElement,
+  store: ProjectStore,
+): HTMLButtonElement {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'chrome-top-btn'
+  button.textContent = 'Export'
+  button.setAttribute('data-chrome-export', '')
+
+  const syncGate = (): void => {
+    const { project } = store.getState()
+    const unboundCount = unboundExportCount(project)
+    const blocked = isExportBlocked(project)
+
+    if (blocked) {
+      button.setAttribute('aria-disabled', 'true')
+      button.setAttribute('title', exportBlockedTooltip(unboundCount))
+      button.classList.remove('chrome-top-btn-export-ready')
+    } else {
+      button.removeAttribute('aria-disabled')
+      button.removeAttribute('title')
+      button.classList.add('chrome-top-btn-export-ready')
+    }
+  }
+
+  syncGate()
+  registerChromeCleanup(root, store.subscribe(syncGate))
+
+  button.addEventListener('click', () => {
+    if (button.getAttribute('aria-disabled') === 'true') return
+    const { project } = store.getState()
+    if (isExportBlocked(project)) return
+    downloadProjectJson(project)
+  })
+
+  return button
 }
 
 function buildHistoryButton(

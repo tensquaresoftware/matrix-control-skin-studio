@@ -230,7 +230,8 @@ function installMinimalDocument() {
   const previous = globalThis.document
   const previousWindow = globalThis.window
   const winListeners = new Map()
-  globalThis.document = { createElement }
+  const body = createElement('body')
+  globalThis.document = { createElement, body }
   globalThis.window = {
     addEventListener(type, fn) {
       if (!winListeners.has(type)) winListeners.set(type, [])
@@ -415,13 +416,25 @@ describe('chrome shell I/O matrix', () => {
 
       assert.ok(root.querySelector('[data-chrome-new]'))
       assert.ok(root.querySelector('[data-chrome-inert="import"]'))
-      assert.ok(root.querySelector('[data-chrome-inert="export"]'))
+      assert.ok(root.querySelector('[data-chrome-export]'))
+      assert.equal(root.querySelector('[data-chrome-inert="export"]'), null)
       assert.ok(root.querySelector('[data-chrome-undo]'))
       assert.ok(root.querySelector('[data-chrome-redo]'))
       assert.equal(root.querySelector('[data-chrome-inert="undo"]'), null)
       assert.equal(root.querySelector('[data-chrome-inert="redo"]'), null)
       assert.equal(root.querySelector('[data-chrome-inert="zoom"]'), null)
       assert.equal(root.querySelector('[data-chrome-inert="skin"]'), null)
+
+      // Seed empty inventory ⇒ unbound 0 ⇒ Export clear (accent, not aria-disabled).
+      const exportReady = root.querySelector('[data-chrome-export]')
+      assert.equal(exportReady?.disabled, false)
+      assert.equal(exportReady?.getAttribute('aria-disabled'), null)
+      assert.ok(exportReady?.classList.contains('chrome-top-btn-export-ready'))
+      assert.match(baseCss, /\.chrome-top-btn-export-ready\b/)
+      assert.match(
+        baseCss,
+        /\[data-chrome-export\]\[aria-disabled=['"]true['"]\]/,
+      )
       assert.ok(root.querySelector('[data-chrome-zoom-select]'))
       assert.ok(root.querySelector('[data-chrome-skin-select]'))
 
@@ -454,6 +467,213 @@ describe('chrome shell I/O matrix', () => {
     }
   })
 
+  it('Export hard gate: aria-disabled + tooltip when unbound; accent + download when clear', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+    const prevURL = globalThis.URL
+    const prevCreateElement = globalThis.document.createElement
+
+    try {
+      const inventory = {
+        source: 'test-fixture',
+        objectTypes: [
+          {
+            id: 'headerLed',
+            states: ['off', 'on'],
+            properties: ['fill'],
+          },
+        ],
+      }
+      const palette = [{ id: 'duoLedYellow', hex: '#FFCC00' }]
+      const blockedProject = {
+        formatVersion: 1,
+        palette,
+        skins: [
+          {
+            id: 'black-duo',
+            displayName: 'Black/Duo',
+            mappings: [
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'off',
+                propertyId: 'fill',
+                paletteEntryId: 'duoLedYellow',
+              },
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: null,
+              },
+            ],
+          },
+        ],
+        inventory,
+      }
+
+      const store = model.createStore({ project: blockedProject })
+      const root = createRoot()
+      mountChromeShell(root, store, { storage: persist.createMemoryStorage() })
+
+      const exportBtn = root.querySelector('[data-chrome-export]')
+      assert.ok(exportBtn)
+      assert.equal(exportBtn.disabled, false)
+      assert.equal(exportBtn.getAttribute('aria-disabled'), 'true')
+      assert.equal(
+        exportBtn.getAttribute('title'),
+        'Export blocked — 1 unbound mapping(s)',
+      )
+      assert.equal(exportBtn.classList.contains('chrome-top-btn-export-ready'), false)
+
+      // Guard: click while blocked must not start a download.
+      const clicksBlocked = []
+      globalThis.URL = {
+        createObjectURL() {
+          clicksBlocked.push('createObjectURL')
+          return 'blob:blocked'
+        },
+        revokeObjectURL() {},
+      }
+      exportBtn.click()
+      assert.deepEqual(clicksBlocked, [])
+      globalThis.URL = prevURL
+
+      // Bind remaining slot → Export clears live from store.
+      const clearProject = structuredClone(blockedProject)
+      clearProject.skins[0].mappings[1].paletteEntryId = 'duoLedYellow'
+      store.apply({ project: clearProject })
+
+      assert.equal(exportBtn.getAttribute('aria-disabled'), null)
+      assert.equal(exportBtn.getAttribute('title'), null)
+      assert.ok(exportBtn.classList.contains('chrome-top-btn-export-ready'))
+      assert.equal(io.isExportBlocked(store.getState().project), false)
+
+      const clicks = []
+      globalThis.URL = {
+        createObjectURL() {
+          return 'blob:export-test'
+        },
+        revokeObjectURL() {},
+      }
+      globalThis.document.createElement = (tag) => {
+        const el = prevCreateElement(tag)
+        if (String(tag).toLowerCase() === 'a') {
+          const origClick = el.click.bind(el)
+          el.click = () => {
+            clicks.push({
+              download: el.getAttribute('download'),
+              href: el.getAttribute('href'),
+            })
+            origClick()
+          }
+        }
+        return el
+      }
+
+      exportBtn.click()
+      assert.equal(clicks.length, 1)
+      assert.equal(clicks[0].download, 'matrix-control-skin-studio.json')
+      assert.equal(clicks[0].href, 'blob:export-test')
+
+      // After clear, unbind again → blocked UI returns.
+      const rebound = structuredClone(clearProject)
+      rebound.skins[0].mappings[1].paletteEntryId = null
+      store.apply({ project: rebound })
+      assert.equal(exportBtn.getAttribute('aria-disabled'), 'true')
+      assert.equal(
+        exportBtn.getAttribute('title'),
+        'Export blocked — 1 unbound mapping(s)',
+      )
+      assert.equal(exportBtn.classList.contains('chrome-top-btn-export-ready'), false)
+      const clicksAfterUnbind = clicks.length
+      exportBtn.click()
+      assert.equal(clicks.length, clicksAfterUnbind)
+
+      // Multi-skin: active Skin clear, sibling unbound → project-total gate.
+      const multiBlocked = {
+        formatVersion: 1,
+        palette,
+        skins: [
+          {
+            id: 'active-clear',
+            displayName: 'Active Clear',
+            mappings: [
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'off',
+                propertyId: 'fill',
+                paletteEntryId: 'duoLedYellow',
+              },
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: 'duoLedYellow',
+              },
+            ],
+          },
+          {
+            id: 'sibling-unbound',
+            displayName: 'Sibling Unbound',
+            mappings: [
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'off',
+                propertyId: 'fill',
+                paletteEntryId: 'duoLedYellow',
+              },
+              {
+                objectTypeId: 'headerLed',
+                stateId: 'on',
+                propertyId: 'fill',
+                paletteEntryId: null,
+              },
+            ],
+          },
+        ],
+        inventory,
+      }
+      store.apply({
+        project: multiBlocked,
+        session: {
+          selectedObjectTypeId: null,
+          selectedStateId: null,
+          activeSkinId: 'active-clear',
+        },
+      })
+      assert.equal(io.unboundExportCount(store.getState().project), 1)
+      assert.equal(exportBtn.getAttribute('aria-disabled'), 'true')
+      assert.equal(
+        exportBtn.getAttribute('title'),
+        'Export blocked — 1 unbound mapping(s)',
+      )
+      assert.equal(exportBtn.classList.contains('chrome-top-btn-export-ready'), false)
+      const clicksMultiBlocked = clicks.length
+      exportBtn.click()
+      assert.equal(clicks.length, clicksMultiBlocked)
+
+      // Clear sibling → Export downloads.
+      const multiClear = structuredClone(multiBlocked)
+      multiClear.skins[1].mappings[1].paletteEntryId = 'duoLedYellow'
+      store.apply({ project: multiClear })
+      assert.equal(exportBtn.getAttribute('aria-disabled'), null)
+      assert.ok(exportBtn.classList.contains('chrome-top-btn-export-ready'))
+      exportBtn.click()
+      assert.equal(clicks.length, clicksMultiBlocked + 1)
+      assert.equal(
+        clicks[clicks.length - 1].download,
+        'matrix-control-skin-studio.json',
+      )
+    } finally {
+      globalThis.document.createElement = prevCreateElement
+      globalThis.URL = prevURL
+      restoreDoc()
+    }
+  })
+
   it('top-bar order: New Import Export · Undo Redo · Zoom · spacer · Skin', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
@@ -470,7 +690,7 @@ describe('chrome shell I/O matrix', () => {
       const markers = topBar.children.map((child) => {
         if (child.getAttribute('data-chrome-new') !== null) return 'new'
         if (child.getAttribute('data-chrome-inert') === 'import') return 'import'
-        if (child.getAttribute('data-chrome-inert') === 'export') return 'export'
+        if (child.getAttribute('data-chrome-export') !== null) return 'export'
         if (child.classList.contains('chrome-top-sep')) return 'sep'
         if (child.getAttribute('data-chrome-undo') !== null) return 'undo'
         if (child.getAttribute('data-chrome-redo') !== null) return 'redo'
@@ -492,7 +712,11 @@ describe('chrome shell I/O matrix', () => {
       ])
       assert.equal(findButtonByLabel(root, 'New')?.disabled, false)
       assert.equal(findButtonByLabel(root, 'Import')?.disabled, true)
-      assert.equal(findButtonByLabel(root, 'Export')?.disabled, true)
+      // Empty project inventory ⇒ Export enabled (not native disabled).
+      const exportBtn = findButtonByLabel(root, 'Export')
+      assert.equal(exportBtn?.disabled, false)
+      assert.equal(exportBtn?.getAttribute('aria-disabled'), null)
+      assert.ok(exportBtn?.classList.contains('chrome-top-btn-export-ready'))
       assert.equal(findButtonByLabel(root, 'Undo')?.disabled, true)
       assert.equal(findButtonByLabel(root, 'Redo')?.disabled, true)
       assert.match(baseCss, /\.chrome-combo-select\b/)
