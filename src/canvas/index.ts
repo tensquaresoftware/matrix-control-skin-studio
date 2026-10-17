@@ -338,13 +338,11 @@ function detectMappingChangedObjectTypeIds(
   const nextSkin = next.skins.find((skin) => skin.id === activeSkinId)
   if (nextSkin == null) return []
 
+  // Skin newly present under activeSkinId (create/restore) is not an operator
+  // Mapping upsert/clear — do not flood-pulse every mapped Object type.
+  if (prevSkin == null) return []
+
   const changed = new Set<string>()
-  if (prevSkin == null) {
-    for (const mapping of nextSkin.mappings) {
-      changed.add(mapping.objectTypeId)
-    }
-    return [...changed]
-  }
 
   const prevByTriple = new Map(
     prevSkin.mappings.map((mapping) => [

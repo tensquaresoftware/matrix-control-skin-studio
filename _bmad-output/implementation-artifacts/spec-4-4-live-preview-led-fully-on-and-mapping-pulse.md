@@ -74,6 +74,26 @@ context:
 - Given a Mapping change for an Object type that has a mock hit, when the upsert/clear lands, then that hit pulses outline 2× ~400 ms with chrome pulse tokens, then returns to steady selection if still selected.
 - Given ZONE_PLUS_RULE, when the Duo Header LED zone paints and the canvas mounts, then Duo uses fully-on Palette hex, decorative greens stay stubs, and no intensity/dim UI is present.
 
+### Review Findings
+
+- [x] [Review][Patch] Inactive-Skin Mapping edit must not pulse — add matrix case asserting zero `.is-pulsing` and unchanged active-Skin hit fill [`scripts/live-preview-matrix.test.mjs`]
+- [x] [Review][Patch] Unselected hit must use first-State fill — add matrix case with another type selected (or none) and non-first `selectedStateId` [`scripts/live-preview-matrix.test.mjs`]
+- [x] [Review][Patch] First appearance of active Skin with mappings must not flood-pulse every Object type — return `[]` when `prevSkin == null` [`src/canvas/index.ts:342`]
+- [x] [Review][Defer] In-flight Mapping pulse aborted by later store paint / full mock rebuild [`src/canvas/index.ts:100-120`] — deferred: already parked in build review (narrow-repaint / pulse memory debt)
+- [x] [Review][Defer] Live-preview matrix duplicates canvas DOM/tsc harness [`scripts/live-preview-matrix.test.mjs`] — deferred: already parked for shared Epic 4 helper
+
+#### Rejected
+
+- `false` — Spec `done` vs sprint `review`: expected mid-review tracking, not a product defect
+- `false` — Residual `.is-pulsing` after animation: without `animation-fill-mode: forwards`, computed outline returns to selection / transparent; leftover class is inert until next rebuild (same as build triage)
+- `false` — ZONE_PLUS_RULE intensity coverage “only greps CSS”: no intensity/dim strings or controls anywhere under `src/`; constraint already met
+- `false` — Same apply edits previous Skin and switches `activeSkinId`: pulse is scoped to the Skin being painted; no pulse on the abandoned Skin is correct
+- `false` — NUL bytes in Mapping triple keys: product Object/State/Property ids never embed NUL; unreachable on seed/fixture paths
+- rejected (spec edit) — `review_loop_iteration` / empty Spec Change Log / Verification omits manual pulse check: fix would only edit the spec under review
+- `low` rejected — Misleading `bypassBtn` assert/comment in first-Property bind test: ring-only case already covers HIT_FILL_FIRST_PROPERTY; comment cleanup not worth a patch loop
+- `low` rejected — Missing CSS assert for pulse easing: token already wired to `ease-out` in `base.css`; everyday harm negligible
+- `low` rejected — Deferred-work bullet format inconsistency vs 4-3 freeform line: registry hygiene only
+
 ## Implementation Notes
 
 - HIT_FILL_FIRST_PROPERTY + Mapping-delta `.is-pulsing` stamp in `src/canvas/index.ts` after full mock rebuild; zone/selection paths unchanged.

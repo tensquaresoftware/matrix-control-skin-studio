@@ -724,6 +724,181 @@ describe('live preview I/O matrix (story 4.4)', () => {
     }
   })
 
+  it('inactive-Skin Mapping edit does not pulse or recolor active hit', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const { upsertMapping } = await importCompiledTs('src/model/palette-helpers.ts')
+    const canvas = await importCompiledTs('src/canvas/index.ts')
+    const restore = installMinimalDocument()
+    try {
+      const host = createElement('div')
+      const project = fixtureProject({
+        skins: [
+          {
+            id: 'black-duo',
+            displayName: 'Black/Duo',
+            mappings: [
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'face',
+                paletteEntryId: 'faceRed',
+              },
+            ],
+          },
+          {
+            id: 'cream-duo',
+            displayName: 'Cream/Duo',
+            mappings: [],
+          },
+        ],
+      })
+      const store = model.createStore({
+        project,
+        session: defaultSession({
+          activeSkinId: 'black-duo',
+          selectedObjectTypeId: 'knobLarge',
+          selectedStateId: 'normal',
+        }),
+      })
+      canvas.mountCanvas(host, { storage: memoryStorage(), store })
+
+      assert.equal(hitFill(host, 'knobLarge'), '#CC2244')
+
+      const next = store.getState().project
+      const creamIndex = next.skins.findIndex((s) => s.id === 'cream-duo')
+      const cream = next.skins[creamIndex]
+      next.skins = next.skins.map((s, i) =>
+        i === creamIndex
+          ? {
+              ...s,
+              mappings: upsertMapping(cream.mappings, {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'face',
+                paletteEntryId: 'duoLedYellow',
+              }),
+            }
+          : s,
+      )
+      store.apply({ project: next })
+
+      assert.equal(hitFill(host, 'knobLarge'), '#CC2244')
+      assert.equal(host.querySelectorAll('.is-pulsing').length, 0)
+    } finally {
+      restore()
+    }
+  })
+
+  it('unselected hit paints first-State Mapping (not session State of another type)', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const canvas = await importCompiledTs('src/canvas/index.ts')
+    const restore = installMinimalDocument()
+    try {
+      const host = createElement('div')
+      const project = fixtureProject({
+        skins: [
+          {
+            id: 'black-duo',
+            displayName: 'Black/Duo',
+            mappings: [
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'normal',
+                propertyId: 'face',
+                paletteEntryId: 'faceRed',
+              },
+              {
+                objectTypeId: 'knobLarge',
+                stateId: 'pressed',
+                propertyId: 'face',
+                paletteEntryId: 'duoLedYellow',
+              },
+            ],
+          },
+        ],
+      })
+      const store = model.createStore({
+        project,
+        session: defaultSession({
+          selectedObjectTypeId: 'bypassBtn',
+          selectedStateId: 'pressed',
+        }),
+      })
+      canvas.mountCanvas(host, { storage: memoryStorage(), store })
+
+      // knobLarge is not selected; fill must use first State (normal → faceRed), not pressed.
+      assert.equal(hitFill(host, 'knobLarge'), '#CC2244')
+      assert.equal(host.querySelectorAll('.is-pulsing').length, 0)
+    } finally {
+      restore()
+    }
+  })
+
+  it('new active Skin with prefilled mappings does not flood-pulse', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const canvas = await importCompiledTs('src/canvas/index.ts')
+    const restore = installMinimalDocument()
+    try {
+      const host = createElement('div')
+      const store = model.createStore({
+        project: fixtureProject({
+          skins: [
+            {
+              id: 'black-duo',
+              displayName: 'Black/Duo',
+              mappings: [
+                {
+                  objectTypeId: 'knobLarge',
+                  stateId: 'normal',
+                  propertyId: 'face',
+                  paletteEntryId: 'faceRed',
+                },
+              ],
+            },
+          ],
+        }),
+        session: defaultSession({ activeSkinId: 'black-duo' }),
+      })
+      canvas.mountCanvas(host, { storage: memoryStorage(), store })
+      assert.equal(hitFill(host, 'knobLarge'), '#CC2244')
+
+      const next = store.getState().project
+      next.skins = [
+        ...next.skins,
+        {
+          id: 'cream-duo',
+          displayName: 'Cream/Duo',
+          mappings: [
+            {
+              objectTypeId: 'knobLarge',
+              stateId: 'normal',
+              propertyId: 'face',
+              paletteEntryId: 'duoLedYellow',
+            },
+            {
+              objectTypeId: 'bypassBtn',
+              stateId: 'normal',
+              propertyId: 'fill',
+              paletteEntryId: 'patchZoneBlue',
+            },
+          ],
+        },
+      ]
+      store.apply({
+        project: next,
+        session: {
+          ...store.getState().session,
+          activeSkinId: 'cream-duo',
+        },
+      })
+
+      assert.equal(hitFill(host, 'knobLarge'), '#FFCC00')
+      assert.equal(host.querySelectorAll('.is-pulsing').length, 0)
+    } finally {
+      restore()
+    }
+  })
+
   it('hit fill follows activeSkinId across two Skins with different face mappings', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const canvas = await importCompiledTs('src/canvas/index.ts')
