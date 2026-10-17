@@ -650,6 +650,51 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('rapid hex/slider + pointerup coalesce into one undo step', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed, history] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+        importCompiledTs('src/history/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+
+      const hexField = host.querySelector('[data-picker-hex]')
+      const hue = host.querySelector('[data-picker-hue]')
+      assert.ok(hexField && hue)
+
+      hexField.value = '#112233'
+      hexField.dispatchEvent({ type: 'input' })
+      hexField.value = '#445566'
+      hexField.dispatchEvent({ type: 'input' })
+      hue.value = '90'
+      hue.dispatchEvent({ type: 'input' })
+      hue.dispatchEvent({ type: 'pointerup' })
+
+      assert.equal(history.canUndo(store), true)
+      const afterBurst = paletteHex(store, 'duoLedYellow')
+      history.undo(store)
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      history.redo(store)
+      assert.equal(paletteHex(store, 'duoLedYellow'), afterBurst)
+      assert.equal(history.canUndo(store), true)
+      // One coalesced step only — second undo does not change hex further.
+      history.undo(store)
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(history.canUndo(store), false)
+    } finally {
+      restore()
+    }
+  })
+
   it('create: + Add appends Colour {n} #808080, unique id, and selects it', async () => {
     const restore = installMinimalDocument()
     try {

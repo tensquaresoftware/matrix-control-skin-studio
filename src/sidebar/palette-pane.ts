@@ -1,3 +1,4 @@
+import { execute } from '../history/index'
 import { looksLikeOpaqueHexToken } from '../model/opaque-hex'
 import type { ProjectStore } from '../model/store'
 import type { PaletteEntry, ProjectDocument } from '../model/types'
@@ -119,7 +120,7 @@ export function mountPalettePane(
       ...project,
       palette: [...project.palette, entry],
     }
-    store.apply({ project: next })
+    execute(store, { project: next })
     selection.setSelectedId(entry.id)
   })
 
@@ -138,7 +139,7 @@ export function mountPalettePane(
         ...project,
         palette: project.palette.filter((e) => e.id !== selectedId),
       }
-      store.apply({ project: next })
+      execute(store, { project: next })
       return
     }
 
@@ -354,5 +355,5 @@ function applyRename(
       i === index ? { ...entry, constantName } : entry,
     ),
   }
-  store.apply({ project: next })
+  execute(store, { project: next })
 }

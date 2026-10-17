@@ -1,3 +1,4 @@
+import { execute, flushCoalesce } from '../history/index'
 import type { ProjectStore } from '../model/store'
 import type { ProjectDocument } from '../model/types'
 import { hexToHsv, hsvToHex, parseOpaqueHex } from './hex-color'
@@ -82,7 +83,7 @@ export function mountPickerPane(
         i === index ? { ...entry, hex } : entry,
       ),
     }
-    store.apply({ project: next })
+    execute(store, { project: next }, { coalesceKey: `hex:${id}` })
   }
 
   const onSliderInput = (): void => {
@@ -98,8 +99,14 @@ export function mountPickerPane(
     commitHex(hsvToHex(h, s, v))
   }
 
+  const onPointerUpFlush = (): void => {
+    flushCoalesce(store)
+  }
+
   for (const slider of [hue, sat, val]) {
     slider.input.addEventListener('input', onSliderInput)
+    slider.input.addEventListener('pointerup', onPointerUpFlush)
+    slider.input.addEventListener('mouseup', onPointerUpFlush)
   }
 
   hexField.addEventListener('focus', () => {

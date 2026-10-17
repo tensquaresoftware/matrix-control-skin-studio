@@ -1,4 +1,12 @@
 import { applyCanvasViewFromPrefs, mountCanvas } from '../canvas/index'
+import {
+  canRedo,
+  canUndo,
+  execute,
+  redo,
+  subscribeHistory,
+  undo,
+} from '../history/index'
 import type { ProjectStore } from '../model/store'
 import {
   clampZoomStep,
@@ -22,6 +30,31 @@ export { NEW_CONFIRM_BODY, openNewConfirmModal } from './new-confirm'
 
 const EMPTY_GLYPH = '—'
 
+/** Remount cleanup registry on the chrome root (history button subscriptions). */
+const CHROME_CLEANUPS = Symbol.for('matrix-control-skin-studio.chrome-cleanups')
+
+type RootWithCleanups = HTMLElement & {
+  [CHROME_CLEANUPS]?: Array<() => void>
+}
+
+function disposeChromeCleanups(root: HTMLElement): void {
+  const keyed = root as RootWithCleanups
+  const list = keyed[CHROME_CLEANUPS]
+  if (list == null) return
+  for (const dispose of list) {
+    dispose()
+  }
+  keyed[CHROME_CLEANUPS] = []
+}
+
+function registerChromeCleanup(root: HTMLElement, dispose: () => void): void {
+  const keyed = root as RootWithCleanups
+  if (keyed[CHROME_CLEANUPS] == null) {
+    keyed[CHROME_CLEANUPS] = []
+  }
+  keyed[CHROME_CLEANUPS].push(dispose)
+}
+
 export type MountChromeShellOptions = {
   storage?: PersistStorage
 }
@@ -41,6 +74,7 @@ export function mountChromeShell(
   }
 
   const storage = options.storage ?? getBrowserStorage()
+  disposeChromeCleanups(root)
   root.replaceChildren()
 
   const shell = document.createElement('div')
@@ -111,8 +145,12 @@ function buildTopBar(
   const importBtn = inertButton('Import')
   const exportBtn = inertButton('Export')
   const sep1 = separator()
-  const undoBtn = inertButton('Undo', 'chrome-top-btn chrome-top-btn-ghost')
-  const redoBtn = inertButton('Redo', 'chrome-top-btn chrome-top-btn-ghost')
+  const undoBtn = buildHistoryButton(modalRoot, store, 'Undo', 'undo', () => {
+    undo(store)
+  })
+  const redoBtn = buildHistoryButton(modalRoot, store, 'Redo', 'redo', () => {
+    redo(store)
+  })
   const zoom = buildZoomCombo(storage, zoomReadout, canvasHost)
   const spacer = document.createElement('span')
   spacer.className = 'chrome-top-spacer'
@@ -131,6 +169,32 @@ function buildTopBar(
     skin,
   )
   return topBar
+}
+
+function buildHistoryButton(
+  root: HTMLElement,
+  store: ProjectStore,
+  label: string,
+  kind: 'undo' | 'redo',
+  onClick: () => void,
+): HTMLButtonElement {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'chrome-top-btn chrome-top-btn-ghost'
+  button.textContent = label
+  button.setAttribute(`data-chrome-${kind}`, '')
+
+  const syncEnabled = (): void => {
+    button.disabled = kind === 'undo' ? !canUndo(store) : !canRedo(store)
+  }
+  syncEnabled()
+  registerChromeCleanup(root, subscribeHistory(store, syncEnabled))
+
+  button.addEventListener('click', () => {
+    if (button.disabled) return
+    onClick()
+  })
+  return button
 }
 
 function inertButton(label: string, className = 'chrome-top-btn'): HTMLButtonElement {
@@ -218,13 +282,18 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
       session.activeSkinId !== null &&
       !project.skins.some((s) => s.id === session.activeSkinId)
     ) {
-      store.apply({
-        session: {
-          selectedObjectTypeId: session.selectedObjectTypeId,
-          selectedStateId: session.selectedStateId,
-          activeSkinId: null,
+      // Orphaned activeSkinId sync — non-undoable (EXCLUDE).
+      execute(
+        store,
+        {
+          session: {
+            selectedObjectTypeId: session.selectedObjectTypeId,
+            selectedStateId: session.selectedStateId,
+            activeSkinId: null,
+          },
         },
-      })
+        { push: false },
+      )
       ;({ project, session } = store.getState())
     }
 
@@ -266,13 +335,18 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
       return
     }
 
-    store.apply({
-      session: {
-        selectedObjectTypeId: currentSession.selectedObjectTypeId,
-        selectedStateId: currentSession.selectedStateId,
-        activeSkinId: nextId,
+    // Skin combo only updates activeSkinId — never an undo step (EXCLUDE).
+    execute(
+      store,
+      {
+        session: {
+          selectedObjectTypeId: currentSession.selectedObjectTypeId,
+          selectedStateId: currentSession.selectedStateId,
+          activeSkinId: nextId,
+        },
       },
-    })
+      { push: false },
+    )
   })
 
   wrap.append(lbl, select)

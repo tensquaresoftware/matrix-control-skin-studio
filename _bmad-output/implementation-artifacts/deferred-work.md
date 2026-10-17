@@ -112,3 +112,7 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-fix-canvas-layout-chrome.md`
   summary: Decide behavior when the window is narrower than sidebar 320px plus a usable canvas (min canvas width vs intentional page overflow).
   evidence: With `flex: 0 0 320px` the sidebar never shrinks; a very narrow viewport can still starve the canvas. Out of this bugfix DoD (normal desktop window); reopen if responsive chrome becomes a goal.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-1-history-stack-with-coalesced-undo-redo.md`
+  summary: Replace JSON.stringify snapshot equality in history coalesce / canUndo with a cheaper structural compare if project documents grow large.
+  evidence: Every coalesce tick and enablement check stringifies full project+session; fine for MVP seed size; revisit under large palettes/skins.

@@ -1,3 +1,4 @@
+import { execute } from '../history/index'
 import {
   findMapping,
   resolvePaletteHex,
@@ -403,7 +404,7 @@ function applyObjectTypeHitSelection(
     selectedObjectTypeId: objectTypeId,
     selectedStateId: nextStateId,
   }
-  store.apply({ session: nextSession })
+  execute(store, { session: nextSession })
 }
 
 function buildZoneElement(

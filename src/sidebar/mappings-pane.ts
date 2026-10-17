@@ -1,3 +1,4 @@
+import { execute } from '../history/index'
 import {
   findMapping,
   isMappingUnbound,
@@ -272,7 +273,7 @@ export function mountMappingsPane(
     }
     canvasHighlightActive = false
     mappingFocus.setFocused(null)
-    store.apply({ session: nextSession })
+    execute(store, { session: nextSession })
   })
 
   stateSelect.addEventListener('change', () => {
@@ -286,7 +287,7 @@ export function mountMappingsPane(
     }
     canvasHighlightActive = false
     mappingFocus.setFocused(null)
-    store.apply({ session: nextSession })
+    execute(store, { session: nextSession })
   })
 
   options.selectionSync?.setHighlightScroll(() => {
@@ -318,7 +319,7 @@ function applyMappingUpsert(
       i === skinIndex ? { ...item, mappings } : item,
     ),
   }
-  store.apply({ project: nextProject })
+  execute(store, { project: nextProject })
   return true
 }
 

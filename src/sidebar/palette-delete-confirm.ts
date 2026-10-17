@@ -1,3 +1,4 @@
+import { execute } from '../history/index'
 import type { ProjectStore } from '../model/store'
 import type { Mapping, ProjectDocument, Skin } from '../model/types'
 
@@ -152,5 +153,5 @@ export function applyDeleteAndUnbind(
       ),
     })),
   }
-  store.apply({ project: next })
+  execute(store, { project: next })
 }

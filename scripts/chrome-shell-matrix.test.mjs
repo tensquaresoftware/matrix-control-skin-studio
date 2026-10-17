@@ -416,8 +416,10 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-chrome-new]'))
       assert.ok(root.querySelector('[data-chrome-inert="import"]'))
       assert.ok(root.querySelector('[data-chrome-inert="export"]'))
-      assert.ok(root.querySelector('[data-chrome-inert="undo"]'))
-      assert.ok(root.querySelector('[data-chrome-inert="redo"]'))
+      assert.ok(root.querySelector('[data-chrome-undo]'))
+      assert.ok(root.querySelector('[data-chrome-redo]'))
+      assert.equal(root.querySelector('[data-chrome-inert="undo"]'), null)
+      assert.equal(root.querySelector('[data-chrome-inert="redo"]'), null)
       assert.equal(root.querySelector('[data-chrome-inert="zoom"]'), null)
       assert.equal(root.querySelector('[data-chrome-inert="skin"]'), null)
       assert.ok(root.querySelector('[data-chrome-zoom-select]'))
@@ -470,8 +472,8 @@ describe('chrome shell I/O matrix', () => {
         if (child.getAttribute('data-chrome-inert') === 'import') return 'import'
         if (child.getAttribute('data-chrome-inert') === 'export') return 'export'
         if (child.classList.contains('chrome-top-sep')) return 'sep'
-        if (child.getAttribute('data-chrome-inert') === 'undo') return 'undo'
-        if (child.getAttribute('data-chrome-inert') === 'redo') return 'redo'
+        if (child.getAttribute('data-chrome-undo') !== null) return 'undo'
+        if (child.getAttribute('data-chrome-redo') !== null) return 'redo'
         if (child.getAttribute('data-chrome-zoom') !== null) return 'zoom'
         if (child.getAttribute('data-chrome-spacer') !== null) return 'spacer'
         if (child.getAttribute('data-chrome-skin') !== null) return 'skin'

@@ -1,3 +1,4 @@
+import { execute } from '../history/index'
 import type { ProjectStore } from '../model/store'
 import type { Mapping, ProjectDocument, SessionUiState, Skin } from '../model/types'
 import type { CanvasSelectionSync } from './canvas-selection-sync'
@@ -286,7 +287,7 @@ function applyRename(
       i === index ? { ...skin, displayName } : skin,
     ),
   }
-  store.apply({ project: next })
+  execute(store, { project: next })
 }
 
 function applyCreate(store: ProjectStore): void {
@@ -304,7 +305,7 @@ function applyCreate(store: ProjectStore): void {
     ...session,
     activeSkinId: created.id,
   }
-  store.apply({ project: nextProject, session: nextSession })
+  execute(store, { project: nextProject, session: nextSession })
 }
 
 function applyDuplicate(store: ProjectStore): void {
@@ -328,7 +329,7 @@ function applyDuplicate(store: ProjectStore): void {
     ...session,
     activeSkinId: copy.id,
   }
-  store.apply({ project: nextProject, session: nextSession })
+  execute(store, { project: nextProject, session: nextSession })
 }
 
 /** Smallest unused positive integer among existing `Skin {n}` display names. */
@@ -353,7 +354,7 @@ function applyDelete(store: ProjectStore, skinId: string): void {
     session.activeSkinId === skinId
       ? { ...session, activeSkinId: null }
       : session
-  store.apply({ project: nextProject, session: nextSession })
+  execute(store, { project: nextProject, session: nextSession })
 }
 
 function deepCopyMappings(mappings: readonly Mapping[]): Mapping[] {

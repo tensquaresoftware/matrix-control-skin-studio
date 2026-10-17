@@ -1,3 +1,4 @@
+import { clearHistory } from '../history/index'
 import type { ProjectStore } from '../model/store'
 import { applySeedBaseline } from '../seed/index'
 import { dismissDeleteConfirms } from './dismiss-project-confirms'
@@ -50,6 +51,7 @@ export function openNewConfirmModal(root: HTMLElement, store: ProjectStore): voi
     // Confirm cannot mutate the fresh seed by a captured id.
     dismissDeleteConfirms(root)
     applySeedBaseline(store)
+    clearHistory(store)
     close()
   })
 
