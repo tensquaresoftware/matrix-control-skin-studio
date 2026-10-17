@@ -940,6 +940,203 @@ describe('mappings I/O matrix', () => {
     }
   })
 
+  it('Object type change: State not on destination falls back to first state', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        fixtureProject(),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'on',
+        }),
+      )
+
+      selectObjectType(host, 'knobLarge')
+      assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
+      // `on` is not in knobLarge.states → first state `normal`.
+      assert.equal(store.getState().session.selectedStateId, 'normal')
+      assert.equal(
+        host.querySelector('[data-mappings-state]')?.value,
+        'normal',
+      )
+      const rows = propertyRows(host)
+      assert.equal(rows.length, 1)
+      assert.equal(rows[0].getAttribute('data-mapping-row'), 'led_on')
+    } finally {
+      restore()
+    }
+  })
+
+  it('UI rebind: focused bound row → different Palette id replaces mapping', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        fixtureProject({
+          skins: [
+            {
+              id: 'black-duo',
+              displayName: 'Black/Duo',
+              mappings: [
+                {
+                  objectTypeId: 'headerLed',
+                  stateId: 'off',
+                  propertyId: 'fill',
+                  paletteEntryId: 'duoLedYellow',
+                },
+              ],
+            },
+            {
+              id: 'cream-duo',
+              displayName: 'Cream/Duo',
+              mappings: [],
+            },
+          ],
+        }),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'off',
+        }),
+      )
+
+      const fillRow = propertyRows(host).find(
+        (row) => row.getAttribute('data-mapping-row') === 'fill',
+      )
+      assert.ok(fillRow)
+      assert.equal(fillRow.classList.contains('is-unbound'), false)
+      fillRow.click()
+
+      const paletteRow = host.querySelector('[data-palette-row="patchZoneBlue"]')
+      assert.ok(paletteRow)
+      paletteRow.click()
+
+      const mappings = skinMappings(store)
+      assert.equal(mappings.length, 1)
+      assert.equal(mappings[0].paletteEntryId, 'patchZoneBlue')
+      assert.equal(mappings[0].propertyId, 'fill')
+
+      const rebound = propertyRows(host).find(
+        (row) => row.getAttribute('data-mapping-row') === 'fill',
+      )
+      assert.equal(
+        rebound?.querySelector('[data-mapping-palette-id]')?.textContent,
+        'patchZoneBlue',
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('Object type change clears focus; Palette must not bind prior type', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        fixtureProject(),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'off',
+        }),
+      )
+
+      const fillRow = propertyRows(host).find(
+        (row) => row.getAttribute('data-mapping-row') === 'fill',
+      )
+      assert.ok(fillRow)
+      fillRow.click()
+      assert.ok(
+        propertyRows(host)
+          .find((row) => row.getAttribute('data-mapping-row') === 'fill')
+          ?.classList.contains('is-focused'),
+      )
+
+      selectObjectType(host, 'knobLarge')
+      assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
+      assert.equal(
+        propertyRows(host).some((row) => row.classList.contains('is-focused')),
+        false,
+      )
+
+      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      assert.equal(
+        findMappingInSkin(store, {
+          objectTypeId: 'headerLed',
+          stateId: 'off',
+          propertyId: 'fill',
+        }),
+        undefined,
+      )
+      assert.equal(
+        findMappingInSkin(store, {
+          objectTypeId: 'knobLarge',
+          stateId: 'off',
+          propertyId: 'led_on',
+        }),
+        undefined,
+      )
+      assert.deepEqual(skinMappings(store), [])
+    } finally {
+      restore()
+    }
+  })
+
+  it('Skin segment clears Mapping focus; Palette cannot bind while Skin tab shown', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        fixtureProject(),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'off',
+        }),
+      )
+
+      const fillRow = propertyRows(host).find(
+        (row) => row.getAttribute('data-mapping-row') === 'fill',
+      )
+      assert.ok(fillRow)
+      fillRow.click()
+      assert.ok(
+        propertyRows(host)
+          .find((row) => row.getAttribute('data-mapping-row') === 'fill')
+          ?.classList.contains('is-focused'),
+      )
+
+      host.querySelector('[data-skin-seg-tab="skin"]').click()
+      assert.equal(
+        host.querySelector('[data-mappings-tab]')?.hidden,
+        true,
+      )
+
+      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      assert.deepEqual(skinMappings(store), [])
+    } finally {
+      restore()
+    }
+  })
+
   it('Skin switch clears Mapping focus; Palette cannot bind onto new Skin without re-focus', async () => {
     const restore = installMinimalDocument()
     try {

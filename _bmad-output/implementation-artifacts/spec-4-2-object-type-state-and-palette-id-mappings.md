@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-10-17'
 status: 'done'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 baseline_commit: '36ea7d137ed908dfb4c8be589159e05bbd2f1eba'
 context:
   - '{project-root}/_bmad-output/implementation-artifacts/epic-4-context.md'
@@ -82,11 +82,35 @@ context:
 - Given a State change, when rows refresh, then they match the new pair and session State updates.
 - Given mapping uniqueness, when two edits target the same triple on one Skin, then one Mapping entry remains.
 
+### Review Findings
+
+- [x] [Review][Patch] Clear Mapping focus when leaving the Mappings segment so Palette cannot bind while Skin tab is shown [`src/sidebar/skin-pane.ts:120`]
+- [x] [Review][Patch] Matrix: Object type change to a type without the current State falls back to first state + Property rows [`scripts/mappings-matrix.test.mjs` — cover `resolveStateAfterTypeChange` non-sticky path]
+- [x] [Review][Patch] Matrix: rebind already-bound Property via focus + Palette click (UI path, not helper-only) [`scripts/mappings-matrix.test.mjs`]
+- [x] [Review][Patch] Matrix: Object type change clears Mapping focus / no bind to prior type [`scripts/mappings-matrix.test.mjs`]
+- [x] [Review][Defer] Session Object/State ids missing from inventory leave selects on dash while chrome keeps stale ids [`src/sidebar/mappings-pane.ts:200`] — deferred: pre-existing from build review; Collect/inventory shrink path; KEEP_EMPTY seed everyday-safe
+- [x] [Review][Defer] Spec `status: done` vs sprint `review` / `review_loop_iteration` still 0 — deferred: process tracking only; align when this review closes
+
+#### Rejected
+
+- `false` — Empty Spec Change Log / frozen I/O matrix gaps / Code Map omitting `mapping-focus.ts`: fix would edit the spec under review
+- `false` — Missing empty-state guidance copy: empty Property list and disabled selects match KEEP_EMPTY / I/O matrix; no AC requires helper text
+- `false` — Select options showing raw inventory ids: inventory model is id-only; intentional
+- `false` — `bindFocusedMapping` trusts focus without session cross-check: `clearFocusIfStale` + Object/State/Skin clears cover mismatch; remaining tab-hide case is the Skin-segment patch
+- `false` — Optional `mappingFocus` on Palette mount silently disables bind: production `mountSidebar` always wires the shared controller
+- `low` rejected — Clear shown on dangling-id Unbound rows: Clear still repairs to `null`; unlikely everyday with a healthy Palette
+- `low` rejected — Mapping-row a11y / keyboard Clear gaps: mouse-first calibration; not everyday harm for this story
+- `low` rejected — Chrome context-strip text unasserted in mappings matrix: session writes already covered; chrome is an existing consumer
+- `low` rejected — Disabled selects reuse export-disabled tokens: cosmetic; prior triage rejected
+- `low` rejected — Duplicated sidebar matrix DOM harness: WET until a third consumer; not a product defect
+- `low` rejected — `upsertMapping` leaves pre-existing duplicate triples: normal UI never creates duplicates (prior triage)
+
 ## Implementation Notes
 
 - Implemented: `findMapping` / `upsertMapping`; `mappings-pane.ts` + `mapping-focus.ts`; ROW_THEN_PALETTE via palette-pane; Clear → Unbound; seed inventory unchanged empty.
 - Review patches: Skin-scoped focus clear; Clear only when bound; `bindFocusedMapping` false on rejected upsert; five matrix regressions.
-- Verified: `npm test` 123 pass; `npm run build` green.
+- Code-review patches: clear Mapping focus on Skin segment; matrix for non-sticky State fallback, UI rebind, Object-type focus clear, Skin-segment focus clear.
+- Verified: `npm test` 127 pass.
 
 ## Spec Change Log
 

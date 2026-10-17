@@ -75,3 +75,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-object-type-state-and-palette-id-mappings.md`
   summary: Repair session Object type / State ids when they are missing from the loaded inventory so chrome and selects stay aligned.
   evidence: Mappings selects show dash while session/chrome can keep stale ids if inventory shrinks; KEEP_EMPTY seed never hits this everyday — Collect or inventory replace will surface it.
+
+## Deferred from: code review of spec-4-2-object-type-state-and-palette-id-mappings.md (2026-10-17)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-object-type-state-and-palette-id-mappings.md`
+  summary: Repair session Object type / State ids when missing from inventory (chrome vs selects) — confirmed still open; same item as build-review defer above.
+  evidence: Edge Case Hunter + Blind Hunter; `mappings-pane` fillSelect shows dash without rewriting session; KEEP_EMPTY seed everyday-safe.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-object-type-state-and-palette-id-mappings.md`
+  summary: Align spec frontmatter status / review_loop_iteration with sprint `review` when the review loop closes (process tracking only).
+  evidence: Spec `status: done` while sprint moves story to `review`; not a product defect.

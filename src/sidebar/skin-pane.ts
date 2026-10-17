@@ -120,6 +120,9 @@ export function mountSkinPane(
   const setSegment = (next: SkinSegment): void => {
     if (activeSegment === next) return
     activeSegment = next
+    // Leaving Mappings must drop row focus — Palette stays visible and would
+    // otherwise bind while the operator is on the Skin segment.
+    if (next !== 'mappings') mappingFocus.setFocused(null)
     syncSegmentUi()
   }
 
