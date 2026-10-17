@@ -116,3 +116,8 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-1-history-stack-with-coalesced-undo-redo.md`
   summary: Replace JSON.stringify snapshot equality in history coalesce / canUndo with a cheaper structural compare if project documents grow large.
   evidence: Every coalesce tick and enablement check stringifies full project+session; fine for MVP seed size; revisit under large palettes/skins.
+
+## Deferred from: code review of spec-5-1-history-stack-with-coalesced-undo-redo.md (2026-10-17)
+
+- Unbounded undo stack stores full project+session snapshots with no eviction — fine for MVP session length; revisit cap/eviction if long editing sessions grow memory.
+- Chrome Object/State/Skin `store.subscribe` readouts still stack on remount (only history listeners were disposed) — pre-existing remount pattern across shells; not blocking 5-1 Undo/Redo.

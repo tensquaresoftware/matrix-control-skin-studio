@@ -86,14 +86,25 @@ context:
 - [x] [Review][Patch] Unsubscribe history listeners on chrome remount [`src/chrome/index.ts`]
 - [x] [Review][Patch] Matrix gaps: coalesce-after-undo redo, chrome Skin EXCLUDE, picker coalesce, Skin-CRUD Skin restore, UI-driven undo [`scripts/history-matrix.test.mjs`, `scripts/palette-picker-matrix.test.mjs`]
 - [x] [Review][Defer] JSON.stringify equality cost on coalesce ticks [`src/history/index.ts`] — deferred: MVP size OK
+- [x] [Review][Patch] Skin delete confirm still says permanent while delete is undoable [`src/sidebar/skin-delete-confirm.ts:8`]
+- [x] [Review][Patch] Net-zero coalesce burst must not destroy redo — clear redo only when flush pushes a step; keep mid-burst `canRedo` false via open coalesce [`src/history/index.ts:144`]
+- [x] [Review][Patch] Assert UI-driven discrete undo for Skin rename, Palette create/rename, Mapping bind, and State select [`scripts/history-matrix.test.mjs`]
+- [x] [Review][Patch] Assert orphan `activeSkinId` mount sync leaves `canUndo` false [`scripts/chrome-shell-matrix.test.mjs` / `scripts/history-matrix.test.mjs`]
+- [x] [Review][Patch] Assert top-bar Undo enabled mid-coalesce before flush [`scripts/history-matrix.test.mjs`]
+- [x] [Review][Defer] Unbounded undo stack / full-snapshot memory growth [`src/history/index.ts`] — deferred: MVP session length OK; revisit eviction later
+- [x] [Review][Defer] Chrome `store.subscribe` readouts not disposed on remount [`src/chrome/index.ts:100`] — deferred: pre-existing remount pattern; history listeners already cleaned
 
 #### Rejected
 
 - `false` — Hex field needs blur flush: idle covers hex; pointer-up is for sliders
 - `false` — Design Notes stale flag wording: would only edit this build’s spec
-- `false` — Sprint vs spec status mismatch: expected mid-build
+- `false` — Sprint vs spec status mismatch: expected mid-build / mid-review
 - `false` — `canUndo` via open coalesce without stack depth: intentional mid-gesture Undo
 - `low` rejected — No `pointercancel`: idle flush covers interrupted drag
+- `false` — Spec Change Log / AC / Manual Verification / Design Notes / `review_loop_iteration` gaps: fix would only edit this build’s spec
+- `low` rejected — Zoom/pan exclusion only via prefs API: chrome Zoom and canvas pan never call history
+- `low` rejected — `push: false` + `coalesceKey` interaction undocumented: no caller combines them
+- `low` rejected — Chrome remount history-cleanup unasserted: dispose path exists; everyday remount unlikely
 
 ## Implementation Notes
 
@@ -102,7 +113,7 @@ context:
 - `push: false` for Skin-only `activeSkinId` (EXCLUDE); undo/redo restore Object/State always, `activeSkinId` only when the command itself changed it (Skin CRUD).
 - UI writers routed through `history.execute`; seed/persist keep direct `store.apply`; New calls `clearHistory` after seed.
 - Coverage: `scripts/history-matrix.test.mjs` wired in `package.json`; chrome matrix expects live Undo/Redo; review patches added coalesce-redo, chrome Skin EXCLUDE, picker-mounted coalesce, Skin-CRUD Skin restore, canvas UI undo.
-- Review patches: coalesced execute clears redo + `canRedo` false mid-burst; chrome remount unsubscribes history listeners.
+- Review patches: mid-burst `canRedo` false via open coalesce; redo cleared only when flush pushes a step (net-zero preserves redo); chrome remount unsubscribes history listeners; Skin delete confirm no longer claims permanence; UI discrete undo + orphan EXCLUDE + mid-coalesce Undo button covered in history matrix.
 
 ## Spec Change Log
 
@@ -127,6 +138,13 @@ context:
 - `medium` — VG: Picker coalesce/pointer-up not verified through picker UI — pre-verified; patch tests
 - `medium` — VG: Skin-CRUD `activeSkinId` restore on undo untested — pre-verified; patch tests
 - `medium` — VG: Discrete UI writers not verified to push undo via UI — pre-verified; patch thin UI-driven undo checks
+- `medium` — Round-2 AA: Skin delete confirm still says “cannot be undone” while `applyDelete` uses undoable `execute` — verified `src/sidebar/skin-delete-confirm.ts`
+- `medium` — Round-2 Edge: mid-burst dirty clears redo; net-zero flush pushes nothing → redo lost with unchanged document — verified `src/history/index.ts` coalesce + `flushCoalesce`
+- `medium` — Round-2 VG: discrete sidebar writers still lack UI-driven undo asserts (Skin/Palette/Mapping/State) — pre-verified; prior patch only covered canvas Object-type
+- `medium` — Round-2 VG: orphan `activeSkinId` mount EXCLUDE never asserts `canUndo` false — pre-verified
+- `medium` — Round-2 VG+BH: mid-coalesce top-bar Undo enablement unasserted — pre-verified
+- `medium` deferred — Unbounded undo stack / full snapshots: MVP OK
+- `low` deferred — Chrome `store.subscribe` remount leak: pre-existing pattern outside history cleanup
 
 ## Design Notes
 

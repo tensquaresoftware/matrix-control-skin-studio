@@ -139,11 +139,9 @@ function createHistoryController(target: ProjectStore): HistoryController {
         if (open == null) {
           open = { key: coalesceKey, before: capture(), timer: null }
         }
-        const beforeApply = capture()
         target.apply(payload)
-        if (!statesEqual(beforeApply, capture())) {
-          redoStack.length = 0
-        }
+        // Do not clear redo mid-burst: a net-zero flush must preserve redo.
+        // Mid-burst canRedo stays false via hasOpenCoalesceChange().
         scheduleCoalesceFlush()
         notify()
         return

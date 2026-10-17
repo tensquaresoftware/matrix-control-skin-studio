@@ -203,8 +203,12 @@ function installMinimalDocument() {
       closest() {
         return null
       },
-      focus() {},
-      blur() {},
+      focus() {
+        el.dispatchEvent({ type: 'focus' })
+      },
+      blur() {
+        el.dispatchEvent({ type: 'blur' })
+      },
       click() {
         el.dispatchEvent({ type: 'click' })
       },
@@ -627,7 +631,7 @@ describe('history I/O matrix', () => {
     assert.equal(store.getState().project.palette[0].hex, '#111111')
   })
 
-  it('coalesce-after-undo: clears redo immediately; canRedo false mid-burst', async () => {
+  it('coalesce-after-undo: canRedo false mid-burst via open coalesce', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const history = await importCompiledTs('src/history/index.ts')
     const store = model.createStore({
@@ -653,6 +657,45 @@ describe('history I/O matrix', () => {
     )
     assert.equal(history.canRedo(store), false)
     assert.equal(history.canUndo(store), true)
+  })
+
+  it('net-zero coalesce after undo: preserves redo when flush pushes nothing', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const store = model.createStore({
+      project: baseProject(),
+      session: baseSession(),
+    })
+
+    history.execute(store, {
+      project: {
+        ...store.getState().project,
+        skins: store.getState().project.skins.map((s) =>
+          s.id === 'skin-a' ? { ...s, displayName: 'First' } : s,
+        ),
+      },
+    })
+    history.undo(store)
+    assert.equal(history.canRedo(store), true)
+    const hexBefore = store.getState().project.palette[0].hex
+
+    history.execute(
+      store,
+      { project: withHex(store.getState().project, 'c1', '#ABCDEF') },
+      { coalesceKey: 'hex:c1' },
+    )
+    history.execute(
+      store,
+      { project: withHex(store.getState().project, 'c1', hexBefore) },
+      { coalesceKey: 'hex:c1' },
+    )
+    history.flushCoalesce(store)
+
+    assert.equal(store.getState().project.palette[0].hex, hexBefore)
+    assert.equal(history.canUndo(store), false)
+    assert.equal(history.canRedo(store), true)
+    history.redo(store)
+    assert.equal(store.getState().project.skins[0].displayName, 'First')
   })
 
   it('chrome Skin combo change keeps canUndo false (EXCLUDE)', async () => {
@@ -753,6 +796,230 @@ describe('history I/O matrix', () => {
 
       history.undo(store)
       assert.equal(store.getState().session.selectedObjectTypeId, null)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('UI Skin rename: canUndo then Undo restores displayName', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const store = model.createStore({
+        project: baseProject(),
+        session: baseSession(),
+      })
+      const root = document.createElement('div')
+      root.id = 'app'
+      mountChromeShell(root, store, {
+        storage: persist.createMemoryStorage(),
+      })
+
+      root.querySelector('[data-skin-seg-tab="skin"]').click()
+      const name = root.querySelector('[data-skin-name]')
+      assert.ok(name)
+      name.focus()
+      name.value = 'Renamed A'
+      name.blur()
+
+      assert.equal(
+        store.getState().project.skins.find((s) => s.id === 'skin-a')
+          ?.displayName,
+        'Renamed A',
+      )
+      assert.equal(history.canUndo(store), true)
+      history.undo(store)
+      assert.equal(
+        store.getState().project.skins.find((s) => s.id === 'skin-a')
+          ?.displayName,
+        'Skin A',
+      )
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('UI Palette + Add: canUndo then Undo removes created entry', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const store = model.createStore({
+        project: baseProject(),
+        session: baseSession(),
+      })
+      const root = document.createElement('div')
+      root.id = 'app'
+      mountChromeShell(root, store, {
+        storage: persist.createMemoryStorage(),
+      })
+
+      const beforeLen = store.getState().project.palette.length
+      const addBtn = root.querySelector('[data-palette-add]')
+      assert.ok(addBtn)
+      addBtn.click()
+      assert.equal(store.getState().project.palette.length, beforeLen + 1)
+      assert.equal(history.canUndo(store), true)
+
+      history.undo(store)
+      assert.equal(store.getState().project.palette.length, beforeLen)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('UI Mapping bind: canUndo then Undo restores prior paletteEntryId', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const store = model.createStore({
+        project: baseProject(),
+        session: baseSession({
+          selectedObjectTypeId: 'ot',
+          selectedStateId: 'idle',
+        }),
+      })
+      const root = document.createElement('div')
+      root.id = 'app'
+      mountChromeShell(root, store, {
+        storage: persist.createMemoryStorage(),
+      })
+
+      const fillRow = root.querySelector('[data-mapping-row="fill"]')
+      assert.ok(fillRow)
+      fillRow.click()
+      const paletteRow = root.querySelector('[data-palette-row="c2"]')
+      assert.ok(paletteRow)
+      paletteRow.click()
+
+      const mapping = store
+        .getState()
+        .project.skins.find((s) => s.id === 'skin-a')
+        ?.mappings.find(
+          (m) =>
+            m.objectTypeId === 'ot' &&
+            m.stateId === 'idle' &&
+            m.propertyId === 'fill',
+        )
+      assert.equal(mapping?.paletteEntryId, 'c2')
+      assert.equal(history.canUndo(store), true)
+
+      history.undo(store)
+      const restored = store
+        .getState()
+        .project.skins.find((s) => s.id === 'skin-a')
+        ?.mappings.find(
+          (m) =>
+            m.objectTypeId === 'ot' &&
+            m.stateId === 'idle' &&
+            m.propertyId === 'fill',
+        )
+      assert.equal(restored?.paletteEntryId, 'c1')
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('UI State select: canUndo then Undo restores prior state', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const store = model.createStore({
+        project: baseProject(),
+        session: baseSession({
+          selectedObjectTypeId: 'ot',
+          selectedStateId: 'idle',
+        }),
+      })
+      const root = document.createElement('div')
+      root.id = 'app'
+      mountChromeShell(root, store, {
+        storage: persist.createMemoryStorage(),
+      })
+
+      const stateSelect = root.querySelector('[data-mappings-state]')
+      assert.ok(stateSelect)
+      stateSelect.value = 'on'
+      stateSelect.dispatchEvent({ type: 'change' })
+      assert.equal(store.getState().session.selectedStateId, 'on')
+      assert.equal(history.canUndo(store), true)
+
+      history.undo(store)
+      assert.equal(store.getState().session.selectedStateId, 'idle')
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('orphan activeSkinId mount sync: canUndo stays false', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const store = model.createStore({
+        project: baseProject(),
+        session: baseSession({ activeSkinId: 'missing-skin-id' }),
+      })
+      const root = document.createElement('div')
+      root.id = 'app'
+      mountChromeShell(root, store, {
+        storage: persist.createMemoryStorage(),
+      })
+
+      assert.equal(store.getState().session.activeSkinId, null)
+      assert.equal(history.canUndo(store), false)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('top-bar Undo enabled mid-coalesce before flush', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const history = await importCompiledTs('src/history/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const store = model.createStore({
+        project: baseProject(),
+        session: baseSession(),
+      })
+      const root = document.createElement('div')
+      root.id = 'app'
+      mountChromeShell(root, store, {
+        storage: persist.createMemoryStorage(),
+      })
+
+      const undoBtn = root.querySelector('[data-chrome-undo]')
+      assert.ok(undoBtn)
+      assert.equal(undoBtn.disabled, true)
+
+      history.execute(
+        store,
+        { project: withHex(store.getState().project, 'c1', '#ABCDEF') },
+        { coalesceKey: 'hex:c1' },
+      )
+      assert.equal(history.canUndo(store), true)
+      assert.equal(undoBtn.disabled, false)
     } finally {
       restoreDoc()
     }

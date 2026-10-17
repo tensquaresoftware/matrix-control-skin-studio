@@ -688,7 +688,7 @@ describe('skin tab I/O matrix', () => {
       assert.ok(modal)
       assert.equal(
         modal.querySelector('[data-skin-delete-body]')?.textContent,
-        'Delete skin “Black/Green”? This cannot be undone.',
+        'Delete skin “Black/Green”?',
       )
       assert.equal(
         modal.querySelector('[data-skin-delete-cancel]')?.textContent,

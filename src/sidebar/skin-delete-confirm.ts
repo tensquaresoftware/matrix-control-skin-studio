@@ -6,7 +6,7 @@ export type OpenSkinDeleteConfirmOptions = {
 }
 
 export const SKIN_DELETE_CONFIRM_BODY = (displayName: string): string =>
-  `Delete skin “${displayName}”? This cannot be undone.`
+  `Delete skin “${displayName}”?`
 
 /**
  * One-deep delete-skin confirm (UX-DR13). Cancel closes without mutating.
