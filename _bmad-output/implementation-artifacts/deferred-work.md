@@ -63,3 +63,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-1-gui-view-mock-with-orchestrator-zones.md`
   summary: Dispose canvas store subscription on remount (or document single-mount lifetime).
   evidence: `mountCanvas` subscribes for zone repaint with no unsubscribe; same pattern as chrome strip subscribers; everyday remount uncommon until a product remount path appears.
+
+## Deferred from: code review of spec-4-1-gui-view-mock-with-orchestrator-zones.md (2026-10-17)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-gui-view-mock-with-orchestrator-zones.md`
+  summary: Narrow zone/Palette repaint instead of full mock `replaceChildren` on every store notification (needed before 4.3 selection outline / 4.4 pulse on stable nodes).
+  evidence: `renderMockComposition` clears and rebuilds the whole mock on each `store.subscribe` tick; fine for 4.1 band paint, fights later selection/pulse work that needs stable DOM.

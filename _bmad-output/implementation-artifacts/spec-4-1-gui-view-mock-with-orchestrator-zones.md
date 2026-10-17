@@ -117,3 +117,24 @@ context:
 - Hit-testing for Object types may attach `data-object-type-id` (or equivalent) for later 4.3 without implementing sidebar sync in this story.
 - “Like any other object” for Patch/Master bands means **same Palette colour discipline** (pick/edit hex, visible on all Skins) — not inventing Inventory ObjectTypes for the decorative strips (AD-13). Full Property→Palette mapping UI remains story 4.2.
 - Baseline Blue/Orange hexes for the new seed entries are agent-chosen opaque `#RRGGBB` aligned with the PRD Duo table wording; operators can recalibrate afterward.
+
+### Review Findings
+
+- [x] [Review][Patch] Object-type hit chips use `cursor: pointer` while remaining non-interactive until 4.3 [`src/styles/base.css` `.mock-object-type-hit`] — fixed: `cursor: default`
+- [x] [Review][Defer] Restored pre-4.1 one-entry palette leaves Patch/Master bands unbound on cold reopen [`src/boot-project.ts`] — deferred: pre-existing envelope/seed boundary (already in deferred-work from build review)
+- [x] [Review][Defer] `mountCanvas` store subscribe without unsubscribe / remount listener leak [`src/canvas/index.ts`] — deferred: everyday remount uncommon; dispose API adds surface (already in deferred-work; triage log had rejected low — parked in deferred-work)
+- [x] [Review][Defer] Full mock DOM rebuild via `replaceChildren` on every store tick [`src/canvas/index.ts` `renderMockComposition`] — deferred: acceptable for 4.1 zone repaint; stable nodes needed when 4.3/4.4 own selection outline and pulse
+
+#### Rejected
+
+- `false` — ALWAYS_ON matrix never switches `activeSkinId`: zone paint reads project Palette, not Skin; switching Skin would not change band fills
+- `false` — Recolour test mutates `getState().project` in place: `getState` already returns a clone; apply clones again
+- `false` — Hard-coded decorative green LED/knob/fader fills: Design Notes temporary stubs; not Palette-backed slots in this story
+- `false` / docs — `.canvas-surface { overflow: hidden }` ownership vs Epic 2: 4.1 did add the rule, but clipping the mock to the surface is intentional UX, not a product defect
+- `false` / docs — Triage log vs `deferred-work` disagree on subscribe dispose: process inconsistency; fix would only edit artifacts
+- rejected (edit spec) — Cold-reopen case missing from frozen I/O / AC text
+- rejected (edit notes) — Implementation Notes “109 pass” brittle headcount
+- `low` rejected — Chrome matrix asserts only `duoLedYellow` Palette row: seed + zone-fill asserts already cover Patch/Master entries on the product paint path
+- `low` rejected — Identical “Orchestrator zone” band labels: column already shows Patch/Master
+- `low` rejected — `listObjectTypeHitRegions` does not exclude Orchestrator zone ids: no inventory collision today; speculative
+- `low` rejected — nullish `objectTypes` / null array entries throw after `replaceChildren`: only corrupt hand-edited inventory; persist requires an array

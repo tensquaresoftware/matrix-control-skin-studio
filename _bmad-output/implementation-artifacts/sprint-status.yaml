@@ -38,7 +38,7 @@
 #   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
 #   to fill SM-1. Definitive JSON field freeze waits on Collect.
 generated: 10-15-2026 22:25
-last_updated: 10-17-2026 11:45
+last_updated: 10-17-2026 12:07
 project: Matrix-Control-Skin-Studio
 project_key: NOKEY
 tracking_system: file-system
@@ -77,7 +77,7 @@ development_status:
   # --- Epic 4: Mapping / preview (MVP) ---
   epic-4: in-progress
   # Collect-dep: clickable regions only for loaded seed inventory; no invented Collect inventory
-  4-1-gui-view-mock-with-orchestrator-zones: review
+  4-1-gui-view-mock-with-orchestrator-zones: done
   # Collect-dep: Property/State sets come from loaded inventory only
   4-2-object-type-state-and-palette-id-mappings: backlog
   4-3-bidirectional-canvas-sidebar-selection-sync: backlog

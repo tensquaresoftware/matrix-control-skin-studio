@@ -582,7 +582,8 @@ body {
   color: var(--color-text-secondary);
   font: inherit;
   font-size: 11px;
-  cursor: pointer;
+  /* Non-interactive until 4.3 — no pointer affordance */
+  cursor: default;
   /* Selection outline tokens ready for 4.3 */
   outline: var(--comp-canvas-selection-outline-width) solid transparent;
   outline-offset: var(--comp-canvas-selection-outline-offset);
