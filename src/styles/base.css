@@ -349,9 +349,14 @@ body {
 }
 
 .chrome-sidebar-slot {
+  /* Cap at token width: default min-width:auto lets Picker/Palette content
+     expand the slot and crush .chrome-canvas-slot (flex:1) to ~0 width. */
+  flex: 0 0 var(--space-sidebar-width);
   width: var(--space-sidebar-width);
-  flex-shrink: 0;
+  max-width: var(--space-sidebar-width);
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 /* Canvas GUI-view — focusable pan/zoom surface */
@@ -360,6 +365,7 @@ body {
   align-items: stretch;
   justify-content: stretch;
   height: 100%;
+  min-width: 0;
   background: var(--color-surface-app);
   position: relative;
   overflow: hidden;
@@ -381,6 +387,7 @@ body {
 
 .canvas-surface {
   flex: 1;
+  min-width: 0;
   margin: var(--space-6);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border-subtle);
@@ -617,6 +624,7 @@ body {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  min-width: 0;
   min-height: 0;
   background: var(--color-surface-panel);
   border-left: 1px solid var(--color-border-subtle);

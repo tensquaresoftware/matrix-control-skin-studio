@@ -106,3 +106,9 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - `deriveUnbound` vs Mapping-row Unbound for **missing** rows is **not** deferred product debt — Story 5.2 AC / AD-10 require expanding derive to the inventory × Skin × ObjectType × State completeness set before the Unbound pane and export gate ship.
 - Verification gaps accepted for later matrix polish (not Epic 4 reopen): canvas hit Unbound stub when Mapping has dangling Palette id; canvas clears hits when `activeSkinId` is null.
 - Edge polish accepted: no-op identical Mapping upsert still writes/pulses; canvas Mapping highlight may survive leaving the Mappings segment.
+
+## Deferred from: build review of spec-fix-canvas-layout-chrome.md (2026-10-17)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-fix-canvas-layout-chrome.md`
+  summary: Decide behavior when the window is narrower than sidebar 320px plus a usable canvas (min canvas width vs intentional page overflow).
+  evidence: With `flex: 0 0 320px` the sidebar never shrinks; a very narrow viewport can still starve the canvas. Out of this bugfix DoD (normal desktop window); reopen if responsive chrome becomes a goal.

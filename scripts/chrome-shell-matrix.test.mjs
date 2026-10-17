@@ -310,7 +310,7 @@ describe('chrome shell I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /chrome-shell-matrix\.test\.mjs/)
   })
 
-  it('layout tokens: top bar 40px, context 28px, sidebar 320px, splitter hit 6px', () => {
+  it('layout tokens + flex caps: top bar 40px, context 28px, sidebar 320px (no canvas crush), splitter hit 6px', () => {
     assert.match(baseCss, /--space-top-bar-height\s*:\s*40px/)
     assert.match(baseCss, /--space-context-strip-height\s*:\s*28px/)
     assert.match(baseCss, /--space-sidebar-width\s*:\s*320px/)
@@ -327,9 +327,42 @@ describe('chrome shell I/O matrix', () => {
       baseCss,
       /\.chrome-sidebar-slot\s*\{[^}]*width:\s*var\(--space-sidebar-width\)/s,
     )
+    // Sidebar must not grow past the token (min-width:auto content crush).
+    assert.match(
+      baseCss,
+      /\.chrome-sidebar-slot\s*\{[^}]*flex:\s*0\s+0\s+var\(--space-sidebar-width\)/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-sidebar-slot\s*\{[^}]*max-width:\s*var\(--space-sidebar-width\)/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-sidebar-slot\s*\{[^}]*min-width:\s*0/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-sidebar-slot\s*\{[^}]*overflow:\s*hidden/s,
+    )
     assert.match(
       baseCss,
       /\.chrome-canvas-slot\s*\{[^}]*flex:\s*1/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-canvas-slot\s*\{[^}]*min-width:\s*0/s,
+    )
+    assert.match(
+      baseCss,
+      /\.canvas-host\s*\{[^}]*min-width:\s*0/s,
+    )
+    assert.match(
+      baseCss,
+      /\.canvas-surface\s*\{[^}]*min-width:\s*0/s,
+    )
+    assert.match(
+      baseCss,
+      /\.sidebar\s*\{[^}]*min-width:\s*0/s,
     )
   })
 

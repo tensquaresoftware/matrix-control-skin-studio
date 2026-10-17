@@ -49,7 +49,7 @@ export function mountSidebar(
 ): void {
   const storage = options.storage ?? getBrowserStorage()
   host.replaceChildren()
-  // Keep chrome slot layout classes (320px / flex-shrink:0) — never clobber.
+  // Keep chrome slot layout classes (flex:0 0 + width caps) — never clobber.
   host.classList.add('sidebar')
   host.setAttribute('data-sidebar', '')
 
