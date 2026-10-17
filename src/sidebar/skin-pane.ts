@@ -1,11 +1,17 @@
 import type { ProjectStore } from '../model/store'
 import type { Mapping, ProjectDocument, SessionUiState, Skin } from '../model/types'
+import type { CanvasSelectionSync } from './canvas-selection-sync'
 import type { MappingFocusController } from './mapping-focus'
 import { createMappingFocus } from './mapping-focus'
 import { mountMappingsPane } from './mappings-pane'
 import { openSkinDeleteConfirm } from './skin-delete-confirm'
 
 type SkinSegment = 'mappings' | 'skin'
+
+export type MountSkinPaneOptions = {
+  mappingFocus?: MappingFocusController
+  selectionSync?: CanvasSelectionSync
+}
 
 const SKIN_NAME_RE = /^Skin (\d+)$/
 
@@ -24,8 +30,10 @@ const REJECTED_SKIN_NAMES = new Set([
 export function mountSkinPane(
   body: HTMLElement,
   store: ProjectStore,
-  mappingFocus: MappingFocusController = createMappingFocus(),
+  options: MountSkinPaneOptions = {},
 ): void {
+  const mappingFocus = options.mappingFocus ?? createMappingFocus()
+  const selectionSync = options.selectionSync
   body.classList.add('skin-pane-body')
   body.replaceChildren()
 
@@ -97,7 +105,7 @@ export function mountSkinPane(
   skinPanel.append(nameRow, actions, reminder)
   body.append(seg, mappingsPanel, skinPanel)
 
-  mountMappingsPane(mappingsPanel, store, mappingFocus)
+  mountMappingsPane(mappingsPanel, store, mappingFocus, { selectionSync })
 
   const modalRoot = (): HTMLElement =>
     body.closest('[data-sidebar]') ?? body
@@ -125,6 +133,11 @@ export function mountSkinPane(
     if (next !== 'mappings') mappingFocus.setFocused(null)
     syncSegmentUi()
   }
+
+  // AUTO_MAPPINGS: canvas hit switches pane 3 to Mappings before highlight/scroll.
+  selectionSync?.setSwitchToMappings(() => {
+    setSegment('mappings')
+  })
 
   mappingsBtn.addEventListener('click', () => {
     setSegment('mappings')

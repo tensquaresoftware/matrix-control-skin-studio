@@ -8,7 +8,10 @@ import {
   ZOOM_STEPS,
   type PersistStorage,
 } from '../persist/index'
-import { mountSidebar } from '../sidebar/index'
+import {
+  createCanvasSelectionSync,
+  mountSidebar,
+} from '../sidebar/index'
 import { openNewConfirmModal } from './new-confirm'
 
 export {
@@ -79,8 +82,9 @@ export function mountChromeShell(
   shell.append(topBar, contextStrip, body)
   root.append(shell)
 
-  mountCanvas(canvasHost, { storage, store })
-  mountSidebar(sidebarHost, { storage, store })
+  const selectionSync = createCanvasSelectionSync()
+  mountCanvas(canvasHost, { storage, store, selectionSync })
+  mountSidebar(sidebarHost, { storage, store, selectionSync })
 }
 
 function buildTopBar(

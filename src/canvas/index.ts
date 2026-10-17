@@ -1,6 +1,7 @@
 import { resolvePaletteHex } from '../model/palette-helpers'
+import { resolveStateAfterTypeChange } from '../model/session-helpers'
 import type { ProjectStore } from '../model/store'
-import type { ProjectDocument } from '../model/types'
+import type { ProjectDocument, SessionUiState } from '../model/types'
 import {
   clampZoomStep,
   getBrowserStorage,
@@ -8,6 +9,7 @@ import {
   savePrefs,
   type PersistStorage,
 } from '../persist/index'
+import type { CanvasSelectionSync } from '../sidebar/canvas-selection-sync'
 import {
   listObjectTypeHitRegions,
   MOCK_COMPOSITION,
@@ -22,6 +24,8 @@ export type MountCanvasOptions = {
   storage?: PersistStorage
   /** When provided, Palette-backed zone paint resolves from project and repaints on store changes. */
   store?: ProjectStore
+  /** Canvas ↔ Sidebar selection bridge (story 4-3). */
+  selectionSync?: CanvasSelectionSync
 }
 
 export {
@@ -63,6 +67,7 @@ export function mountCanvas(
 ): void {
   const storage = options.storage ?? getBrowserStorage()
   const store = options.store
+  const selectionSync = options.selectionSync
   host.replaceChildren()
   // Keep chrome slot layout classes (flex:1) — never clobber with assignment.
   host.classList.add('canvas-host')
@@ -81,8 +86,14 @@ export function mountCanvas(
   host.append(surface)
 
   const paint = (): void => {
-    const project = store?.getState().project ?? null
-    renderMockComposition(mockRoot, project)
+    const state = store?.getState()
+    renderMockComposition(
+      mockRoot,
+      state?.project ?? null,
+      state?.session ?? null,
+      store,
+      selectionSync,
+    )
   }
   paint()
   if (store != null) {
@@ -96,6 +107,9 @@ export function mountCanvas(
 function renderMockComposition(
   mockRoot: HTMLElement,
   project: ProjectDocument | null,
+  session: SessionUiState | null,
+  store: ProjectStore | undefined,
+  selectionSync: CanvasSelectionSync | undefined,
 ): void {
   mockRoot.replaceChildren()
 
@@ -175,17 +189,70 @@ function renderMockComposition(
   hitHost.className = 'mock-object-type-hits'
   hitHost.setAttribute('data-mock-object-type-hits', '')
   if (project != null) {
+    const selectedId = session?.selectedObjectTypeId ?? null
     for (const region of listObjectTypeHitRegions(project.inventory)) {
-      // Non-interactive until 4.3 owns selection — avoid capturing pointerdown as pan.
       const hit = document.createElement('div')
       hit.className = 'mock-object-type-hit'
       hit.setAttribute('data-object-type-id', region.objectTypeId)
+      hit.setAttribute('role', 'button')
+      hit.tabIndex = 0
       hit.textContent = region.objectTypeId
+      if (selectedId === region.objectTypeId) {
+        hit.classList.add('is-selected')
+      }
+      // Stop pan from starting when the operator clicks a hit region.
+      hit.addEventListener('pointerdown', (event: PointerEvent) => {
+        event.stopPropagation()
+      })
+      hit.addEventListener('click', () => {
+        if (store == null) return
+        applyObjectTypeHitSelection(store, region.objectTypeId)
+        selectionSync?.notifyCanvasHit()
+      })
+      hit.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        if (event.repeat) return
+        event.preventDefault()
+        if (store == null) return
+        applyObjectTypeHitSelection(store, region.objectTypeId)
+        selectionSync?.notifyCanvasHit()
+      })
       hitHost.append(hit)
     }
   }
 
   mockRoot.append(header, body, footer, hitHost)
+}
+
+/** Select Object type via session; keep State sticky when still valid (4-2 semantics). */
+function applyObjectTypeHitSelection(
+  store: ProjectStore,
+  objectTypeId: string,
+): void {
+  const { project, session } = store.getState()
+  const nextType =
+    project.inventory.objectTypes.find((type) => type.id === objectTypeId) ??
+    null
+  if (nextType == null) return
+
+  const nextStateId = resolveStateAfterTypeChange(
+    nextType,
+    session.selectedStateId,
+  )
+  if (
+    session.selectedObjectTypeId === objectTypeId &&
+    session.selectedStateId === nextStateId
+  ) {
+    // Same-type re-click: session unchanged; caller still notifies AUTO_MAPPINGS.
+    return
+  }
+
+  const nextSession: SessionUiState = {
+    ...session,
+    selectedObjectTypeId: objectTypeId,
+    selectedStateId: nextStateId,
+  }
+  store.apply({ session: nextSession })
 }
 
 function buildZoneElement(

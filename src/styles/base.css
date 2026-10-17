@@ -582,11 +582,14 @@ body {
   color: var(--color-text-secondary);
   font: inherit;
   font-size: 11px;
-  /* Non-interactive until 4.3 — no pointer affordance */
-  cursor: default;
-  /* Selection outline tokens ready for 4.3 */
+  cursor: pointer;
   outline: var(--comp-canvas-selection-outline-width) solid transparent;
   outline-offset: var(--comp-canvas-selection-outline-offset);
+}
+
+.mock-object-type-hit.is-selected {
+  /* 2px accent outline; selection fill remains transparent (chip chrome bg stays). */
+  outline-color: var(--comp-canvas-selection-outline);
 }
 
 /* Sidebar — UX-DR6 / FR-10 */
@@ -1051,6 +1054,11 @@ body {
 }
 
 .mapping-row.is-focused {
+  background: var(--comp-mapping-row-selected);
+}
+
+/* Canvas-driven highlight (HIGHLIGHT_SCROLL_ONLY) — muted accent, not MappingFocus. */
+.mapping-row.is-canvas-highlighted {
   background: var(--comp-mapping-row-selected);
 }
 

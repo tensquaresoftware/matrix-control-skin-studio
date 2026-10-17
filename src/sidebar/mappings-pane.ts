@@ -4,6 +4,7 @@ import {
   resolvePaletteHex,
   upsertMapping,
 } from '../model/palette-helpers'
+import { resolveStateAfterTypeChange } from '../model/session-helpers'
 import type { ProjectStore } from '../model/store'
 import type {
   InventoryObjectType,
@@ -12,7 +13,12 @@ import type {
   SessionUiState,
   Skin,
 } from '../model/types'
+import type { CanvasSelectionSync } from './canvas-selection-sync'
 import type { MappingFocusController, MappingFocusKey } from './mapping-focus'
+
+export type MountMappingsPaneOptions = {
+  selectionSync?: CanvasSelectionSync
+}
 
 /**
  * Mappings tab: Object type + State always visible; Property → Palette-id rows
@@ -22,6 +28,7 @@ export function mountMappingsPane(
   host: HTMLElement,
   store: ProjectStore,
   mappingFocus: MappingFocusController,
+  options: MountMappingsPaneOptions = {},
 ): void {
   host.classList.add('mappings-pane')
   host.replaceChildren()
@@ -65,6 +72,11 @@ export function mountMappingsPane(
   let syncingSelects = false
   /** Last seen active Skin id — focus is Skin-scoped and cleared on switch. */
   let trackedActiveSkinId: string | null | undefined = undefined
+  /**
+   * Canvas-driven muted highlight (HIGHLIGHT_SCROLL_ONLY) — never MappingFocus.
+   * Cleared on Sidebar Object/State change or explicit Property-row focus.
+   */
+  let canvasHighlightActive = false
 
   const resolveActiveSkin = (): Skin | null => {
     const { project, session } = store.getState()
@@ -123,6 +135,7 @@ export function mountMappingsPane(
     const { project, session } = store.getState()
     const skin = resolveActiveSkin()
     if (skin == null) {
+      canvasHighlightActive = false
       mappingFocus.setFocused(null)
       propertyList.replaceChildren()
       return
@@ -153,6 +166,7 @@ export function mountMappingsPane(
       return
     }
 
+    let firstRow: HTMLElement | null = null
     for (const propertyId of properties) {
       const triple = {
         objectTypeId: objectType.id,
@@ -165,24 +179,30 @@ export function mountMappingsPane(
         focused.objectTypeId === triple.objectTypeId &&
         focused.stateId === triple.stateId &&
         focused.propertyId === triple.propertyId
-      propertyList.append(
-        buildPropertyRow({
-          project,
-          triple,
-          mapping,
-          focused: isFocused,
-          onFocus: () => {
-            mappingFocus.setFocused(triple)
-          },
-          onClear: () => {
-            if (mapping == null || mapping.paletteEntryId == null) return
-            applyMappingUpsert(store, skin.id, {
-              ...triple,
-              paletteEntryId: null,
-            })
-          },
-        }),
-      )
+      const row = buildPropertyRow({
+        project,
+        triple,
+        mapping,
+        focused: isFocused,
+        canvasHighlighted: canvasHighlightActive && !isFocused,
+        onFocus: () => {
+          canvasHighlightActive = false
+          mappingFocus.setFocused(triple)
+        },
+        onClear: () => {
+          if (mapping == null || mapping.paletteEntryId == null) return
+          applyMappingUpsert(store, skin.id, {
+            ...triple,
+            paletteEntryId: null,
+          })
+        },
+      })
+      if (firstRow == null) firstRow = row
+      propertyList.append(row)
+    }
+
+    if (canvasHighlightActive && firstRow != null) {
+      firstRow.scrollIntoView?.({ block: 'nearest' })
     }
   }
 
@@ -194,6 +214,7 @@ export function mountMappingsPane(
       trackedActiveSkinId !== activeSkinId
     ) {
       mappingFocus.setFocused(null)
+      canvasHighlightActive = false
     }
     trackedActiveSkinId = activeSkinId
 
@@ -247,6 +268,7 @@ export function mountMappingsPane(
       selectedObjectTypeId: nextTypeId,
       selectedStateId: nextStateId,
     }
+    canvasHighlightActive = false
     mappingFocus.setFocused(null)
     store.apply({ session: nextSession })
   })
@@ -260,27 +282,19 @@ export function mountMappingsPane(
       ...session,
       selectedStateId: nextStateId,
     }
+    canvasHighlightActive = false
     mappingFocus.setFocused(null)
     store.apply({ session: nextSession })
+  })
+
+  options.selectionSync?.setHighlightScroll(() => {
+    canvasHighlightActive = true
+    renderPropertyRows()
   })
 
   render()
   store.subscribe(render)
   mappingFocus.subscribe(renderPropertyRows)
-}
-
-function resolveStateAfterTypeChange(
-  nextType: InventoryObjectType | null,
-  previousStateId: string | null,
-): string | null {
-  if (nextType == null || nextType.states.length === 0) return null
-  if (
-    previousStateId != null &&
-    nextType.states.includes(previousStateId)
-  ) {
-    return previousStateId
-  }
-  return nextType.states[0] ?? null
 }
 
 /** @returns true when Skin.mappings were written. */
@@ -329,12 +343,22 @@ type BuildRowOptions = {
   triple: MappingFocusKey
   mapping: Mapping | undefined
   focused: boolean
+  /** Muted canvas-driven highlight — never enables Palette bind. */
+  canvasHighlighted: boolean
   onFocus: () => void
   onClear: () => void
 }
 
 function buildPropertyRow(options: BuildRowOptions): HTMLElement {
-  const { project, triple, mapping, focused, onFocus, onClear } = options
+  const {
+    project,
+    triple,
+    mapping,
+    focused,
+    canvasHighlighted,
+    onFocus,
+    onClear,
+  } = options
   const row = document.createElement('div')
   row.className = 'mapping-row'
   row.setAttribute('data-mapping-row', triple.propertyId)
@@ -342,6 +366,9 @@ function buildPropertyRow(options: BuildRowOptions): HTMLElement {
   row.tabIndex = 0
   if (focused) {
     row.classList.add('is-focused')
+  }
+  if (canvasHighlighted) {
+    row.classList.add('is-canvas-highlighted')
   }
 
   const unbound =

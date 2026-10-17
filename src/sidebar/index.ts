@@ -2,11 +2,16 @@ import type { ProjectStore } from '../model/store'
 import { loadPrefs, savePrefs } from '../persist/prefs'
 import type { PersistStorage } from '../persist/storage'
 import { getBrowserStorage } from '../persist/storage'
+import type { CanvasSelectionSync } from './canvas-selection-sync'
+import { createCanvasSelectionSync } from './canvas-selection-sync'
 import { createMappingFocus } from './mapping-focus'
 import { mountPalettePane } from './palette-pane'
 import { createPaletteSelection } from './palette-selection'
 import { mountPickerPane } from './picker-pane'
 import { mountSkinPane } from './skin-pane'
+
+export type { CanvasSelectionSync } from './canvas-selection-sync'
+export { createCanvasSelectionSync } from './canvas-selection-sync'
 
 /** Mock-canonical picker height (PANE_DEFAULTS = MOCK) — fixed, not in prefs. */
 export const PICKER_PANE_HEIGHT_PX = 220
@@ -27,6 +32,8 @@ export type MountSidebarOptions = {
   storage?: PersistStorage
   /** When provided, mounts Palette rows + Picker live recolour (story 3-1). */
   store?: ProjectStore
+  /** Canvas ↔ Mappings selection bridge (story 4-3). */
+  selectionSync?: CanvasSelectionSync
 }
 
 const PANE_IDS = ['palette', 'mappings', 'unbound'] as const
@@ -86,9 +93,14 @@ export function mountSidebar(
   if (options.store) {
     const selection = createPaletteSelection()
     const mappingFocus = createMappingFocus()
+    const selectionSync =
+      options.selectionSync ?? createCanvasSelectionSync()
     mountPickerPane(picker.body, options.store, selection)
     mountPalettePane(palette.body, options.store, selection, mappingFocus)
-    mountSkinPane(mappings.body, options.store, mappingFocus)
+    mountSkinPane(mappings.body, options.store, {
+      mappingFocus,
+      selectionSync,
+    })
   }
 }
 
