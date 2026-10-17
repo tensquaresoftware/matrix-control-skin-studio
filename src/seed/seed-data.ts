@@ -18,12 +18,26 @@ function freezeInventory(inventory: Inventory): Readonly<Inventory> {
   return Object.freeze(inventory)
 }
 
-/** Duo LED yellow — sole base palette entry for this seed (DUO_ONLY). */
+/**
+ * Seed Palette baseline:
+ * - Duo LED yellow (FR-16)
+ * - Patch Blue / Master Orange Orchestrator band colours (FR-15 / DUO_ZONE_COLOURS)
+ */
 export const SEED_PALETTE = freezePalette([
   {
     id: 'duoLedYellow',
     hex: '#FFCC00',
     constantName: 'kDuoLedYellow',
+  },
+  {
+    id: 'patchZoneBlue',
+    hex: '#3D7EFF',
+    constantName: 'kPatchZoneBlue',
+  },
+  {
+    id: 'masterZoneOrange',
+    hex: '#FF8A1F',
+    constantName: 'kMasterZoneOrange',
   },
 ])
 

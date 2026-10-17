@@ -79,7 +79,7 @@ export function mountChromeShell(
   shell.append(topBar, contextStrip, body)
   root.append(shell)
 
-  mountCanvas(canvasHost, { storage })
+  mountCanvas(canvasHost, { storage, store })
   mountSidebar(sidebarHost, { storage, store })
 }
 

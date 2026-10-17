@@ -116,6 +116,9 @@ function installMinimalDocument() {
       getAttribute(name) {
         return attrs.has(name) ? attrs.get(name) : null
       },
+      removeAttribute(name) {
+        attrs.delete(name)
+      },
       append(...nodes) {
         for (const child of nodes) {
           child.parent = node

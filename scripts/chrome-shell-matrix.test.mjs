@@ -126,6 +126,9 @@ function createElement(tagName) {
     getAttribute(name) {
       return attrs.has(name) ? attrs.get(name) : null
     },
+    removeAttribute(name) {
+      attrs.delete(name)
+    },
     hasAttribute(name) {
       return attrs.has(name)
     },
@@ -352,6 +355,17 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-sidebar]'))
       assert.ok(root.querySelector('[data-palette-row="duoLedYellow"]'))
       assert.ok(root.querySelector('[data-picker-hex]'))
+
+      // Product path: chrome → mountCanvas(store) must paint Orchestrator zones from seed Palette.
+      const zonePatch = root.querySelector('[data-orch-zone="zone-patch"]')
+      const zoneMaster = root.querySelector('[data-orch-zone="zone-master"]')
+      const zoneDuoLed = root.querySelector('[data-orch-zone="zone-header-duo-led"]')
+      assert.ok(zonePatch, 'expected zone-patch')
+      assert.ok(zoneMaster, 'expected zone-master')
+      assert.ok(zoneDuoLed, 'expected zone-header-duo-led')
+      assert.equal(zonePatch.style.backgroundColor, '#3D7EFF')
+      assert.equal(zoneMaster.style.backgroundColor, '#FF8A1F')
+      assert.equal(zoneDuoLed.style.backgroundColor, '#FFCC00')
 
       // Layout slot classes must survive mountCanvas / mountSidebar (flex:1 + 320px).
       const canvasHost = root.querySelector('[data-canvas-host]')

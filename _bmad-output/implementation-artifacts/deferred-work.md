@@ -54,3 +54,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-3-skin-tab-rename-duplicate-delete.md`
   summary: Assert Skin delete confirm one-deep guard (second Delete click does not stack another scrim).
   evidence: Early return exists in `openSkinDeleteConfirm`; single-open cancel/confirm already covered; double-open is an edge interaction not worth blocking this change.
+
+## Deferred from: build review of spec-4-1-gui-view-mock-with-orchestrator-zones.md (2026-10-17)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-gui-view-mock-with-orchestrator-zones.md`
+  summary: Merge or migrate Patch/Master seed Palette entries into restored pre-4.1 envelopes so Orchestrator bands are not unbound after cold reopen.
+  evidence: `bootProjectStore` applies seed baseline only when nothing is restored; an autosaved formatVersion-1 project with the old one-entry palette leaves `patchZoneBlue` / `masterZoneOrange` unresolved until New or manual Palette create.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-gui-view-mock-with-orchestrator-zones.md`
+  summary: Dispose canvas store subscription on remount (or document single-mount lifetime).
+  evidence: `mountCanvas` subscribes for zone repaint with no unsubscribe; same pattern as chrome strip subscribers; everyday remount uncommon until a product remount path appears.
