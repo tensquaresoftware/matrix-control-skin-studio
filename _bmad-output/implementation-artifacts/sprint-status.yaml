@@ -38,7 +38,7 @@
 #   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
 #   to fill SM-1. Definitive JSON field freeze waits on Collect.
 generated: 10-15-2026 22:25
-last_updated: 10-17-2026 18:25
+last_updated: 10-17-2026 18:52
 project: Matrix-Control-Skin-Studio
 project_key: NOKEY
 tracking_system: file-system
@@ -93,7 +93,7 @@ development_status:
   # resolvable Palette colour (missing Mapping row, null id, or dangling id). UI
   # Mapping rows already show Unbound for missing rows; today's derive only walks
   # existing mapping rows — 5-2 must expand derive + pane + export gate to that set.
-  5-2-unbound-derive-and-unbound-pane: backlog
+  5-2-unbound-derive-and-unbound-pane: review
   # Collect-dep: JSON field names freeze post-Collect; writer pin formatVersion 1 OK now
   5-3-hard-export-gate-and-single-project-json: backlog
   5-4-import-replace-all-with-fail-closed-formatversion: backlog

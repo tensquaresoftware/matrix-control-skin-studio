@@ -9,6 +9,7 @@ import { mountPalettePane } from './palette-pane'
 import { createPaletteSelection } from './palette-selection'
 import { mountPickerPane } from './picker-pane'
 import { mountSkinPane } from './skin-pane'
+import { mountUnboundPane } from './unbound-pane'
 
 export type { CanvasSelectionSync } from './canvas-selection-sync'
 export { createCanvasSelectionSync } from './canvas-selection-sync'
@@ -101,6 +102,11 @@ export function mountSidebar(
       mappingFocus,
       selectionSync,
     })
+    mountUnboundPane(unbound.body, options.store, {
+      mappingFocus,
+      selectionSync,
+      head: unbound.head,
+    })
   }
 }
 
@@ -169,7 +175,7 @@ function createPane(
   title: string,
   heightPx: number,
   fixed: boolean,
-): { pane: HTMLElement; body: HTMLElement } {
+): { pane: HTMLElement; head: HTMLElement; body: HTMLElement } {
   const pane = document.createElement('div')
   pane.className = `sidebar-pane sidebar-pane-${id}`
   pane.setAttribute('data-sidebar-pane', id)
@@ -187,7 +193,7 @@ function createPane(
   body.setAttribute('data-sidebar-pane-body', id)
 
   pane.append(head, body)
-  return { pane, body }
+  return { pane, head, body }
 }
 
 function createSplitter(index: number): HTMLElement {

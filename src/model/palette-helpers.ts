@@ -1,10 +1,13 @@
 import { looksLikeOpaqueHexToken, parseOpaqueHex } from './opaque-hex'
 import type { Mapping, ProjectDocument } from './types'
 
+/** One inventory slot lacking a resolvable Palette colour (AD-10). */
 export type UnboundHit = {
   skinId: string
   skinDisplayName: string
-  mapping: Mapping
+  objectTypeId: string
+  stateId: string
+  propertyId: string
 }
 
 export type MappingTriple = {
@@ -78,19 +81,34 @@ export function upsertMapping(
 }
 
 /**
- * Every mapping that cannot paint — `paletteEntryId` null or id not in palette
- * (or palette hex unreadable). Shared Unbound derive for Epic 4/5.
+ * Every required inventory slot that cannot paint — missing Mapping,
+ * `paletteEntryId` null, or id not in palette (or palette hex unreadable).
+ * Completeness = Skin × ObjectType × State × Property from the **loaded**
+ * inventory (AD-10). Empty inventory ⇒ no required slots. Orphan mappings
+ * outside inventory are ignored.
  */
 export function deriveUnbound(project: ProjectDocument): UnboundHit[] {
   const hits: UnboundHit[] = []
   for (const skin of project.skins) {
-    for (const mapping of skin.mappings) {
-      if (isMappingUnbound(project, mapping)) {
-        hits.push({
-          skinId: skin.id,
-          skinDisplayName: skin.displayName,
-          mapping,
-        })
+    for (const objectType of project.inventory.objectTypes) {
+      for (const stateId of objectType.states) {
+        for (const propertyId of objectType.properties) {
+          const mapping = findMapping(skin.mappings, {
+            objectTypeId: objectType.id,
+            stateId,
+            propertyId,
+          })
+          if (mapping != null && !isMappingUnbound(project, mapping)) {
+            continue
+          }
+          hits.push({
+            skinId: skin.id,
+            skinDisplayName: skin.displayName,
+            objectTypeId: objectType.id,
+            stateId,
+            propertyId,
+          })
+        }
       }
     }
   }

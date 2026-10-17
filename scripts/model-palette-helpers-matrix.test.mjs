@@ -63,6 +63,25 @@ async function importCompiledTs(relPath) {
   }
 }
 
+/** Fixture inventory — seed stays empty; matrices inject objectTypes. */
+function fixtureInventory() {
+  return {
+    source: 'test-fixture',
+    objectTypes: [
+      {
+        id: 'headerLed',
+        states: ['off', 'on'],
+        properties: ['fill'],
+      },
+      {
+        id: 'knob',
+        states: ['normal'],
+        properties: ['ring'],
+      },
+    ],
+  }
+}
+
 function sampleProject(overrides = {}) {
   return {
     formatVersion: 1,
@@ -90,12 +109,23 @@ function sampleProject(overrides = {}) {
             propertyId: 'ring',
             paletteEntryId: 'missingId',
           },
+          // Orphan — outside loaded inventory; must not count.
+          {
+            objectTypeId: 'orphanType',
+            stateId: 'x',
+            propertyId: 'y',
+            paletteEntryId: null,
+          },
         ],
       },
     ],
-    inventory: { objectTypes: [] },
+    inventory: fixtureInventory(),
     ...overrides,
   }
+}
+
+function hitKey(hit) {
+  return `${hit.skinId}|${hit.objectTypeId}|${hit.stateId}|${hit.propertyId}`
 }
 
 describe('model palette helpers matrix', () => {
@@ -129,15 +159,28 @@ describe('model palette helpers matrix', () => {
     assert.equal(looksLikeOpaqueHexToken('duoLedYellow'), false)
   })
 
-  it('deriveUnbound: null and dangling ids count; bound resolvable does not', async () => {
+  it('deriveUnbound: empty inventory ⇒ 0 unbound', async () => {
+    const { deriveUnbound } = await importCompiledTs('src/model/index.ts')
+    const project = sampleProject({ inventory: { objectTypes: [] } })
+    assert.deepEqual(deriveUnbound(project), [])
+  })
+
+  it('deriveUnbound: missing / null / dangling count; bound and orphan do not', async () => {
     const { deriveUnbound, isMappingUnbound } = await importCompiledTs(
       'src/model/index.ts',
     )
     const project = sampleProject()
+    // Required slots: headerLed×{off,on}×fill + knob×normal×ring = 3
+    // Bound: on/fill; null: off/fill; dangling: knob/ring; missing: none extra
+    // Wait — all three inventory slots have mappings. Bound on/fill excluded.
     const hits = deriveUnbound(project)
     assert.equal(hits.length, 2)
-    assert.equal(hits[0].mapping.paletteEntryId, null)
-    assert.equal(hits[1].mapping.paletteEntryId, 'missingId')
+    const keys = new Set(hits.map(hitKey))
+    assert.ok(keys.has('black-duo|headerLed|off|fill'))
+    assert.ok(keys.has('black-duo|knob|normal|ring'))
+    assert.equal(keys.has('black-duo|headerLed|on|fill'), false)
+    assert.equal(keys.has('black-duo|orphanType|x|y'), false)
+
     assert.equal(
       isMappingUnbound(project, project.skins[0].mappings[0]),
       false,
@@ -146,5 +189,115 @@ describe('model palette helpers matrix', () => {
       isMappingUnbound(project, project.skins[0].mappings[1]),
       true,
     )
+  })
+
+  it('deriveUnbound: missing Mapping row counts as unbound', async () => {
+    const { deriveUnbound } = await importCompiledTs('src/model/index.ts')
+    const project = sampleProject({
+      skins: [
+        {
+          id: 'black-duo',
+          displayName: 'Black/Duo',
+          mappings: [],
+        },
+      ],
+    })
+    // 2 states × 1 prop for headerLed + 1 for knob = 3
+    const hits = deriveUnbound(project)
+    assert.equal(hits.length, 3)
+    assert.ok(
+      hits.every(
+        (hit) =>
+          hit.skinId === 'black-duo' &&
+          hit.objectTypeId != null &&
+          hit.stateId != null &&
+          hit.propertyId != null,
+      ),
+    )
+    assert.equal(
+      hits.some((hit) => hit.objectTypeId === 'headerLed' && hit.stateId === 'off'),
+      true,
+    )
+  })
+
+  it('deriveUnbound: unreadable palette hex counts; valid hex clears the hit', async () => {
+    const { deriveUnbound } = await importCompiledTs('src/model/index.ts')
+    const inventory = {
+      source: 'test-fixture',
+      objectTypes: [
+        { id: 'headerLed', states: ['on'], properties: ['fill'] },
+      ],
+    }
+    const withBadHex = sampleProject({
+      inventory,
+      palette: [{ id: 'badHex', hex: 'not-a-colour', constantName: 'Bad' }],
+      skins: [
+        {
+          id: 'black-duo',
+          displayName: 'Black/Duo',
+          mappings: [
+            {
+              objectTypeId: 'headerLed',
+              stateId: 'on',
+              propertyId: 'fill',
+              paletteEntryId: 'badHex',
+            },
+          ],
+        },
+      ],
+    })
+    const badHits = deriveUnbound(withBadHex)
+    assert.equal(badHits.length, 1)
+    assert.equal(hitKey(badHits[0]), 'black-duo|headerLed|on|fill')
+
+    const withValidHex = sampleProject({
+      inventory,
+      palette: [{ id: 'okHex', hex: '#AABBCC', constantName: 'Ok' }],
+      skins: [
+        {
+          id: 'black-duo',
+          displayName: 'Black/Duo',
+          mappings: [
+            {
+              objectTypeId: 'headerLed',
+              stateId: 'on',
+              propertyId: 'fill',
+              paletteEntryId: 'okHex',
+            },
+          ],
+        },
+      ],
+    })
+    assert.deepEqual(deriveUnbound(withValidHex), [])
+  })
+
+  it('deriveUnbound: multi-skin project totals every Skin slot', async () => {
+    const { deriveUnbound } = await importCompiledTs('src/model/index.ts')
+    const project = sampleProject({
+      skins: [
+        {
+          id: 'black',
+          displayName: 'Black',
+          mappings: [],
+        },
+        {
+          id: 'green',
+          displayName: 'Green',
+          mappings: [
+            {
+              objectTypeId: 'headerLed',
+              stateId: 'on',
+              propertyId: 'fill',
+              paletteEntryId: 'duoLedYellow',
+            },
+          ],
+        },
+      ],
+    })
+    // Black: 3 unbound; Green: 2 unbound (on/fill bound) → 5
+    const hits = deriveUnbound(project)
+    assert.equal(hits.length, 5)
+    assert.equal(hits.filter((h) => h.skinId === 'black').length, 3)
+    assert.equal(hits.filter((h) => h.skinId === 'green').length, 2)
   })
 })
