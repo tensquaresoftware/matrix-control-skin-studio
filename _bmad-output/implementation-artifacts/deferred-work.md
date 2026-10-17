@@ -84,3 +84,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-2-object-type-state-and-palette-id-mappings.md`
   summary: Align spec frontmatter status / review_loop_iteration with sprint `review` when the review loop closes (process tracking only).
   evidence: Spec `status: done` while sprint moves story to `review`; not a product defect.
+
+## Deferred from: code review of spec-4-3-bidirectional-canvas-sidebar-selection-sync.md (2026-10-17)
+
+- Keyboard focus dropped after Object-type hit activation because full mock rebuild replaces hit nodes — deferred: same full-rebuild / narrow-repaint debt already parked from 4-1; 4-3 keeps re-stamping selection class after rebuild; focus restore needs stable hit DOM.

@@ -76,6 +76,25 @@ context:
 - Given I choose an Object type in the Sidebar, when a matching mock region exists, then it shows the 2px accent selection outline with transparent fill.
 - Given session Object/State change from either side, when the context strip renders, then Object/State readouts match session.
 
+### Review Findings
+
+- [x] [Review][Patch] Clear `canvasHighlightActive` on early returns when Object type/State is missing or Property list is empty [`src/sidebar/mappings-pane.ts:165`]
+- [x] [Review][Patch] Matrix: Enter/Space hit path must assert AUTO_MAPPINGS + highlight/scroll; pin `event.repeat` via notify/scroll non-reentry not `applyCount` alone [`scripts/selection-sync-matrix.test.mjs` — Enter/Space case]
+- [x] [Review][Patch] Matrix: Sidebar Object/State change and Skin null/switch must clear `.is-canvas-highlighted` after a canvas hit [`scripts/selection-sync-matrix.test.mjs`]
+- [x] [Review][Patch] Harness `matchesSelector` must support compound class selectors so `.mock-object-type-hit.is-selected` assertions can fail [`scripts/selection-sync-matrix.test.mjs:240`]
+- [x] [Review][Defer] Keyboard focus dropped after hit activation because full mock rebuild replaces hit nodes [`src/canvas/index.ts` `renderMockComposition`] — deferred: same full-rebuild debt already parked from 4-1; narrow-repaint stays out of 4-3 unless AC fails
+
+#### Rejected
+
+- `false` — Spec `status: done` vs sprint `review` / empty Spec Change Log / stale open rows in Review Triage Log: process metadata; fix would edit the spec under review
+- `false` — Same muted bg for `.is-canvas-highlighted` and `.is-focused`: Code Map allows shared carefully; HIGHLIGHT_SCROLL_ONLY is semantic (no MappingFocus)
+- `false` — `--comp-canvas-selection-fill` unused on selected hit / CSS matrix only checks token presence: chip background already transparent; comment documents fill stays transparent
+- `false` — Space/Enter double-fires via synthetic `click`: hits are `div role="button"`; no browser click synthesis after keydown `preventDefault`
+- `false` — Orphan `createCanvasSelectionSync` when option omitted: chrome always passes the shared bridge
+- `false` — `notifyCanvasHit` after inventory-missing hit id: hits are rebuilt from current inventory; stale hit DOM is not reachable via store updates
+- `low` rejected — `scrollIntoView` only on first Property row: everyday seed/fixture lists are short; scrolling every row adds complexity without AC pressure
+- `low` rejected — Sidebar→outline case omits context-strip asserts: canvas path already pins strip; chrome wire is pre-existing
+
 ## Implementation Notes
 
 - Added `createCanvasSelectionSync` bridge (chrome → canvas + sidebar) for AUTO_MAPPINGS + HIGHLIGHT_SCROLL_ONLY without MappingFocus.

@@ -162,7 +162,9 @@ export function mountMappingsPane(
     const focused = mappingFocus.getFocused()
     propertyList.replaceChildren()
 
-    if (objectType == null || stateId == null) {
+    if (objectType == null || stateId == null || properties.length === 0) {
+      // Avoid sticky HIGHLIGHT_SCROLL_ONLY when there is nothing to show.
+      canvasHighlightActive = false
       return
     }
 
