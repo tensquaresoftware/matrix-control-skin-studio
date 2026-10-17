@@ -88,3 +88,12 @@
 ## Deferred from: code review of spec-4-3-bidirectional-canvas-sidebar-selection-sync.md (2026-10-17)
 
 - Keyboard focus dropped after Object-type hit activation because full mock rebuild replaces hit nodes — deferred: same full-rebuild / narrow-repaint debt already parked from 4-1; 4-3 keeps re-stamping selection class after rebuild; focus restore needs stable hit DOM.
+
+## Deferred from: build review of spec-4-4-live-preview-led-fully-on-and-mapping-pulse.md (2026-10-17)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-4-live-preview-led-fully-on-and-mapping-pulse.md`
+  summary: Keep in-flight Mapping pulse across later store paints until animationend (needs stable hit nodes / pulse id memory).
+  evidence: Full mock rebuild on every store tick drops `.is-pulsing` mid-animation; Design Notes accepted re-stamp-after-rebuild; same narrow-repaint debt as 4-1/4-3.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-4-live-preview-led-fully-on-and-mapping-pulse.md`
+  summary: Share the canvas DOM/tsc harness helper across Epic 4 matrix scripts instead of re-copying it.
+  evidence: `live-preview-matrix.test.mjs` duplicates the large harness from `canvas-mock-matrix`; harness fixes will diverge silently.

@@ -592,6 +592,25 @@ body {
   outline-color: var(--comp-canvas-selection-outline);
 }
 
+/* Mapping-change pulse (UX-DR12 / AD-16) — outline only; chrome pulse tokens */
+@keyframes mock-hit-pulse-outline {
+  0% {
+    outline-color: var(--comp-pulse-highlight-outline);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+.mock-object-type-hit.is-pulsing {
+  outline-width: var(--comp-pulse-highlight-outline-width);
+  outline-style: solid;
+  animation-name: mock-hit-pulse-outline;
+  animation-duration: var(--comp-pulse-highlight-duration);
+  animation-iteration-count: var(--comp-pulse-highlight-repeats);
+  animation-timing-function: var(--comp-pulse-highlight-easing);
+}
+
 /* Sidebar — UX-DR6 / FR-10 */
 .sidebar {
   display: flex;

@@ -1,7 +1,16 @@
-import { resolvePaletteHex } from '../model/palette-helpers'
+import {
+  findMapping,
+  resolvePaletteHex,
+} from '../model/palette-helpers'
 import { resolveStateAfterTypeChange } from '../model/session-helpers'
 import type { ProjectStore } from '../model/store'
-import type { ProjectDocument, SessionUiState } from '../model/types'
+import type {
+  InventoryObjectType,
+  Mapping,
+  ProjectDocument,
+  SessionUiState,
+  Skin,
+} from '../model/types'
 import {
   clampZoomStep,
   getBrowserStorage,
@@ -85,15 +94,30 @@ export function mountCanvas(
   surface.append(mockRoot)
   host.append(surface)
 
+  /** Prior project snapshot for Mapping-delta pulse detection (FR-5 / AD-16). */
+  let previousProject: ProjectDocument | null = null
+
   const paint = (): void => {
     const state = store?.getState()
+    const project = state?.project ?? null
+    const session = state?.session ?? null
+    const pulseTypeIds =
+      previousProject != null && project != null
+        ? detectMappingChangedObjectTypeIds(
+            previousProject,
+            project,
+            session?.activeSkinId ?? null,
+          )
+        : []
     renderMockComposition(
       mockRoot,
-      state?.project ?? null,
-      state?.session ?? null,
+      project,
+      session,
       store,
       selectionSync,
+      pulseTypeIds,
     )
+    previousProject = project
   }
   paint()
   if (store != null) {
@@ -110,6 +134,7 @@ function renderMockComposition(
   session: SessionUiState | null,
   store: ProjectStore | undefined,
   selectionSync: CanvasSelectionSync | undefined,
+  pulseTypeIds: readonly string[] = [],
 ): void {
   mockRoot.replaceChildren()
 
@@ -190,6 +215,11 @@ function renderMockComposition(
   hitHost.setAttribute('data-mock-object-type-hits', '')
   if (project != null) {
     const selectedId = session?.selectedObjectTypeId ?? null
+    const pulseSet = new Set(pulseTypeIds)
+    const typesById = new Map(
+      project.inventory.objectTypes.map((type) => [type.id, type]),
+    )
+    const activeSkin = resolveActiveSkin(project, session)
     for (const region of listObjectTypeHitRegions(project.inventory)) {
       const hit = document.createElement('div')
       hit.className = 'mock-object-type-hit'
@@ -199,6 +229,13 @@ function renderMockComposition(
       hit.textContent = region.objectTypeId
       if (selectedId === region.objectTypeId) {
         hit.classList.add('is-selected')
+      }
+      const objectType = typesById.get(region.objectTypeId)
+      if (objectType != null) {
+        applyHitFillPaint(hit, objectType, project, session, activeSkin)
+      }
+      if (pulseSet.has(region.objectTypeId)) {
+        hit.classList.add('is-pulsing')
       }
       // Stop pan from starting when the operator clicks a hit region.
       hit.addEventListener('pointerdown', (event: PointerEvent) => {
@@ -222,6 +259,122 @@ function renderMockComposition(
   }
 
   mockRoot.append(header, body, footer, hitHost)
+}
+
+function resolveActiveSkin(
+  project: ProjectDocument,
+  session: SessionUiState | null,
+): Skin | null {
+  const skinId = session?.activeSkinId
+  if (skinId == null) return null
+  return project.skins.find((skin) => skin.id === skinId) ?? null
+}
+
+/**
+ * HIT_FILL_FIRST_PROPERTY: paint State = session State when this type is
+ * selected and that State is listed; otherwise the type’s first State.
+ */
+function resolveHitPaintStateId(
+  objectType: InventoryObjectType,
+  session: SessionUiState | null,
+): string | null {
+  if (objectType.states.length === 0) return null
+  if (
+    session?.selectedObjectTypeId === objectType.id &&
+    session.selectedStateId != null &&
+    objectType.states.includes(session.selectedStateId)
+  ) {
+    return session.selectedStateId
+  }
+  return objectType.states[0] ?? null
+}
+
+/** First-Property face fill via findMapping + resolvePaletteHex (AD-15). */
+function applyHitFillPaint(
+  hit: HTMLElement,
+  objectType: InventoryObjectType,
+  project: ProjectDocument,
+  session: SessionUiState | null,
+  activeSkin: Skin | null,
+): void {
+  const stateId = resolveHitPaintStateId(objectType, session)
+  const propertyId = objectType.properties[0]
+  if (stateId == null || propertyId == null || activeSkin == null) {
+    hit.style.backgroundColor = ''
+    hit.setAttribute('data-hit-unbound', '')
+    return
+  }
+  const mapping = findMapping(activeSkin.mappings, {
+    objectTypeId: objectType.id,
+    stateId,
+    propertyId,
+  })
+  const hex = resolvePaletteHex(project, mapping?.paletteEntryId ?? null)
+  if (hex == null) {
+    hit.style.backgroundColor = ''
+    hit.setAttribute('data-hit-unbound', '')
+    return
+  }
+  hit.style.backgroundColor = hex
+  hit.removeAttribute('data-hit-unbound')
+}
+
+function mappingTripleKey(mapping: Mapping): string {
+  return `${mapping.objectTypeId}\0${mapping.stateId}\0${mapping.propertyId}`
+}
+
+/**
+ * Object-type ids whose Mapping rows changed on the active Skin only.
+ * Inactive Skin deltas and Palette hex-only edits → empty (no pulse).
+ */
+function detectMappingChangedObjectTypeIds(
+  previous: ProjectDocument,
+  next: ProjectDocument,
+  activeSkinId: string | null,
+): string[] {
+  if (activeSkinId == null) return []
+
+  const prevSkin = previous.skins.find((skin) => skin.id === activeSkinId)
+  const nextSkin = next.skins.find((skin) => skin.id === activeSkinId)
+  if (nextSkin == null) return []
+
+  const changed = new Set<string>()
+  if (prevSkin == null) {
+    for (const mapping of nextSkin.mappings) {
+      changed.add(mapping.objectTypeId)
+    }
+    return [...changed]
+  }
+
+  const prevByTriple = new Map(
+    prevSkin.mappings.map((mapping) => [
+      mappingTripleKey(mapping),
+      mapping.paletteEntryId,
+    ]),
+  )
+  const nextTriples = new Set<string>()
+
+  for (const mapping of nextSkin.mappings) {
+    const key = mappingTripleKey(mapping)
+    nextTriples.add(key)
+    const prevPaletteId = prevByTriple.get(key)
+    if (
+      prevPaletteId === undefined ||
+      prevPaletteId !== mapping.paletteEntryId
+    ) {
+      changed.add(mapping.objectTypeId)
+    }
+  }
+
+  for (const [key] of prevByTriple) {
+    if (nextTriples.has(key)) continue
+    const objectTypeId = key.split('\0')[0]
+    if (objectTypeId != null && objectTypeId.length > 0) {
+      changed.add(objectTypeId)
+    }
+  }
+
+  return [...changed]
 }
 
 /** Select Object type via session; keep State sticky when still valid (4-2 semantics). */
