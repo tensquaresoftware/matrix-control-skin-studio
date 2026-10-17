@@ -97,3 +97,12 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-4-4-live-preview-led-fully-on-and-mapping-pulse.md`
   summary: Share the canvas DOM/tsc harness helper across Epic 4 matrix scripts instead of re-copying it.
   evidence: `live-preview-matrix.test.mjs` duplicates the large harness from `canvas-mock-matrix`; harness fixes will diverge silently.
+
+## Accepted at Epic 4 close (transversal review 2026-10-17)
+
+Decision: close Epic 4 with debts accepted; Unbound completeness owned by story **5-2** (not deferred).
+
+- Cumulative canvas debt still open (already listed above from 4-1…4-4): narrow-repaint / pulse memory; `mountCanvas` unsubscribe; pre-4.1 Patch/Master palette migrate on restore; session Object/State repair on inventory shrink; shared matrix harness; keyboard focus restore after rebuild.
+- `deriveUnbound` vs Mapping-row Unbound for **missing** rows is **not** deferred product debt — Story 5.2 AC / AD-10 require expanding derive to the inventory × Skin × ObjectType × State completeness set before the Unbound pane and export gate ship.
+- Verification gaps accepted for later matrix polish (not Epic 4 reopen): canvas hit Unbound stub when Mapping has dangling Palette id; canvas clears hits when `activeSkinId` is null.
+- Edge polish accepted: no-op identical Mapping upsert still writes/pulses; canvas Mapping highlight may survive leaving the Mappings segment.

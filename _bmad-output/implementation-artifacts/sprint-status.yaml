@@ -75,7 +75,7 @@ development_status:
   epic-3-retrospective: optional
 
   # --- Epic 4: Mapping / preview (MVP) ---
-  epic-4: in-progress
+  epic-4: done
   # Collect-dep: clickable regions only for loaded seed inventory; no invented Collect inventory
   4-1-gui-view-mock-with-orchestrator-zones: done
   # Collect-dep: Property/State sets come from loaded inventory only
@@ -88,6 +88,11 @@ development_status:
   epic-5: backlog
   5-1-history-stack-with-coalesced-undo-redo: backlog
   # Collect-dep: Unbound from loaded inventory; do not invent slots for SM-1
+  # Contract (Epic 4 close 2026-10-17): deriveUnbound must match AD-10 / Story 5.2 —
+  # Unbound = every loaded inventory Property × Skin × ObjectType × State without
+  # resolvable Palette colour (missing Mapping row, null id, or dangling id). UI
+  # Mapping rows already show Unbound for missing rows; today's derive only walks
+  # existing mapping rows — 5-2 must expand derive + pane + export gate to that set.
   5-2-unbound-derive-and-unbound-pane: backlog
   # Collect-dep: JSON field names freeze post-Collect; writer pin formatVersion 1 OK now
   5-3-hard-export-gate-and-single-project-json: backlog

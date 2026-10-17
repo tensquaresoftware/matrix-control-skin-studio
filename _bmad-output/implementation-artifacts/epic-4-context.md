@@ -2,6 +2,24 @@
 
 <!-- Compiled from planning artifacts. Edit freely. Regenerate with compile-epic-context if planning docs change. -->
 
+**Status:** closed (`sprint-status.yaml` → `epic-4: done`, 2026-10-17). Stories 4.1–4.4 complete; retrospective remains optional. Next MVP queue: Epic 5 (undo / Unbound / export).
+
+## Epic 5 entry (readiness)
+
+Stories 4.1–4.4 ship the calibration loop on the locked chrome. **Epic 5 may assume:**
+
+- Mappings are `paletteEntryId | null` only; paint resolves via `resolvePaletteHex` / `findMapping` — never hex off a Mapping.
+- Session sticky selection: `selectedObjectTypeId` / `selectedStateId` / `activeSkinId`; canvas click does not reset State.
+- Canvas live paint: Orchestrator zones from layout Palette ids; inventory Object-type hits use `HIT_FILL_FIRST_PROPERTY`; Mapping change pulses chrome outline (may abort under rapid full-rebuild — accepted debt).
+- Seed inventory stays `KEEP_EMPTY`; Object-type hits/pulse proven with fixture inventory in matrices — do not invent Collect types.
+- Mapping rows already show Unbound for missing rows, null id, and dangling id.
+
+**Must fix in story 5-2 (not optional):** today’s `deriveUnbound` only walks existing `Skin.mappings[]` rows. AD-10 / Story 5.2 require Unbound = every loaded inventory Property × Skin × ObjectType × State without a resolvable Palette colour (missing Mapping row **or** null **or** dangling). Expand `deriveUnbound` (and Unbound pane / export gate consumers) to that completeness set so UI markers, count, and hard gate share one truth.
+
+**Accepted Epic 4 debt (do not block Epic 5 start):** full mock `replaceChildren` / pulse abort / keyboard focus loss; `mountCanvas` subscribe without dispose; pre-4.1 cold reopen missing Patch/Master Palette entries; session Object/State repair on inventory shrink; duplicated canvas matrix harness. Tracked in `deferred-work.md`.
+
+**Not Epic 4 / do not implement against:** Unbound export hard gate, coalesced undo/redo, import/export packing — stories **5-1** / **5-3** / **5-4**.
+
 ## Goal
 
 Epic 4 turns the locked console into a working calibration loop: the operator selects Object type and State, binds each Property to a Palette id only, and sees the Matrix-Control mock update immediately — including LED faces at fully-on colour and Duo Patch/Master accents via Orchestrator zones on the canvas. Canvas and Sidebar stay in sync on selection, with a short outline pulse when a Mapping changes, so multi-Skin colour work stays trustworthy without inventing inventory or free hex on the Mapping path.
