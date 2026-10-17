@@ -233,6 +233,9 @@ function buildImportButton(
   return { button, fileInput }
 }
 
+/** Monotonic generation so a slower earlier pick cannot overwrite a newer one. */
+let importPickGeneration = 0
+
 async function handleImportFilePicked(
   modalRoot: HTMLElement,
   store: ProjectStore,
@@ -243,13 +246,19 @@ async function handleImportFilePicked(
   fileInput.value = ''
   if (file == null) return
 
+  const gen = ++importPickGeneration
+
   let raw: string
   try {
     raw = await readPickedFileText(file)
   } catch {
+    if (gen !== importPickGeneration) return
     openImportErrorModal(modalRoot, IMPORT_INVALID_PROJECT_ERROR)
     return
   }
+
+  // Stale read — a newer pick already owns the flow.
+  if (gen !== importPickGeneration) return
 
   const result = parseProjectDocument(raw)
   if (!result.ok) {

@@ -56,7 +56,8 @@ export function serializeProject(project: ProjectDocument): string {
 export function parseProjectDocument(raw: string): ParseProjectDocumentResult {
   let parsed: unknown
   try {
-    parsed = JSON.parse(raw)
+    // Strip UTF-8 BOM — some editors prefix otherwise-valid JSON.
+    parsed = JSON.parse(raw.replace(/^\uFEFF/, ''))
   } catch {
     return { ok: false, reason: 'invalid-project' }
   }

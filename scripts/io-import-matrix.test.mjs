@@ -117,6 +117,16 @@ describe('io import I/O matrix', () => {
     assert.deepEqual(result.project, project)
   })
 
+  it('v1 with UTF-8 BOM prefix still parses', async () => {
+    const io = await importCompiledTs('src/io/index.ts')
+    const project = validProject()
+    const result = io.parseProjectDocument(
+      `\uFEFF${JSON.stringify(project)}`,
+    )
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.project, project)
+  })
+
   it('serialize ↔ parse symmetry for valid docs', async () => {
     const io = await importCompiledTs('src/io/index.ts')
     const project = validProject()

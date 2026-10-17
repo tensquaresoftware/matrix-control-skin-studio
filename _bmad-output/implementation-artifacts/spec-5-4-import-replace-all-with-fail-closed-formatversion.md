@@ -88,7 +88,12 @@ context:
 - [x] [Review][Patch] Assert Import confirm dismisses open Skin delete confirm [`scripts/chrome-shell-matrix.test.mjs`]
 - [x] [Review][Patch] Assert New↔Import mutual one-deep dismissal [`scripts/chrome-shell-matrix.test.mjs`]
 - [x] [Review][Patch] Assert file.text() reject → DISTINCT_INVALID MODAL_ACK [`scripts/chrome-shell-matrix.test.mjs`]
-- [x] [Review][Defer] Concurrent overlapping Import change handlers race [`src/chrome/index.ts`] — deferred: maybe-false; settle with dual async change + delayed text()
+- [x] [Review][Patch] Ignore stale Import reads with a generation token (verified race) [`src/chrome/index.ts`]
+- [x] [Review][Patch] Assert second Import pick replaces open confirm/error and binds latest project [`scripts/chrome-shell-matrix.test.mjs`]
+- [x] [Review][Patch] Assert hidden Import file input value cleared after pick [`scripts/chrome-shell-matrix.test.mjs`]
+- [x] [Review][Patch] Assert Import confirm dismisses open Palette delete confirm [`scripts/chrome-shell-matrix.test.mjs`]
+- [x] [Review][Patch] Assert Zoom/pan prefs untouched on Import fail-closed / malformed paths [`scripts/chrome-shell-matrix.test.mjs`]
+- [x] [Review][Patch] Strip UTF-8 BOM before project JSON parse [`src/io/index.ts`]
 
 **Rejected**
 - `false` — Lean validation depth (skin.id / mapping keys / inventory entries): intentional envelope-parity lean gate
@@ -96,7 +101,13 @@ context:
 - `false` — Import open does not dismiss deletes: parity with New (dismiss on confirm only)
 - `false` — Autosave envelope unasserted after Import: apply + attachAutosave covered; prefs isolation is the Import contract
 - `low` rejected — Hidden file input outside shell tree: remount layout
-- `false` — `dismissProjectConfirms` unused by callers: re-export helper
+- `false` — `dismissProjectConfirms` unused by callers: re-export helper; live one-deep uses targeted removes
+- `false` — Spec `status: done` vs sprint `review`: expected mid-review tracking; not a product defect
+- rejected (edit-spec) — AC text omits DISTINCT_INVALID / envelope rows already in frozen matrix
+- rejected (edit-spec) — empty Spec Change Log heading
+- `low` rejected — Import copy redeclared in chrome matrix: everyday drift unlikely; pins already exported
+- `false` — Envelope gate requires both `project` and `session` keys: intentional handoff vs autosave matrix
+- rejected (edit-spec) — Manual verification list omits Cancel / envelope / unreadable paths already in matrix
 
 ## Implementation Notes
 
@@ -104,6 +115,8 @@ context:
 - `chrome/`: live Import + hidden file input; `import-confirm.ts` confirm + MODAL_ACK error; New/Import dismiss each other for one-deep; MIRROR_NEW apply + `clearHistory`; second pick replaces prior Import scrim.
 - Matrices: `io-import-matrix` + chrome Import confirm/cancel/fail-closed/delete-dismiss/New mutual/read-fail; `npm test` 219/219 green.
 - Review patches: dismissImportScrims before open; chrome asserts for delete dismiss, New↔Import one-deep, file.text() reject.
+- Review pass 2: importPickGeneration ignores stale reads; BOM strip; second-pick / palette-delete / prefs-on-fail / file-input clear asserts; stale-vs-newer pick race test.
+
 
 ## Spec Change Log
 

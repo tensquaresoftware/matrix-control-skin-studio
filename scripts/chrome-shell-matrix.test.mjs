@@ -2305,6 +2305,7 @@ describe('chrome shell I/O matrix', () => {
       assert.deepEqual(store.getState().project, beforeProject)
       assert.deepEqual(store.getState().session, beforeSession)
       assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
+      assert.equal(root.querySelector('[data-chrome-import-file]')?.value, '')
     } finally {
       restoreDoc()
     }
@@ -2319,6 +2320,16 @@ describe('chrome shell I/O matrix', () => {
 
     try {
       const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '150%',
+          panXY: { x: 3, y: 4 },
+          sidebarPaneHeights: { palette: 150, mappings: 170, unbound: 130 },
+        }),
+      )
+      const prefsBefore = storage.getItem(persist.PREFS_KEY)
+
       const store = model.createStore()
       const before = {
         project: sampleEditedProject(seed.createSeedProject()),
@@ -2350,6 +2361,7 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(root.querySelector('[data-import-error]'), null)
       assert.deepEqual(store.getState().project, before.project)
       assert.deepEqual(store.getState().session, before.session)
+      assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
     } finally {
       restoreDoc()
     }
@@ -2364,6 +2376,16 @@ describe('chrome shell I/O matrix', () => {
 
     try {
       const storage = persist.createMemoryStorage()
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '125%',
+          panXY: { x: 5, y: 6 },
+          sidebarPaneHeights: { palette: 140, mappings: 160, unbound: 120 },
+        }),
+      )
+      const prefsBefore = storage.getItem(persist.PREFS_KEY)
+
       const store = model.createStore()
       const beforeProject = sampleEditedProject(seed.createSeedProject())
       store.apply({ project: beforeProject, session: sampleSession() })
@@ -2396,12 +2418,13 @@ describe('chrome shell I/O matrix', () => {
         IMPORT_INVALID_PROJECT_ERROR,
       )
       assert.deepEqual(store.getState().project, beforeProject)
+      assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
     } finally {
       restoreDoc()
     }
   })
 
-  it('Import confirm dismisses open Skin delete confirm before apply', async () => {
+  it('Import confirm dismisses open Skin + Palette delete confirms before apply', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
     const seed = await importCompiledTs('src/seed/index.ts')
@@ -2433,19 +2456,130 @@ describe('chrome shell I/O matrix', () => {
       const root = createRoot()
       mountChromeShell(root, store, { storage })
 
-      // Sibling delete scrim (same selector dismissDeleteConfirms removes).
-      // Planted: chrome mock lacks Element.closest that Skin delete UI needs.
-      const deleteScrim = createElement('div')
-      deleteScrim.setAttribute('data-skin-delete-confirm', '')
-      root.append(deleteScrim)
+      // Sibling delete scrims (dismissDeleteConfirms removes both).
+      // Planted: chrome mock lacks Element.closest that delete UI needs.
+      const skinDeleteScrim = createElement('div')
+      skinDeleteScrim.setAttribute('data-skin-delete-confirm', '')
+      root.append(skinDeleteScrim)
+      const paletteDeleteScrim = createElement('div')
+      paletteDeleteScrim.setAttribute('data-palette-delete-confirm', '')
+      root.append(paletteDeleteScrim)
       assert.ok(root.querySelector('[data-skin-delete-confirm]'))
+      assert.ok(root.querySelector('[data-palette-delete-confirm]'))
 
       await pickImportJson(root, io.serializeProject(imported))
       findButtonByLabel(root.querySelector('[data-import-confirm]'), 'Import').click()
 
       assert.equal(root.querySelector('[data-skin-delete-confirm]'), null)
+      assert.equal(root.querySelector('[data-palette-delete-confirm]'), null)
       assert.equal(root.querySelector('[data-import-confirm]'), null)
       assert.deepEqual(store.getState().project, imported)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import second pick replaces open confirm and binds latest project', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      store.apply({
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      })
+
+      const projectA = {
+        formatVersion: 1,
+        palette: [{ id: 'a-yellow', hex: '#FFCC00' }],
+        skins: [{ id: 'skin-a', displayName: 'A', mappings: [] }],
+        inventory: { objectTypes: [] },
+      }
+      const projectB = {
+        formatVersion: 1,
+        palette: [{ id: 'b-cyan', hex: '#00CCFF' }],
+        skins: [{ id: 'skin-b', displayName: 'B', mappings: [] }],
+        inventory: { objectTypes: [] },
+      }
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      await pickImportJson(root, io.serializeProject(projectA))
+      assert.ok(root.querySelector('[data-import-confirm]'))
+
+      await pickImportJson(root, io.serializeProject(projectB))
+      assert.equal(root.querySelectorAll('[data-import-confirm]').length, 1)
+      assert.equal(root.querySelector('[data-import-error]'), null)
+
+      findButtonByLabel(root.querySelector('[data-import-confirm]'), 'Import').click()
+      assert.deepEqual(store.getState().project, projectB)
+    } finally {
+      restoreDoc()
+    }
+  })
+
+  it('Import stale slower pick is ignored after a newer pick', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const persist = await importCompiledTs('src/persist/index.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const io = await importCompiledTs('src/io/index.ts')
+    const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
+    const restoreDoc = installMinimalDocument()
+
+    try {
+      const storage = persist.createMemoryStorage()
+      const store = model.createStore()
+      store.apply({
+        project: sampleEditedProject(seed.createSeedProject()),
+        session: sampleSession(),
+      })
+
+      const projectA = {
+        formatVersion: 1,
+        palette: [{ id: 'stale-a', hex: '#AA0000' }],
+        skins: [{ id: 'skin-stale', displayName: 'Stale', mappings: [] }],
+        inventory: { objectTypes: [] },
+      }
+      const projectB = {
+        formatVersion: 1,
+        palette: [{ id: 'fresh-b', hex: '#00AA00' }],
+        skins: [{ id: 'skin-fresh', displayName: 'Fresh', mappings: [] }],
+        inventory: { objectTypes: [] },
+      }
+
+      const root = createRoot()
+      mountChromeShell(root, store, { storage })
+
+      let resolveA
+      const delayedA = new Promise((resolve) => {
+        resolveA = resolve
+      })
+
+      // Start slow pick A, then fast pick B; release A after B has opened confirm.
+      await pickImportFile(root, {
+        name: 'a.json',
+        async text() {
+          await delayedA
+          return io.serializeProject(projectA)
+        },
+      })
+      await pickImportJson(root, io.serializeProject(projectB))
+      assert.ok(root.querySelector('[data-import-confirm]'))
+
+      resolveA()
+      await Promise.resolve()
+      await Promise.resolve()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      findButtonByLabel(root.querySelector('[data-import-confirm]'), 'Import').click()
+      assert.deepEqual(store.getState().project, projectB)
     } finally {
       restoreDoc()
     }

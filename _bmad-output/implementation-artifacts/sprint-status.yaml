@@ -38,7 +38,7 @@
 #   (source: "seed-placeholder" OK). Do not invent ObjectTypes / Properties / States
 #   to fill SM-1. Definitive JSON field freeze waits on Collect.
 generated: 10-15-2026 22:25
-last_updated: 10-17-2026 19:50
+last_updated: 10-17-2026 19:56
 project: Matrix-Control-Skin-Studio
 project_key: NOKEY
 tracking_system: file-system
@@ -85,7 +85,7 @@ development_status:
   epic-4-retrospective: optional
 
   # --- Epic 5: Undo / export (MVP) ---
-  epic-5: in-progress
+  epic-5: done
   5-1-history-stack-with-coalesced-undo-redo: done
   # Collect-dep: Unbound from loaded inventory; do not invent slots for SM-1
   # Contract (Epic 4 close 2026-10-17): deriveUnbound must match AD-10 / Story 5.2 —
@@ -96,7 +96,7 @@ development_status:
   5-2-unbound-derive-and-unbound-pane: done
   # Collect-dep: JSON field names freeze post-Collect; writer pin formatVersion 1 OK now
   5-3-hard-export-gate-and-single-project-json: done
-  5-4-import-replace-all-with-fail-closed-formatversion: review
+  5-4-import-replace-all-with-fail-closed-formatversion: done
   epic-5-retrospective: optional
 
   # --- Epic 6: Soon intent-only — OUT OF MVP ACTIVE QUEUE ---
