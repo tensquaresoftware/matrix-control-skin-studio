@@ -121,3 +121,7 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 
 - Unbounded undo stack stores full project+session snapshots with no eviction — fine for MVP session length; revisit cap/eviction if long editing sessions grow memory.
 - Chrome Object/State/Skin `store.subscribe` readouts still stack on remount (only history listeners were disposed) — pre-existing remount pattern across shells; not blocking 5-1 Undo/Redo.
+
+## Deferred from: code review of spec-5-2-unbound-derive-and-unbound-pane.md (2026-10-17)
+
+- Sprint-status comment above 5-2 still says the story must expand “derive + pane + export gate,” but export gating is owned by 5-3 — tracking comment hygiene only; not a product defect of the Unbound pane.

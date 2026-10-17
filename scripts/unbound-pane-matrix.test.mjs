@@ -85,6 +85,7 @@ function createElement(tagName) {
     tabIndex: -1,
     children: [],
     parent: null,
+    _scrollIntoViewCalls: 0,
     classList: {
       add(...names) {
         for (const n of names) classSet.add(n)
@@ -230,6 +231,9 @@ function createElement(tagName) {
     blur() {
       node._focused = false
       node.dispatchEvent({ type: 'blur' })
+    },
+    scrollIntoView() {
+      node._scrollIntoViewCalls += 1
     },
     select() {},
     setPointerCapture() {},
@@ -640,6 +644,10 @@ describe('unbound pane matrix', () => {
         .find((r) => r.classList.contains('is-focused'))
       assert.ok(focused)
       assert.equal(focused.getAttribute('data-mapping-row'), 'fill')
+      assert.ok(
+        focused._scrollIntoViewCalls >= 1,
+        'Unbound jump must scroll the focused Mapping row into view',
+      )
 
       history.undo(store)
       const restored = store.getState().session

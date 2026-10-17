@@ -81,6 +81,9 @@ context:
 
 ### Review Findings
 
+- [x] [Review][Patch] Fix Unbound pane body scroll — `.unbound-pane-body` `overflow: auto` is overridden by later `.sidebar-pane-body` `overflow: hidden` [`src/styles/base.css`]
+- [x] [Review][Patch] Assert Unbound jump calls `scrollIntoView` on the focused Mapping row [`scripts/unbound-pane-matrix.test.mjs`]
+- [x] [Review][Defer] Sprint-status comment still says 5-2 expands “export gate” (owned by 5-3) [`sprint-status.yaml`] — deferred: tracking comment hygiene, not a product defect
 - [x] [Review][Patch] Mount `{n} unbound` badge in Unbound pane head (not scrolling body) [`src/sidebar/unbound-pane.ts`, `src/sidebar/index.ts`]
 - [x] [Review][Patch] Scroll focused Mapping row into view after Unbound jump [`src/sidebar/unbound-pane.ts`]
 - [x] [Review][Patch] Assert `deriveUnbound` counts unreadable palette hex slots [`scripts/model-palette-helpers-matrix.test.mjs`]
@@ -89,11 +92,17 @@ context:
 
 #### Rejected
 
-- `low` rejected — Shared pane-head flex without badge host
-- `false` — Sprint vs spec status mid-build
-- `false` — Manual Verification fixture loader (would only edit this build’s spec)
-- `low` rejected — Draft comment in palette-helpers matrix
-- `low` rejected — `activeSkinId == null` matrix gap
+- `false` — Spec `done` vs sprint `review` / empty Spec Change Log / stale Triage Log: tracking & prior-review audit trail; fixing would only edit this build’s spec
+- `false` — Manual Verification fixture loader (would only edit this build’s spec); seed empty is intentional
+- `false` — Alternate empty-state copy when active Skin is clear but project total > 0: spec requires list empty and no success copy
+- `false` — Row labels use inventory IDs / unused `skinDisplayName`: matches INCLUDE_STATE; list is active-Skin-scoped so skin name is not needed in the row
+- `false` — `history.execute` on every Unbound row click “pushes no-op undo”: `statesEqual` skips the stack when Object/State already match
+- `false` — Active-Skin filter lacks Green-only absence case: multi-skin + active-clear + Skin-switch matrices already prove other-Skin hits stay out of the active list
+- `false` — `selectionSync` present but `switchToMappings` missing: production sync always exposes the method; only a broken mock would throw
+- `low` rejected — Shared `.sidebar-pane-head` flex for badge layout: everyday harm on other pane heads negligible
+- `low` rejected — Draft-style comments in palette-helpers matrix: cosmetic
+- `low` rejected — Duplicated `fixtureInventory()` across matrices: two copies OK until a third; extract is extra surface
+- `low` rejected — `activeSkinId == null` matrix gap (prior round)
 - `false` — List/live-region a11y not in intent
 - `low` rejected — Per-row warning dot vs mock
 - `false` — Optional `selectionSync` unset path
