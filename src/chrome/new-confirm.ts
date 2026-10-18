@@ -56,8 +56,10 @@ export function openNewConfirmModal(root: HTMLElement, store: ProjectStore): voi
     // Drop sibling delete confirms before seed-replace so a leftover
     // Confirm cannot mutate the fresh seed by a captured id.
     dismissDeleteConfirms(root)
-    applySeedBaseline(store)
+    // Clear history before apply so sync listeners never see a live
+    // undo stack pointing at the pre-New project.
     clearHistory(store)
+    applySeedBaseline(store)
     close()
   })
 

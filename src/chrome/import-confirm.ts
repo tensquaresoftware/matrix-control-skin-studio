@@ -83,11 +83,13 @@ export function openImportConfirmModal(
     // Drop sibling delete confirms before replace so a leftover Confirm
     // cannot mutate the fresh project by a captured id.
     dismissDeleteConfirms(root)
+    // Clear history before apply so sync listeners never see a live
+    // undo stack pointing at the pre-import project.
+    clearHistory(store)
     store.apply({
       project,
       session: createEmptySession(),
     })
-    clearHistory(store)
     close()
   })
 
