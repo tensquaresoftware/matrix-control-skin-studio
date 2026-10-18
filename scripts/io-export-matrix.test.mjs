@@ -308,6 +308,34 @@ describe('io export I/O matrix', () => {
     assert.equal(io.isExportBlocked(project), true)
   })
 
+  it('gate blocked: no Skin while inventory still has required slots', async () => {
+    const io = await importCompiledTs('src/io/index.ts')
+    const project = {
+      formatVersion: 1,
+      palette: [{ id: 'duoLedYellow', hex: '#FFCC00' }],
+      skins: [],
+      inventory: fixtureInventory(),
+    }
+    assert.equal(io.unboundExportCount(project), 0)
+    assert.equal(io.isExportBlocked(project), true)
+    assert.equal(
+      io.exportGateTitle(project),
+      'Export blocked — add at least one Skin',
+    )
+  })
+
+  it('downloadProjectJson: no-op when export gate is blocked', async () => {
+    const io = await importCompiledTs('src/io/index.ts')
+    const project = blockedProject()
+    let called = false
+    io.downloadProjectJson(project, io.EXPORT_DOWNLOAD_FILENAME, {
+      triggerDownload() {
+        called = true
+      },
+    })
+    assert.equal(called, false)
+  })
+
   it('defaultTriggerDownload: appends anchor to body; revoke is deferred', async () => {
     const io = await importCompiledTs('src/io/index.ts')
     const project = clearProject()

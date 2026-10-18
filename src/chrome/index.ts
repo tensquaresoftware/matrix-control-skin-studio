@@ -9,10 +9,9 @@ import {
 } from '../history/index'
 import {
   downloadProjectJson,
-  exportBlockedTooltip,
+  exportGateTitle,
   isExportBlocked,
   parseProjectDocument,
-  unboundExportCount,
 } from '../io/index'
 import type { ProjectStore } from '../model/store'
 import {
@@ -305,12 +304,11 @@ function buildExportButton(
 
   const syncGate = (): void => {
     const { project } = store.getState()
-    const unboundCount = unboundExportCount(project)
-    const blocked = isExportBlocked(project)
+    const title = exportGateTitle(project)
 
-    if (blocked) {
+    if (title != null) {
       button.setAttribute('aria-disabled', 'true')
-      button.setAttribute('title', exportBlockedTooltip(unboundCount))
+      button.setAttribute('title', title)
       button.classList.remove('chrome-top-btn-export-ready')
     } else {
       button.removeAttribute('aria-disabled')

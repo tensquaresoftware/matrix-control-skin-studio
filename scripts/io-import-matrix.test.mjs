@@ -263,5 +263,69 @@ describe('io import I/O matrix', () => {
       ),
       { ok: false, reason: 'invalid-project' },
     )
+
+    assert.deepEqual(
+      io.parseProjectDocument(
+        JSON.stringify({
+          formatVersion: 1,
+          palette: [],
+          skins: [{ displayName: 'No id', mappings: [] }],
+          inventory: { objectTypes: [] },
+        }),
+      ),
+      { ok: false, reason: 'invalid-project' },
+    )
+
+    assert.deepEqual(
+      io.parseProjectDocument(
+        JSON.stringify({
+          formatVersion: 1,
+          palette: [],
+          skins: [{ id: 's', mappings: [] }],
+          inventory: { objectTypes: [] },
+        }),
+      ),
+      { ok: false, reason: 'invalid-project' },
+    )
+
+    assert.deepEqual(
+      io.parseProjectDocument(
+        JSON.stringify({
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: { objectTypes: [null] },
+        }),
+      ),
+      { ok: false, reason: 'invalid-project' },
+    )
+
+    assert.deepEqual(
+      io.parseProjectDocument(
+        JSON.stringify({
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: {
+            objectTypes: [{ id: 'ot', states: 'nope', properties: [] }],
+          },
+        }),
+      ),
+      { ok: false, reason: 'invalid-project' },
+    )
+
+    assert.deepEqual(
+      io.parseProjectDocument(
+        JSON.stringify({
+          formatVersion: 1,
+          palette: [],
+          skins: [],
+          inventory: {
+            objectTypes: [{ id: 'ot', states: [], properties: null }],
+          },
+        }),
+      ),
+      { ok: false, reason: 'invalid-project' },
+    )
   })
 })

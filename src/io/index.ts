@@ -25,14 +25,40 @@ export function unboundExportCount(project: ProjectDocument): number {
   return deriveUnbound(project).length
 }
 
-/** Hard gate: blocked while project-total unbound > 0. */
+/**
+ * Hard gate: blocked while project-total unbound > 0, or when there is no
+ * Skin to bind against a non-empty inventory completeness set.
+ */
 export function isExportBlocked(project: ProjectDocument): boolean {
-  return unboundExportCount(project) > 0
+  if (unboundExportCount(project) > 0) return true
+  return (
+    project.skins.length === 0 && inventoryHasRequiredSlots(project.inventory)
+  )
 }
 
-/** English tooltip while Export is blocked (UX-DR13). */
+/** English tooltip while Export is blocked by unbound count (UX-DR13). */
 export function exportBlockedTooltip(unboundCount: number): string {
   return `Export blocked — ${unboundCount} unbound mapping(s)`
+}
+
+/** Live Export title while gated; null when clear. */
+export function exportGateTitle(project: ProjectDocument): string | null {
+  if (!isExportBlocked(project)) return null
+  const unboundCount = unboundExportCount(project)
+  if (unboundCount > 0) return exportBlockedTooltip(unboundCount)
+  return 'Export blocked — add at least one Skin'
+}
+
+/** Inventory defines at least one ObjectType × State × Property slot. */
+function inventoryHasRequiredSlots(
+  inventory: ProjectDocument['inventory'],
+): boolean {
+  for (const objectType of inventory.objectTypes) {
+    if (objectType.states.length > 0 && objectType.properties.length > 0) {
+      return true
+    }
+  }
+  return false
 }
 
 /**
@@ -95,14 +121,14 @@ export function parseProjectDocument(raw: string): ParseProjectDocumentResult {
   }
 }
 
-/** Lean project-shape checks aligned with export fields (not parseEnvelope). */
+/**
+ * Lean project-shape checks aligned with export fields + what deriveUnbound
+ * consumes (not parseEnvelope). Fail-closed on missing structural fields.
+ */
 function isValidProjectShape(p: Record<string, unknown>): boolean {
   if (!isValidPalette(p.palette)) return false
-  if (!Array.isArray(p.skins)) return false
-  if (p.inventory === null || typeof p.inventory !== 'object') return false
-  const inventory = p.inventory as Record<string, unknown>
-  if (!Array.isArray(inventory.objectTypes)) return false
-  return skinsHaveValidMappings(p.skins)
+  if (!Array.isArray(p.skins) || !skinsHaveValidShape(p.skins)) return false
+  return isValidInventory(p.inventory)
 }
 
 function isValidPalette(palette: unknown): boolean {
@@ -119,22 +145,52 @@ function isValidPalette(palette: unknown): boolean {
   return true
 }
 
-function skinsHaveValidMappings(skins: unknown[]): boolean {
-  for (const skin of skins) {
-    if (skin === null || typeof skin !== 'object') return false
-    const mappings = (skin as Record<string, unknown>).mappings
-    if (!Array.isArray(mappings)) return false
-    for (const mapping of mappings) {
-      if (!isValidMappingPaletteEntryId(mapping)) return false
+function isValidInventory(inventory: unknown): boolean {
+  if (inventory === null || typeof inventory !== 'object') return false
+  const objectTypes = (inventory as Record<string, unknown>).objectTypes
+  if (!Array.isArray(objectTypes)) return false
+  for (const objectType of objectTypes) {
+    if (objectType === null || typeof objectType !== 'object') return false
+    const ot = objectType as Record<string, unknown>
+    if (typeof ot.id !== 'string' || ot.id.length === 0) return false
+    if (!isStringIdArray(ot.states) || !isStringIdArray(ot.properties)) {
+      return false
     }
   }
   return true
 }
 
-/** Mapping values are palette entry id or null — never raw / bare hex tokens. */
-function isValidMappingPaletteEntryId(mapping: unknown): boolean {
+function isStringIdArray(value: unknown): boolean {
+  if (!Array.isArray(value)) return false
+  return value.every((entry) => typeof entry === 'string')
+}
+
+function skinsHaveValidShape(skins: unknown[]): boolean {
+  for (const skin of skins) {
+    if (skin === null || typeof skin !== 'object') return false
+    const s = skin as Record<string, unknown>
+    if (typeof s.id !== 'string' || s.id.length === 0) return false
+    if (typeof s.displayName !== 'string') return false
+    if (!Array.isArray(s.mappings)) return false
+    for (const mapping of s.mappings) {
+      if (!isValidMapping(mapping)) return false
+    }
+  }
+  return true
+}
+
+/** Mapping keys + palette entry id or null — never raw / bare hex tokens. */
+function isValidMapping(mapping: unknown): boolean {
   if (mapping === null || typeof mapping !== 'object') return false
-  const id = (mapping as Record<string, unknown>).paletteEntryId
+  const m = mapping as Record<string, unknown>
+  if (typeof m.objectTypeId !== 'string' || m.objectTypeId.length === 0) {
+    return false
+  }
+  if (typeof m.stateId !== 'string' || m.stateId.length === 0) return false
+  if (typeof m.propertyId !== 'string' || m.propertyId.length === 0) {
+    return false
+  }
+  const id = m.paletteEntryId
   if (id === null) return true
   if (typeof id !== 'string' || id.length === 0) return false
   return !looksLikeOpaqueHexToken(id)
@@ -160,7 +216,7 @@ function defaultTriggerDownload(blob: Blob, filename: string): void {
 }
 
 /**
- * Download project-only JSON. Caller must ensure the export gate is clear.
+ * Download project-only JSON when the hard export gate is clear; otherwise no-op.
  * Filename defaults to {@link EXPORT_DOWNLOAD_FILENAME}.
  */
 export function downloadProjectJson(
@@ -168,6 +224,7 @@ export function downloadProjectJson(
   filename: string = EXPORT_DOWNLOAD_FILENAME,
   options: DownloadProjectJsonOptions = {},
 ): void {
+  if (isExportBlocked(project)) return
   const json = serializeProject(project)
   const blob = new Blob([json], { type: 'application/json' })
   const trigger = options.triggerDownload ?? defaultTriggerDownload
