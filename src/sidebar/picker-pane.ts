@@ -107,6 +107,8 @@ export function mountPickerPane(
     slider.input.addEventListener('input', onSliderInput)
     slider.input.addEventListener('pointerup', onPointerUpFlush)
     slider.input.addEventListener('mouseup', onPointerUpFlush)
+    slider.input.addEventListener('pointercancel', onPointerUpFlush)
+    slider.input.addEventListener('lostpointercapture', onPointerUpFlush)
   }
 
   hexField.addEventListener('focus', () => {
@@ -128,15 +130,18 @@ export function mountPickerPane(
     hexFocused = false
     if (selection.getSelectedId() == null) {
       syncFromStore(true)
+      flushCoalesce(store)
       return
     }
     const parsed = parseOpaqueHex(hexField.value)
     if (parsed == null) {
       const hex = selectedHex()
       hexField.value = hex ?? IDLE_HEX
+      flushCoalesce(store)
       return
     }
     commitHex(parsed)
+    flushCoalesce(store)
   })
 
   syncFromStore()

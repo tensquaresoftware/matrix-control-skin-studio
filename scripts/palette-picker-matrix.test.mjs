@@ -650,6 +650,46 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('hex blur flushes coalesce so a later edit is a separate undo step', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed, history] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+        importCompiledTs('src/history/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      const hexField = host.querySelector('[data-picker-hex]')
+      assert.ok(hexField)
+
+      hexField.focus()
+      hexField.value = '#112233'
+      hexField.dispatchEvent({ type: 'input' })
+      hexField.blur()
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#112233')
+
+      hexField.focus()
+      hexField.value = '#445566'
+      hexField.dispatchEvent({ type: 'input' })
+      hexField.blur()
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#445566')
+
+      history.undo(store)
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#112233')
+      history.undo(store)
+      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(history.canUndo(store), false)
+    } finally {
+      restore()
+    }
+  })
+
   it('rapid hex/slider + pointerup coalesce into one undo step', async () => {
     const restore = installMinimalDocument()
     try {
