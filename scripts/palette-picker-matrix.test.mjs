@@ -361,6 +361,51 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('hex dblclick: opens Color tab with that Palette entry selected', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+
+      const colorTab = host.querySelector('[data-sidebar-tab="color"]')
+      const paletteTab = host.querySelector('[data-sidebar-tab="palette"]')
+      const colorPanel = host.querySelector('[data-sidebar-tab-panel="color"]')
+      const palettePanel = host.querySelector('[data-sidebar-tab-panel="palette"]')
+      assert.ok(colorTab && paletteTab && colorPanel && palettePanel)
+
+      paletteTab.click()
+      assert.ok(paletteTab.classList.contains('is-on'))
+      assert.equal(palettePanel.hidden, false)
+
+      const hex = host
+        .querySelector('[data-palette-row="blue"]')
+        ?.querySelector('[data-palette-hex]')
+      assert.ok(hex)
+      hex.dispatchEvent({ type: 'dblclick', preventDefault() {}, stopPropagation() {} })
+
+      assert.ok(colorTab.classList.contains('is-on'))
+      assert.equal(paletteTab.classList.contains('is-on'), false)
+      assert.equal(colorPanel.hidden, false)
+      assert.equal(palettePanel.hidden, true)
+      assert.ok(
+        host
+          .querySelector('[data-palette-row="blue"]')
+          ?.classList.contains('is-selected'),
+      )
+      assert.equal(host.querySelector('[data-picker-hex]')?.value, '3D7EFF')
+    } finally {
+      restore()
+    }
+  })
+
   it('select + recolour: seed yellow live write-through to #112233', async () => {
     const restore = installMinimalDocument()
     try {
@@ -912,6 +957,13 @@ describe('palette picker I/O matrix', () => {
       )
       assert.deepEqual(labels, ['R', 'G', 'B'])
 
+      const preview = host.querySelector('[data-picker-color-preview]')
+      assert.ok(preview)
+      assert.equal(
+        (preview.style.background || '').replace(/^#/, '').toUpperCase(),
+        paletteHex(store, 'yellow').replace(/^#/, '').toUpperCase(),
+      )
+
       const hue = host.querySelector('[data-picker-hue]')
       assert.ok(hue)
       hue.getBoundingClientRect = () => ({
@@ -1201,12 +1253,56 @@ describe('palette picker I/O matrix', () => {
       const hexField = host.querySelector('[data-picker-hex]')
       assert.equal(hexField.value, '808080')
 
+      // Create opens inline rename immediately (name then Enter).
+      await Promise.resolve()
+      const rename = host.querySelector('[data-palette-rename]')
+      assert.ok(rename)
+      assert.equal(rename.value, 'Colour 1')
+
       // Sequential create fills Colour 2 next.
+      rename.blur()
       addBtn.click()
+      await Promise.resolve()
       const second = store.getState().project.palette.at(-1)
       assert.equal(second.constantName, 'Colour 2')
       assert.equal(second.hex, '#808080')
       assert.notEqual(second.id, created.id)
+      assert.ok(host.querySelector('[data-palette-rename]'))
+    } finally {
+      restore()
+    }
+  })
+
+  it('create: rename opens immediately; Enter commits the new name', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-add]').click()
+      await Promise.resolve()
+
+      const created = store.getState().project.palette.at(-1)
+      const input = host.querySelector('[data-palette-rename]')
+      assert.ok(input)
+      assert.equal(input.value, created.constantName)
+
+      input.value = 'Accent'
+      input.dispatchEvent({ type: 'keydown', key: 'Enter' })
+
+      const entry = store.getState().project.palette.find((e) => e.id === created.id)
+      assert.ok(entry)
+      assert.equal(entry.constantName, 'Accent')
+      assert.equal(entry.id, created.id)
+      assert.equal(entry.hex, '#808080')
+      assert.equal(host.querySelector('[data-palette-rename]'), null)
     } finally {
       restore()
     }
@@ -1229,9 +1325,12 @@ describe('palette picker I/O matrix', () => {
         inventory: { objectTypes: [] },
       })
       host.querySelector('[data-palette-add]').click()
+      await Promise.resolve()
       const created = store.getState().project.palette.at(-1)
       assert.equal(created.constantName, 'Colour 2')
       assert.equal(created.hex, '#808080')
+      // Dismiss the auto-opened rename before tearing down the harness.
+      host.querySelector('[data-palette-rename]')?.blur()
     } finally {
       restore()
     }

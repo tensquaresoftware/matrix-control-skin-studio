@@ -515,9 +515,27 @@ describe('mappings I/O matrix', () => {
       assert.equal(boundRow.classList.contains('is-unbound'), false)
       assert.equal(
         boundRow.querySelector('[data-mapping-palette-id]')?.textContent,
-        'duoLedYellow',
+        'kDuoLedYellow',
       )
       assert.ok(boundRow.querySelector('[data-mapping-swatch]'))
+
+      // Palette rename is SSOT — Mappings must show the new constantName.
+      const label = host
+        .querySelector('[data-palette-row="duoLedYellow"]')
+        ?.querySelector('[data-palette-label]')
+      assert.ok(label)
+      label.dispatchEvent({ type: 'dblclick' })
+      await Promise.resolve()
+      const rename = host.querySelector('[data-palette-rename]')
+      assert.ok(rename)
+      rename.value = 'SkyBlue'
+      rename.dispatchEvent({ type: 'keydown', key: 'Enter' })
+      assert.equal(
+        propertyRows(host)
+          .find((row) => row.getAttribute('data-mapping-row') === 'fill')
+          ?.querySelector('[data-mapping-palette-id]')?.textContent,
+        'SkyBlue',
+      )
     } finally {
       restore()
     }
@@ -586,7 +604,7 @@ describe('mappings I/O matrix', () => {
     }
   })
 
-  it('unbound display: missing mapping and dangling id show warning + Unbound', async () => {
+  it('unbound display: missing mapping and dangling id show warning marker + Unbound', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model] = await Promise.all([
@@ -684,7 +702,7 @@ describe('mappings I/O matrix', () => {
       assert.equal(fillRow.classList.contains('is-unbound'), false)
       assert.equal(
         fillRow.querySelector('[data-mapping-palette-id]')?.textContent,
-        'duoLedYellow',
+        'kDuoLedYellow',
       )
     } finally {
       restore()
@@ -1035,7 +1053,7 @@ describe('mappings I/O matrix', () => {
       )
       assert.equal(
         rebound?.querySelector('[data-mapping-palette-id]')?.textContent,
-        'patchZoneBlue',
+        'kPatchZoneBlue',
       )
     } finally {
       restore()

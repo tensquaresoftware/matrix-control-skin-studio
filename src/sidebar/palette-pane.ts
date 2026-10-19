@@ -1,5 +1,6 @@
 import { execute } from '../history/index'
 import { looksLikeOpaqueHexToken } from '../model/opaque-hex'
+import { paletteEntryDisplayName } from '../model/palette-helpers'
 import type { ProjectStore } from '../model/store'
 import type { PaletteEntry, ProjectDocument } from '../model/types'
 import {
@@ -19,12 +20,14 @@ const COLOUR_NAME_RE = /^Colour (\d+)$/
  * (not SessionUiState). Rows refresh on store and selection changes.
  * Actions: `+ Add`, `Delete…`, inline double-click rename (story 3-2).
  * When a Mapping row is focused, click binds that Property (ROW_THEN_PALETTE).
+ * Double-click hex → select entry + open Color tab (`switchToColor`).
  */
 export function mountPalettePane(
   body: HTMLElement,
   store: ProjectStore,
   selection: PaletteSelectionController,
   mappingFocus?: MappingFocusController,
+  switchToColor?: () => void,
 ): void {
   body.classList.add('palette-pane-body')
   body.replaceChildren()
@@ -56,16 +59,34 @@ export function mountPalettePane(
     body.closest('[data-sidebar]') ?? body
 
   const openRenameFor = (entryId: string): void => {
-    Promise.resolve().then(() => {
+    const startOnPaintedRow = (): boolean => {
       const row = list.querySelector(`[data-palette-row="${entryId}"]`)
-      const label = row?.querySelector('[data-palette-label]') as HTMLElement | null
-      if (!label) return
+      const label = row?.querySelector(
+        '[data-palette-label]',
+      ) as HTMLElement | null
+      if (!label) return false
       const entry = store
         .getState()
         .project.palette.find((item) => item.id === entryId)
-      if (!entry) return
+      if (!entry) return false
       startInlineRename(label, entry, store)
-    })
+      return true
+    }
+
+    // Select without Palette→Mapping bind (bind stays on single click only).
+    if (selection.getSelectedId() !== entryId) {
+      selection.setSelectedId(entryId)
+      Promise.resolve().then(() => {
+        startOnPaintedRow()
+      })
+      return
+    }
+    // Already selected — rename on the live label (no list rebuild).
+    if (!startOnPaintedRow()) {
+      Promise.resolve().then(() => {
+        startOnPaintedRow()
+      })
+    }
   }
 
   const render = (): void => {
@@ -108,6 +129,11 @@ export function mountPalettePane(
           () => {
             openRenameFor(entry.id)
           },
+          () => {
+            // Open Color for this swatch — select only (no Mapping bind).
+            selection.setSelectedId(entry.id)
+            switchToColor?.()
+          },
         ),
       )
     }
@@ -121,7 +147,8 @@ export function mountPalettePane(
       palette: [...project.palette, entry],
     }
     execute(store, { project: next })
-    selection.setSelectedId(entry.id)
+    // Select + open inline rename so the operator can name it and press Enter.
+    openRenameFor(entry.id)
   })
 
   deleteBtn.addEventListener('click', () => {
@@ -143,7 +170,7 @@ export function mountPalettePane(
       return
     }
 
-    const displayName = entry.constantName || entry.id
+    const displayName = paletteEntryDisplayName(entry)
     openPaletteDeleteConfirm({
       root: modalRoot(),
       paletteEntryId: selectedId,
@@ -210,6 +237,7 @@ function buildRow(
   selected: boolean,
   onSelect: () => void,
   onRename: () => void,
+  onOpenInColor: () => void,
 ): HTMLElement {
   // div (not button) so inline rename input is valid interactive content
   const row = document.createElement('div')
@@ -232,12 +260,13 @@ function buildRow(
   const label = document.createElement('span')
   label.className = 'palette-swatch-label'
   label.setAttribute('data-palette-label', '')
-  label.textContent = entry.constantName || entry.id
+  label.textContent = paletteEntryDisplayName(entry)
 
   const hex = document.createElement('span')
   hex.className = 'palette-swatch-hex type-mono-sm'
   hex.setAttribute('data-palette-hex', '')
   hex.textContent = entry.hex
+  hex.title = 'Open in Color'
 
   row.append(chip, label, hex)
 
@@ -256,9 +285,14 @@ function buildRow(
   label.addEventListener('dblclick', (event) => {
     event.stopPropagation()
     event.preventDefault()
-    // Select first (may rebuild the row); open rename on the post-render label.
-    onSelect()
+    // Rename only — do not route through onSelect (that can bind + rebuild).
     onRename()
+  })
+
+  hex.addEventListener('dblclick', (event) => {
+    event.stopPropagation()
+    event.preventDefault()
+    onOpenInColor()
   })
 
   return row
@@ -271,7 +305,7 @@ function startInlineRename(
 ): void {
   if (label.querySelector('[data-palette-rename]')) return
 
-  const previousLabel = entry.constantName || entry.id
+  const previousLabel = paletteEntryDisplayName(entry)
   const input = document.createElement('input')
   input.type = 'text'
   input.className = 'palette-swatch-label-input'

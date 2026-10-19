@@ -29,7 +29,7 @@ export type MountUnboundPaneOptions = {
 }
 
 /**
- * Unbound tab: project-total `{n} unbound` badge on the tab + active-Skin-filtered
+ * Unbound tab: project-total count pill on the tab + active-Skin-filtered
  * clickable list (`Object type · State · Property`). Success copy only when
  * project-total is 0 (PANE_SCOPE / ROW_DISAMBIG / AD-16).
  */
@@ -73,6 +73,7 @@ export function mountUnboundPane(
     if (projectTotal === 0) {
       badge.hidden = true
       badge.textContent = ''
+      badge.removeAttribute('aria-label')
       list.replaceChildren()
       empty.hidden = false
       empty.textContent = emptyUnboundCopy(project)
@@ -80,7 +81,11 @@ export function mountUnboundPane(
     }
 
     badge.hidden = false
-    badge.textContent = `${projectTotal} unbound`
+    badge.textContent = String(projectTotal)
+    badge.setAttribute(
+      'aria-label',
+      `${projectTotal} unbound`,
+    )
     empty.hidden = true
     empty.textContent = ''
 

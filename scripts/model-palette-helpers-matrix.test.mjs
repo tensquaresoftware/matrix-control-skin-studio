@@ -220,6 +220,53 @@ describe('model palette helpers matrix', () => {
     )
   })
 
+  it('resolvePaletteLabel: constantName SSOT, else id; missing → raw id', async () => {
+    const { resolvePaletteLabel, paletteEntryDisplayName } =
+      await importCompiledTs('src/model/index.ts')
+    const project = sampleProject({
+      palette: [
+        { id: 'blue', hex: '#3D7EFF', constantName: 'kBlue' },
+        { id: 'anon', hex: '#111111' },
+      ],
+    })
+    assert.equal(resolvePaletteLabel(project, 'blue'), 'kBlue')
+    assert.equal(resolvePaletteLabel(project, 'anon'), 'anon')
+    assert.equal(resolvePaletteLabel(project, 'missing'), 'missing')
+    assert.equal(resolvePaletteLabel(project, null), '')
+    assert.equal(
+      paletteEntryDisplayName({ id: 'blue', hex: '#3D7EFF', constantName: 'kBlue' }),
+      'kBlue',
+    )
+  })
+
+  it('upsertMapping: identical binding keeps the same array reference', async () => {
+    const { upsertMapping } = await importCompiledTs('src/model/index.ts')
+    const before = [
+      {
+        objectTypeId: 'headerLed',
+        stateId: 'on',
+        propertyId: 'fill',
+        paletteEntryId: 'duoLedYellow',
+      },
+    ]
+    const same = upsertMapping(before, {
+      objectTypeId: 'headerLed',
+      stateId: 'on',
+      propertyId: 'fill',
+      paletteEntryId: 'duoLedYellow',
+    })
+    assert.equal(same, before)
+
+    const rebound = upsertMapping(before, {
+      objectTypeId: 'headerLed',
+      stateId: 'on',
+      propertyId: 'fill',
+      paletteEntryId: 'other',
+    })
+    assert.notEqual(rebound, before)
+    assert.equal(rebound[0].paletteEntryId, 'other')
+  })
+
   it('deriveUnbound: unreadable palette hex counts; valid hex clears the hit', async () => {
     const { deriveUnbound } = await importCompiledTs('src/model/index.ts')
     const inventory = {

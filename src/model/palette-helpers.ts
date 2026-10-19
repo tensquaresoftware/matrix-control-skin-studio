@@ -1,5 +1,5 @@
 import { looksLikeOpaqueHexToken, parseOpaqueHex } from './opaque-hex'
-import type { Mapping, ProjectDocument } from './types'
+import type { Mapping, PaletteEntry, ProjectDocument } from './types'
 
 /** One inventory slot lacking a resolvable Palette colour (AD-10). */
 export type UnboundHit = {
@@ -28,6 +28,25 @@ export function resolvePaletteHex(
   const entry = project.palette.find((e) => e.id === paletteEntryId)
   if (!entry) return null
   return parseOpaqueHex(entry.hex)
+}
+
+/** UI label for one Palette entry — `constantName` when set, else stable `id`. */
+export function paletteEntryDisplayName(entry: PaletteEntry): string {
+  return entry.constantName || entry.id
+}
+
+/**
+ * Display label for a Palette id (SSOT with the Palette tab).
+ * Missing entry → the raw id (or empty when null).
+ */
+export function resolvePaletteLabel(
+  project: ProjectDocument,
+  paletteEntryId: string | null,
+): string {
+  if (paletteEntryId == null) return ''
+  const entry = project.palette.find((e) => e.id === paletteEntryId)
+  if (!entry) return paletteEntryId
+  return paletteEntryDisplayName(entry)
 }
 
 /** True when the mapping has no resolvable Palette colour (null or dangling id). */
@@ -74,6 +93,16 @@ export function upsertMapping(
   )
   if (index < 0) {
     return [...mappings, { ...next }]
+  }
+  const current = mappings[index]
+  // Same binding → keep the array reference so callers can skip a no-op write.
+  if (
+    current.paletteEntryId === next.paletteEntryId &&
+    current.objectTypeId === next.objectTypeId &&
+    current.stateId === next.stateId &&
+    current.propertyId === next.propertyId
+  ) {
+    return mappings as Mapping[]
   }
   return mappings.map((mapping, i) =>
     i === index ? { ...next } : mapping,

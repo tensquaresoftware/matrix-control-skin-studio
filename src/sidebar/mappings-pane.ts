@@ -3,6 +3,7 @@ import {
   findMapping,
   isMappingUnbound,
   resolvePaletteHex,
+  resolvePaletteLabel,
   upsertMapping,
 } from '../model/palette-helpers'
 import type { ProjectStore } from '../model/store'
@@ -306,7 +307,7 @@ function buildPropertyRow(options: BuildRowOptions): HTMLElement {
     const idLabel = document.createElement('span')
     idLabel.className = 'mapping-row-palette-id'
     idLabel.setAttribute('data-mapping-palette-id', '')
-    idLabel.textContent = mapping!.paletteEntryId ?? ''
+    idLabel.textContent = resolvePaletteLabel(project, mapping!.paletteEntryId)
 
     value.append(swatch, idLabel)
   }

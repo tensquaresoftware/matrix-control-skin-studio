@@ -17,6 +17,8 @@ export {
   deriveUnbound,
   findMapping,
   isMappingUnbound,
+  paletteEntryDisplayName,
   resolvePaletteHex,
+  resolvePaletteLabel,
   upsertMapping,
 } from './palette-helpers'

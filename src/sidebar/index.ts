@@ -139,7 +139,9 @@ export function mountSidebar(
     })
 
     mountPickerPane(colorPanel, options.store, selection)
-    mountPalettePane(palettePanel, options.store, selection, mappingFocus)
+    mountPalettePane(palettePanel, options.store, selection, mappingFocus, () => {
+      showZone1('color')
+    })
     mountSkinPane(skinPanel, options.store)
     mountMappingsPane(mappingsPanel, options.store, mappingFocus, {
       selectionSync,

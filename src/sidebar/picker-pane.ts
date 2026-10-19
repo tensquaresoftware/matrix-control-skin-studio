@@ -77,11 +77,12 @@ export function mountPickerPane(
     },
   })
 
-  stage.append(square, hueStrip)
-
   const fields = document.createElement('div')
   fields.className = 'picker-fields-row'
   fields.setAttribute('data-picker-fields', '')
+
+  const hexGroup = document.createElement('div')
+  hexGroup.className = 'picker-hex-group'
 
   const hashLabel = document.createElement('span')
   hashLabel.className = 'picker-hash-label'
@@ -99,19 +100,22 @@ export function mountPickerPane(
   hexField.maxLength = 7
   hexField.size = 6
 
+  hexGroup.append(hashLabel, hexField)
+
   const rField = createRgbField('R', 'r')
   const gField = createRgbField('G', 'g')
   const bField = createRgbField('B', 'b')
 
-  fields.append(
-    hashLabel,
-    hexField,
-    rField.wrap,
-    gField.wrap,
-    bField.wrap,
-  )
+  fields.append(hexGroup, rField.wrap, gField.wrap, bField.wrap)
 
-  body.append(stage, fields)
+  // 12×12 preview at the hue × B-field corner (live colour under the strip).
+  const preview = document.createElement('div')
+  preview.className = 'picker-color-preview'
+  preview.setAttribute('data-picker-color-preview', '')
+  preview.setAttribute('aria-hidden', 'true')
+
+  stage.append(square, hueStrip, fields, preview)
+  body.append(stage)
 
   let hexFocused = false
   let rgbFocused: 'r' | 'g' | 'b' | null = null
@@ -129,11 +133,16 @@ export function mountPickerPane(
     return entry?.hex ?? null
   }
 
+  const paintPreview = (hex: string): void => {
+    preview.style.background = hex
+  }
+
   const paintSquare = (): void => {
     const pure = hsvToHex(hsv.h, 100, 100)
     square.style.background = `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${pure})`
     crosshair.style.left = `${hsv.s}%`
     crosshair.style.top = `${100 - hsv.v}%`
+    paintPreview(hsvToHex(hsv.h, hsv.s, hsv.v))
   }
 
   const paintHueThumb = (): void => {
@@ -158,6 +167,7 @@ export function mountPickerPane(
     try {
       hueValue = hsv.h
       paintSquare()
+      paintPreview(hex)
       paintHueThumb()
       if (!hexFocused || forceFields) {
         hexField.value = hexDigits(hex)

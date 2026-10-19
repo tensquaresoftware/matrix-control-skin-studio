@@ -575,7 +575,8 @@ describe('unbound pane matrix', () => {
       const badge = unboundBadge(host)
       assert.ok(badge)
       assert.equal(badge.hidden, false)
-      assert.equal(badge.textContent, '4 unbound')
+      assert.equal(badge.textContent, '4')
+      assert.equal(badge.getAttribute('aria-label'), '4 unbound')
 
       const rows = unboundRows(host)
       assert.equal(rows.length, 3)
@@ -643,14 +644,14 @@ describe('unbound pane matrix', () => {
 
       const badge = unboundBadge(host)
       const empty = unboundEmpty(host)
-      assert.equal(badge.textContent, '3 unbound')
+      assert.equal(badge.textContent, '3')
       assert.equal(badge.hidden, false)
       assert.equal(unboundRows(host).length, 0)
       assert.equal(empty.hidden, true)
       assert.notEqual(empty.textContent, 'All required mappings bound')
 
       setActiveSkin(store, history, 'green')
-      assert.equal(badge.textContent, '3 unbound')
+      assert.equal(badge.textContent, '3')
       assert.equal(unboundRows(host).length, 3)
     } finally {
       restore()
@@ -672,11 +673,11 @@ describe('unbound pane matrix', () => {
         defaultSession({ activeSkinId: 'black' }),
       )
 
-      assert.equal(unboundBadge(host).textContent, '4 unbound')
+      assert.equal(unboundBadge(host).textContent, '4')
       assert.equal(unboundRows(host).length, 3)
 
       setActiveSkin(store, history, 'green')
-      assert.equal(unboundBadge(host).textContent, '4 unbound')
+      assert.equal(unboundBadge(host).textContent, '4')
       const rows = unboundRows(host)
       assert.equal(rows.length, 1)
       assert.equal(rows[0].textContent, 'knob · normal · ring')
@@ -718,7 +719,7 @@ describe('unbound pane matrix', () => {
       assert.ok(skinTab)
       skinTab.click()
       assert.equal(headBadge.hidden, false)
-      assert.equal(headBadge.textContent, '4 unbound')
+      assert.equal(headBadge.textContent, '4')
       const mappingsPanel = host.querySelector('[data-mappings-tab]')
       const skinPanel = host.querySelector('[data-skin-tab]')
       assert.equal(mappingsPanel.hidden, true)
@@ -795,7 +796,7 @@ describe('unbound pane matrix', () => {
         multiSkinProject(),
         defaultSession({ activeSkinId: 'black' }),
       )
-      assert.equal(unboundBadge(host).textContent, '4 unbound')
+      assert.equal(unboundBadge(host).textContent, '4')
 
       const { project } = store.getState()
       history.execute(store, {
@@ -833,7 +834,7 @@ describe('unbound pane matrix', () => {
       })
 
       assert.equal(badge.hidden, false)
-      assert.equal(badge.textContent, '2 unbound')
+      assert.equal(badge.textContent, '2')
       assert.equal(empty.hidden, true)
       const rows = unboundRows(host)
       assert.equal(rows.length, 1)
