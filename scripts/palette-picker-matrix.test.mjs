@@ -892,6 +892,68 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('PhotoCraft cosmetics: RGB labels without colons; hue invert (yellow low)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+
+      const labels = [...host.querySelectorAll('.picker-rgb-label')].map(
+        (el) => el.textContent,
+      )
+      assert.deepEqual(labels, ['R', 'G', 'B'])
+
+      const hue = host.querySelector('[data-picker-hue]')
+      assert.ok(hue)
+      hue.getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 16,
+        bottom: 360,
+        width: 16,
+        height: 360,
+        toJSON() {
+          return {}
+        },
+      })
+
+      // Lower fifth of strip → yellow-ish ~hue 60–90 (invert: yellow in lower half).
+      hue.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 8,
+        clientY: 300,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      const lowHue = Number(hue.value)
+      assert.ok(lowHue >= 45 && lowHue <= 90, `expected yellow-band hue, got ${lowHue}`)
+      assert.match(paletteHex(store, 'yellow'), /^#[0-9A-F]{6}$/)
+
+      hue.dispatchEvent({
+        type: 'pointerup',
+        button: 0,
+        clientX: 8,
+        clientY: 300,
+        pointerId: 1,
+        preventDefault() {},
+      })
+    } finally {
+      restore()
+    }
+  })
+
   it('near-black hue lift: selected #000000 + hue change writes vivid hex', async () => {
     const restore = installMinimalDocument()
     try {

@@ -5,19 +5,20 @@
 }
 
 :root {
-  /* colors — DESIGN.md Photocraft chrome tokens (Lot B) */
+  /* colors — PhotoCraft-aligned chrome (Lot B + cosmetics) */
   --color-surface-app: #1a1b1e;
   --color-surface-chrome: #222326;
-  --color-surface-panel: #25262b;
-  --color-surface-raised: #32333a;
-  --color-surface-sunken: #141518;
-  --color-surface-gutter: #1a1b1e;
+  --color-surface-panel: #323232;
+  --color-surface-raised: #3a3a3a;
+  --color-surface-sunken: #242424;
+  --color-surface-gutter: #1e1e1e;
   --color-border-subtle: #3a3b42;
-  --color-border-strong: #52545c;
-  --color-tab-inactive: #2a2b30;
-  --color-tab-active: #3a3b42;
-  --color-text-primary: #e8e9ed;
-  --color-text-secondary: #a8aab4;
+  --color-border-strong: #4a4a4a;
+  --color-border-sidebar-rim: #1e1e1e;
+  --color-tab-inactive: #262626;
+  --color-tab-active: #323232;
+  --color-text-primary: #dedede;
+  --color-text-secondary: #808080;
   --color-text-muted: #6e707a;
   --color-text-on-accent: #0e0f12;
   --color-accent: #4c8dff;
@@ -47,10 +48,12 @@
   --space-sidebar-width: 260px;
   --space-sidebar-skin-zoom-budget: 260px;
   --space-picker-sv-size: 200px;
-  --space-picker-hue-width: 24px;
+  --space-picker-hue-width: 16px;
+  --space-picker-stage-gap: 8px;
   --space-splitter-hit: 6px;
   --space-pane-gutter: 4px;
   --space-pane-gap: 0px;
+  --space-sidebar-float: 4px;
   --space-control-gap: 8px;
   --space-section-gap: 12px;
 
@@ -62,39 +65,39 @@
   --radius-lg: 8px;
   --radius-full: 9999px;
 
-  /* typography scale */
-  --type-ui-font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  /* typography scale — PhotoCraft Inter + JetBrains Mono */
+  --type-ui-font-family: 'Inter', system-ui, sans-serif;
   --type-ui-font-size: 13px;
   --type-ui-font-weight: 400;
   --type-ui-line-height: 1.35;
 
-  --type-ui-strong-font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  --type-ui-strong-font-family: 'Inter', system-ui, sans-serif;
   --type-ui-strong-font-size: 13px;
   --type-ui-strong-font-weight: 600;
   --type-ui-strong-line-height: 1.35;
 
-  --type-label-font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  --type-label-font-family: 'Inter', system-ui, sans-serif;
   --type-label-font-size: 11px;
   --type-label-font-weight: 500;
   --type-label-line-height: 1.3;
   --type-label-letter-spacing: 0.04em;
 
-  --type-title-bar-font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  --type-title-bar-font-family: 'Inter', system-ui, sans-serif;
   --type-title-bar-font-size: 12px;
   --type-title-bar-font-weight: 500;
   --type-title-bar-line-height: 1.3;
 
-  --type-mono-font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  --type-mono-font-family: 'JetBrains Mono', ui-monospace, monospace;
   --type-mono-font-size: 12px;
   --type-mono-font-weight: 400;
   --type-mono-line-height: 1.35;
 
-  --type-mono-sm-font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  --type-mono-sm-font-family: 'JetBrains Mono', ui-monospace, monospace;
   --type-mono-sm-font-size: 11px;
   --type-mono-sm-font-weight: 400;
   --type-mono-sm-line-height: 1.3;
 
-  --type-context-font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  --type-context-font-family: 'Inter', system-ui, sans-serif;
   --type-context-font-size: 12px;
   --type-context-font-weight: 400;
   --type-context-line-height: 1.3;
@@ -123,13 +126,18 @@
   --comp-sidebar-tab-active-bg: var(--color-tab-active);
   --comp-sidebar-tab-inactive-text: var(--color-text-secondary);
   --comp-sidebar-tab-active-text: var(--color-text-primary);
+  --comp-sidebar-float-gap: var(--space-sidebar-float);
+  --comp-sidebar-panel-rim: var(--color-border-sidebar-rim);
 
   --comp-picker-pane-background: var(--color-surface-panel);
   --comp-picker-pane-padding: var(--space-3);
   --comp-picker-pane-sv-size: var(--space-picker-sv-size);
   --comp-picker-pane-hue-width: var(--space-picker-hue-width);
+  --comp-picker-pane-stage-gap: var(--space-picker-stage-gap);
   --comp-picker-pane-field-bg: var(--color-surface-sunken);
   --comp-picker-pane-hex-field-bg: var(--color-surface-sunken);
+  --comp-picker-pane-field-border: var(--color-border-strong);
+  --comp-picker-pane-sv-border: var(--color-border-sidebar-rim);
   --comp-picker-pane-hex-text: var(--color-text-primary);
   --comp-picker-pane-typography-hex: var(--type-mono-font-family);
   --comp-picker-pane-typography-hex-font-size: var(--type-mono-font-size);
@@ -638,7 +646,7 @@ body {
   animation-timing-function: var(--comp-pulse-highlight-easing);
 }
 
-/* Sidebar — Lot B two zones / FR-10 */
+/* Sidebar — Lot B two zones / PhotoCraft floating panels */
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -646,8 +654,11 @@ body {
   width: 100%;
   min-width: 0;
   min-height: 0;
-  background: var(--color-surface-panel);
+  gap: var(--comp-sidebar-float-gap);
+  padding: var(--comp-sidebar-float-gap);
+  background: var(--color-surface-gutter);
   border-left: 1px solid var(--color-border-subtle);
+  box-sizing: border-box;
 }
 
 .sidebar-zone {
@@ -657,6 +668,9 @@ body {
   flex-shrink: 0;
   overflow: hidden;
   background: var(--color-surface-panel);
+  border: 1px solid var(--comp-sidebar-panel-rim);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
 }
 
 .sidebar-zone-head {
@@ -678,9 +692,9 @@ body {
   display: flex;
   align-items: stretch;
   width: 100%;
-  gap: 1px;
-  background: var(--color-surface-gutter);
-  border-bottom: 1px solid var(--color-border-subtle);
+  gap: 0;
+  background: transparent;
+  border-bottom: none;
 }
 
 .sidebar-tab {
@@ -689,7 +703,7 @@ body {
   margin: 0;
   padding: 6px 8px;
   border: none;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-radius: 0;
   background: var(--comp-sidebar-tab-inactive-bg);
   color: var(--comp-sidebar-tab-inactive-text);
   font-family: var(--type-ui-font-family);
@@ -715,7 +729,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 0 var(--space-3) var(--space-3);
+  /* space-2 keeps Color stage (200 + hue + equal gaps) inside 260px with float padding. */
+  padding: 0 var(--space-2) var(--space-2);
 }
 
 .sidebar-tab-panel[hidden] {
@@ -818,7 +833,7 @@ body {
   padding-top: var(--space-2);
 }
 
-/* Color tab — Photoshop SV square + vertical hue + #/RGB (Lot B) */
+/* Color tab — PhotoCraft SV square + vertical hue + #/RGB */
 .picker-pane-body {
   display: flex;
   flex-direction: column;
@@ -832,8 +847,12 @@ body {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: var(--space-2);
+  gap: var(--comp-picker-pane-stage-gap);
+  padding-right: var(--comp-picker-pane-stage-gap);
+  box-sizing: border-box;
   flex-shrink: 0;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .picker-sv-square {
@@ -843,7 +862,7 @@ body {
   max-width: 100%;
   flex: 0 0 auto;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--comp-palette-swatch-border);
+  border: 1px solid var(--comp-picker-pane-sv-border);
   cursor: crosshair;
   touch-action: none;
   background: #000000;
@@ -873,30 +892,34 @@ body {
   flex-shrink: 0;
   cursor: ns-resize;
   touch-action: none;
+  /* PhotoCraft invert: yellow in the lower half (hue 0 at bottom). */
   background: linear-gradient(
     to bottom,
     #ff0000,
-    #ffff00,
-    #00ff00,
-    #00ffff,
-    #0000ff,
     #ff00ff,
+    #0000ff,
+    #00ffff,
+    #00ff00,
+    #ffff00,
     #ff0000
   );
   border-radius: var(--radius-sm);
-  border: 1px solid var(--comp-palette-swatch-border);
+  border: none;
 }
 
 .picker-hue-thumb {
   position: absolute;
-  left: -3px;
-  right: -3px;
-  height: 8px;
+  left: 100%;
+  margin-left: 2px;
   margin-top: -4px;
-  border-radius: 2px;
-  background: #ffffff;
-  border: 2px solid #111111;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 6px 4px 0;
+  border-color: transparent var(--color-text-primary) transparent transparent;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
   pointer-events: none;
 }
 
@@ -904,9 +927,13 @@ body {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: space-between;
   gap: 4px;
+  width: var(--comp-picker-pane-sv-size);
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .picker-hash-label {
@@ -917,14 +944,15 @@ body {
 }
 
 .picker-hex-field {
-  flex: 0 0 auto;
-  width: 4.6em;
-  min-width: 4.6em;
+  flex: 1 1 auto;
+  width: 4.2em;
+  min-width: 3.6em;
+  max-width: 5em;
   height: 26px;
   box-sizing: border-box;
   padding: 0 4px;
-  border: 1px solid var(--comp-palette-swatch-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--comp-picker-pane-field-border);
+  border-radius: var(--radius-default);
   background: var(--comp-picker-pane-hex-field-bg);
   color: var(--comp-picker-pane-hex-text);
   font-family: var(--comp-picker-pane-typography-hex);
@@ -938,7 +966,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   color: var(--color-text-secondary);
   font-size: 11px;
 }
@@ -948,12 +976,12 @@ body {
 }
 
 .picker-rgb-input {
-  width: 2.4em;
+  width: 2.2em;
   height: 26px;
   box-sizing: border-box;
   padding: 0 2px;
-  border: 1px solid var(--comp-palette-swatch-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--comp-picker-pane-field-border);
+  border-radius: var(--radius-default);
   background: var(--comp-picker-pane-field-bg);
   color: var(--comp-picker-pane-hex-text);
   font-family: var(--type-mono-font-family);
@@ -1349,10 +1377,34 @@ body {
 .sidebar-splitter {
   position: relative;
   flex-shrink: 0;
-  height: var(--comp-sidebar-splitter-gutter-thickness);
-  background: var(--comp-sidebar-splitter-track);
+  /* Visual gap comes from .sidebar flex gap (PhotoCraft float); keep a hit target. */
+  height: 0;
+  margin: 0;
+  background: transparent;
   cursor: row-resize;
   touch-action: none;
+}
+
+.sidebar-splitter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: transparent;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sidebar-splitter:hover::before,
+.sidebar-splitter.is-dragging::before {
+  background: var(--comp-sidebar-splitter-hover);
+}
+
+.sidebar-splitter.is-dragging::before {
+  background: var(--comp-sidebar-splitter-active);
 }
 
 .sidebar-splitter::after {
@@ -1363,15 +1415,6 @@ body {
   top: 50%;
   transform: translateY(-50%);
   height: var(--comp-sidebar-splitter-hit-height);
-}
-
-.sidebar-splitter:hover,
-.sidebar-splitter.is-dragging {
-  background: var(--comp-sidebar-splitter-hover);
-}
-
-.sidebar-splitter.is-dragging {
-  background: var(--comp-sidebar-splitter-active);
 }
 
 /* Typography role hooks for later chrome */

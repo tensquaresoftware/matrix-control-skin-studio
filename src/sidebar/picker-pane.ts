@@ -137,8 +137,8 @@ export function mountPickerPane(
   }
 
   const paintHueThumb = (): void => {
-    // Gradient is red→…→red top→bottom; hue 0 at top.
-    hueThumb.style.top = `${(hueValue / 360) * 100}%`
+    // PhotoCraft: yellow in the lower half — hue 0 at bottom, 360 at top.
+    hueThumb.style.top = `${(1 - hueValue / 360) * 100}%`
     hue.setAttribute('aria-valuenow', String(Math.round(hueValue)))
   }
 
@@ -247,7 +247,7 @@ export function mountPickerPane(
       return
     }
     const t = clamp01((clientY - rect.top) / rect.height)
-    applyHueFromValue(t * 360)
+    applyHueFromValue((1 - t) * 360)
   }
 
   hueStrip.addEventListener('pointerdown', (event: PointerEvent) => {
@@ -427,7 +427,7 @@ function createRgbField(
 
   const label = document.createElement('span')
   label.className = 'picker-rgb-label'
-  label.textContent = `${labelText}:`
+  label.textContent = labelText
 
   const input = document.createElement('input')
   input.type = 'text'

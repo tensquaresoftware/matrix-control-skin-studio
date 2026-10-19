@@ -16,7 +16,15 @@ const stylesIndex = readFileSync(stylesIndexPath, 'utf8')
 const COLOR_SAMPLES = {
   '--color-surface-app': '#1a1b1e',
   '--color-surface-chrome': '#222326',
-  '--color-text-primary': '#e8e9ed',
+  '--color-surface-panel': '#323232',
+  '--color-surface-gutter': '#1e1e1e',
+  '--color-surface-sunken': '#242424',
+  '--color-tab-inactive': '#262626',
+  '--color-tab-active': '#323232',
+  '--color-border-strong': '#4a4a4a',
+  '--color-border-sidebar-rim': '#1e1e1e',
+  '--color-text-primary': '#dedede',
+  '--color-text-secondary': '#808080',
   '--color-accent': '#4c8dff',
   '--color-destructive': '#e05555',
   '--color-focus-ring': '#7aa8ff',
@@ -27,6 +35,9 @@ const SPACE_SAMPLES = {
   '--space-top-bar-height': '40px',
   '--space-sidebar-width': '260px',
   '--space-picker-sv-size': '200px',
+  '--space-picker-hue-width': '16px',
+  '--space-picker-stage-gap': '8px',
+  '--space-sidebar-float': '4px',
   '--space-unit': '4px',
 }
 
@@ -47,6 +58,7 @@ const REQUIRED_COLOR_VARS = [
   '--color-tab-active',
   '--color-border-subtle',
   '--color-border-strong',
+  '--color-border-sidebar-rim',
   '--color-text-primary',
   '--color-text-secondary',
   '--color-text-muted',
@@ -78,6 +90,9 @@ const REQUIRED_SPACE_VARS = [
   '--space-top-bar-height',
   '--space-sidebar-width',
   '--space-picker-sv-size',
+  '--space-picker-hue-width',
+  '--space-picker-stage-gap',
+  '--space-sidebar-float',
   '--space-pane-gutter',
   '--space-splitter-hit',
   '--space-pane-gap',
@@ -125,12 +140,17 @@ const REQUIRED_COMP_VARS = [
   '--comp-sidebar-tab-active-bg',
   '--comp-sidebar-tab-inactive-text',
   '--comp-sidebar-tab-active-text',
+  '--comp-sidebar-float-gap',
+  '--comp-sidebar-panel-rim',
   '--comp-picker-pane-background',
   '--comp-picker-pane-padding',
   '--comp-picker-pane-sv-size',
   '--comp-picker-pane-hue-width',
+  '--comp-picker-pane-stage-gap',
   '--comp-picker-pane-field-bg',
   '--comp-picker-pane-hex-field-bg',
+  '--comp-picker-pane-field-border',
+  '--comp-picker-pane-sv-border',
   '--comp-picker-pane-hex-text',
   '--comp-picker-pane-typography-hex',
   '--comp-picker-pane-typography-hex-font-size',
@@ -275,17 +295,17 @@ describe('styles I/O matrix', () => {
     )
   })
 
-  it('typography: IBM Plex Sans/Mono wired via Fontsource + type-scale roles', () => {
-    assert.ok(deps['@fontsource/ibm-plex-sans'], 'missing @fontsource/ibm-plex-sans')
-    assert.ok(deps['@fontsource/ibm-plex-mono'], 'missing @fontsource/ibm-plex-mono')
-    assert.match(stylesIndex, /@fontsource\/ibm-plex-sans\/400\.css/)
-    assert.match(stylesIndex, /@fontsource\/ibm-plex-sans\/500\.css/)
-    assert.match(stylesIndex, /@fontsource\/ibm-plex-sans\/600\.css/)
-    assert.match(stylesIndex, /@fontsource\/ibm-plex-mono\/400\.css/)
+  it('typography: Inter / JetBrains Mono wired via Fontsource + type-scale roles', () => {
+    assert.ok(deps['@fontsource/inter'], 'missing @fontsource/inter')
+    assert.ok(deps['@fontsource/jetbrains-mono'], 'missing @fontsource/jetbrains-mono')
+    assert.match(stylesIndex, /@fontsource\/inter\/400\.css/)
+    assert.match(stylesIndex, /@fontsource\/inter\/500\.css/)
+    assert.match(stylesIndex, /@fontsource\/inter\/600\.css/)
+    assert.match(stylesIndex, /@fontsource\/jetbrains-mono\/400\.css/)
     assert.match(stylesIndex, /base\.css/)
 
-    assert.match(baseCss, /IBM Plex Sans/)
-    assert.match(baseCss, /IBM Plex Mono/)
+    assert.match(baseCss, /Inter/)
+    assert.match(baseCss, /JetBrains Mono/)
     assert.match(baseCss, /body\s*\{[^}]*background:\s*var\(--color-surface-app\)/s)
     assert.match(baseCss, /body\s*\{[^}]*color:\s*var\(--color-text-primary\)/s)
     assert.match(baseCss, /body\s*\{[^}]*font-family:\s*var\(--type-ui-font-family\)/s)

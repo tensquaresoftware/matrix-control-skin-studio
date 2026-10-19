@@ -190,3 +190,12 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
   summary: Color SV/hue `role=slider` focusable without arrow-key adjustment.
   evidence: Lot B NFR-8 scoped to tabs + focus ring; full picker keyboard is a later a11y pass.
+
+## Deferred from: oneshot review of spec-sidebar-photocraft-cosmetics.md (2026-10-19)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-sidebar-photocraft-cosmetics.md`
+  summary: DESIGN.md / UX-DR2 still mandate IBM Plex while runtime now loads Inter + JetBrains Mono (PhotoCraft).
+  evidence: Cosmetics pass deliberately skipped DESIGN rewrite; planning SSOT should catch up.
+- source_spec: `_bmad-output/implementation-artifacts/spec-sidebar-photocraft-cosmetics.md`
+  summary: Prior Lot B defer “DESIGN 16px vs runtime 24px” is stale — runtime hue width is now 16px.
+  evidence: Cosmetics aligned to DESIGN width; close or rewrite the Lot B defer when grooming deferred-work.
