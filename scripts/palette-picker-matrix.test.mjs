@@ -500,22 +500,23 @@ describe('palette picker I/O matrix', () => {
       const rField = host.querySelector('[data-picker-r]')
       assert.ok(hue && hexField && sv && rField)
 
+      // Hue/SV may preview locally when idle — must never write the Palette.
       hue.value = '120'
       hue.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
-      assert.equal(hue.value, '0')
-      assert.equal(hexField.value, '000000')
+      assert.equal(hue.value, '120')
 
       hexField.value = 'ABCDEF'
       hexField.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
-      assert.equal(hue.value, '0')
+      // Typed hex without selection restores idle wells (no write).
       assert.equal(hexField.value, '000000')
+      // Idle black is achromatic — keep last preview hue (Photocraft).
+      assert.equal(hue.value, '120')
 
       rField.value = '10'
       rField.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
-      assert.equal(rField.value, '0')
 
       sv.dispatchEvent({
         type: 'pointerdown',
@@ -567,6 +568,43 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('invalid RGB: reject write and restore last valid on blur', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+      const hexField = host.querySelector('[data-picker-hex]')
+      const rField = host.querySelector('[data-picker-r]')
+      assert.ok(hexField && rField)
+      assert.equal(rField.value, '255')
+
+      for (const bad of ['256', '', '12.5', 'abc', '-1']) {
+        rField.focus()
+        rField.value = bad
+        rField.dispatchEvent({ type: 'input' })
+        assert.equal(
+          paletteHex(store, 'yellow'),
+          '#FFCC00',
+          `store must stay unchanged for RGB ${JSON.stringify(bad)}`,
+        )
+        rField.blur()
+        assert.equal(rField.value, '255')
+        assert.equal(hexField.value, 'FFCC00')
+      }
+    } finally {
+      restore()
+    }
+  })
+
   it('SV square pointer: selected entry commits (headless centre fallback)', async () => {
     const restore = installMinimalDocument()
     try {
@@ -601,6 +639,79 @@ describe('palette picker I/O matrix', () => {
       const after = paletteHex(store, 'yellow')
       assert.notEqual(after, before)
       assert.match(after, /^#[0-9A-F]{6}$/)
+    } finally {
+      restore()
+    }
+  })
+
+  it('SV plunge to black/white keeps hue thumb (Photocraft)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+      const hue = host.querySelector('[data-picker-hue]')
+      const sv = host.querySelector('[data-picker-sv]')
+      assert.ok(hue && sv)
+
+      hue.value = '120'
+      hue.dispatchEvent({ type: 'input' })
+      assert.equal(hue.value, '120')
+
+      sv.getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        toJSON() {
+          return {}
+        },
+      })
+
+      // Green hue, then plunge toward black (bottom-left) then white (top-left).
+      sv.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 0,
+        clientY: 200,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      assert.equal(hue.value, '120', 'hue stable at black corner')
+      assert.equal(paletteHex(store, 'yellow'), '#000000')
+
+      sv.dispatchEvent({
+        type: 'pointermove',
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      assert.equal(hue.value, '120', 'hue stable at white corner')
+      assert.equal(paletteHex(store, 'yellow'), '#FFFFFF')
+
+      sv.dispatchEvent({
+        type: 'pointerup',
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      assert.equal(hue.value, '120', 'hue stable after SV drag end')
     } finally {
       restore()
     }
@@ -781,6 +892,102 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
+  it('near-black hue lift: selected #000000 + hue change writes vivid hex', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+      const hexField = host.querySelector('[data-picker-hex]')
+      const hue = host.querySelector('[data-picker-hue]')
+      assert.ok(hexField && hue)
+
+      hexField.value = '000000'
+      hexField.dispatchEvent({ type: 'input' })
+      assert.equal(paletteHex(store, 'yellow'), '#000000')
+
+      hue.value = '120'
+      hue.dispatchEvent({ type: 'input' })
+      // Lift S/V to 100 at hue 120 → pure green (smoke “alive” strip).
+      assert.equal(paletteHex(store, 'yellow'), '#00FF00')
+      assert.notEqual(paletteHex(store, 'yellow'), '#000000')
+    } finally {
+      restore()
+    }
+  })
+
+  it('hue strip pointerdown commits selected entry (layout drag path)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+      const hexField = host.querySelector('[data-picker-hex]')
+      const hue = host.querySelector('[data-picker-hue]')
+      assert.ok(hexField && hue)
+
+      hexField.value = '4C7F99'
+      hexField.dispatchEvent({ type: 'input' })
+      const before = paletteHex(store, 'yellow')
+      assert.equal(before, '#4C7F99')
+
+      hue.getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 24,
+        bottom: 360,
+        width: 24,
+        height: 360,
+        toJSON() {
+          return {}
+        },
+      })
+
+      // Mid-strip → hue 180; must use pointer path (not only .value + input).
+      hue.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 12,
+        clientY: 180,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      const afterDown = paletteHex(store, 'yellow')
+      assert.notEqual(afterDown, before)
+      assert.match(afterDown, /^#[0-9A-F]{6}$/)
+
+      hue.dispatchEvent({
+        type: 'pointerup',
+        button: 0,
+        clientX: 12,
+        clientY: 180,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      assert.equal(paletteHex(store, 'yellow'), afterDown)
+    } finally {
+      restore()
+    }
+  })
+
   it('hex blur flushes coalesce so a later edit is a separate undo step', async () => {
     const restore = installMinimalDocument()
     try {
@@ -842,13 +1049,42 @@ describe('palette picker I/O matrix', () => {
       const hue = host.querySelector('[data-picker-hue]')
       assert.ok(hexField && hue)
 
+      hue.getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 24,
+        bottom: 360,
+        width: 24,
+        height: 360,
+        toJSON() {
+          return {}
+        },
+      })
+
       hexField.value = '#112233'
       hexField.dispatchEvent({ type: 'input' })
       hexField.value = '#445566'
       hexField.dispatchEvent({ type: 'input' })
-      hue.value = '90'
-      hue.dispatchEvent({ type: 'input' })
-      hue.dispatchEvent({ type: 'pointerup' })
+
+      // Real drag lifecycle so pointerup reaches endHueDrag → flushCoalesce.
+      hue.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 12,
+        clientY: 90,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      hue.dispatchEvent({
+        type: 'pointerup',
+        button: 0,
+        clientX: 12,
+        clientY: 90,
+        pointerId: 1,
+        preventDefault() {},
+      })
 
       assert.equal(history.canUndo(store), true)
       const afterBurst = paletteHex(store, 'yellow')
@@ -856,8 +1092,13 @@ describe('palette picker I/O matrix', () => {
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       history.redo(store)
       assert.equal(paletteHex(store, 'yellow'), afterBurst)
-      assert.equal(history.canUndo(store), true)
-      // One coalesced step only — second undo does not change hex further.
+
+      // Flush sealed the burst — a follow-up edit is a separate undo step.
+      hexField.value = '#AABBCC'
+      hexField.dispatchEvent({ type: 'input' })
+      assert.equal(paletteHex(store, 'yellow'), '#AABBCC')
+      history.undo(store)
+      assert.equal(paletteHex(store, 'yellow'), afterBurst)
       history.undo(store)
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(history.canUndo(store), false)

@@ -99,6 +99,34 @@ context:
 - Given `npm test` and `npm run build`, when they finish, then both exit 0.
 - Given the Lot B diff, when reviewed, then Lot A seed/inventory/click behaviour and Lot C mock geometry are not redesigned (chrome wiring only).
 
+### Review Findings
+
+- [x] [Review][Decision] Hue drag lift on near-black / near-gray — **rejected (non-sujet)** — Guillaume: Photocraft parity = SV toward black/white must not move hue thumb (already Lot B HSV model); hue-on-black lift not treated as a product decision for this review.
+- [x] [Review][Patch] SV plunge to black/white must not thrash hue thumb (Photocraft) — preserve achromatic hue + skip store sync mid-drag [`src/sidebar/picker-pane.ts`] + matrix case
+- [x] [Review][Patch] SV drag filters pointerId like hue [`src/sidebar/picker-pane.ts`]
+- [x] [Review][Patch] Matrix: near-black hue lift behaviour pinned [`scripts/palette-picker-matrix.test.mjs`]
+- [x] [Review][Patch] Matrix: hue strip pointerdown path (not only `.value`+`input`) [`scripts/palette-picker-matrix.test.mjs`]
+- [x] [Review][Patch] Matrix: hue coalesce flush via real pointerdown→pointerup lifecycle [`scripts/palette-picker-matrix.test.mjs`]
+- [x] [Review][Patch] Matrix: invalid RGB + blur restore (mirror invalid hex) [`scripts/palette-picker-matrix.test.mjs`]
+- [x] [Review][Defer] DESIGN hue strip 16px vs runtime 24px — deferred: planning/DESIGN token drift after smoke; product uses 24px hit target
+- [x] [Review][Defer] EXPERIENCE State Patterns still cite Sidebar Object sync — deferred: Correct Course planning leftover; runtime Object/State already in top bar
+- [x] [Review][Defer] UX-DR2 / DESIGN typography `context` orphaned after strip removal — deferred: planning hygiene, not live chrome defect
+- [x] [Review][Defer] PRD FR-18 soft “may live in top bar” vs Lot B lock — deferred: planning wording; product locked in top bar
+- [x] [Review][Defer] ASCII chrome sim cited without Lot B stale banner — deferred: planning reference hygiene
+- [x] [Review][Defer] Color SV/hue focusable without arrow-key adjust — deferred: Lot B NFR-8 scoped to tabs; picker keyboard beyond this lot
+
+#### Rejected
+
+- `false` — persist-matrix missing two-key prefs: chrome-shell matrix already covers Lot B keys + legacy → defaults
+- `false` — redundant `role="tabpanel"` on Skin host: no user-facing ARIA failure
+- `false` — skin `data-context-value` lost displayName: select options still set `textContent` to `displayName`
+- `low` — Skin+Zoom ≈260 budget token unused as wrapper: soft ≈ budget; Zoom 72 / Skin 88–112 already adapted and matrix-locked
+- `low` — `.picker-fields-row` overflow may clip RGB: AC pins hex visibility; everyday clip not demonstrated at 260
+- `low` — PrefsDocument `sidebarPaneHeights` not narrowed in TS: comment-only contract; runtime validates Lot B keys
+- `low` — empty Implementation Notes / Spec Change Log / review_loop_iteration: rejected (would only edit the spec under review)
+- `low` — SV/hue syncFromStore during drag / Color tab hide mid-drag / zone sum vs tiny host: rare paths; not everyday calibration
+- `low` — deleted Skin/Zoom undo-exclusion comments: behaviour unchanged; docs-only
+
 ## Implementation Notes
 
 ## Spec Change Log

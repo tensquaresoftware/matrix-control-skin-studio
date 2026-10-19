@@ -169,3 +169,24 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
   summary: Optional superseded footnotes on historical Story 2.2–2.4 / 3.1 ACs (320 / four panes / strip).
   evidence: Proposal optional; Epic 2 narrative already points agents to Lot B spines.
+
+## Deferred from: code review of spec-lot-b-photocraft-chrome.md (2026-10-19)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: DESIGN.md pins Color hue strip at 16px while runtime CSS uses 24px (smoke hit target).
+  evidence: Planning/DESIGN token drift; product intentionally wider for usability; align DESIGN later.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: EXPERIENCE State Patterns still cite Sidebar Object sync after top-bar move.
+  evidence: Already deferred in build review; runtime chrome correct.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: UX-DR2 / DESIGN typography `context` orphaned after context-strip removal.
+  evidence: Already deferred in build review; planning hygiene.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: PRD FR-18 soft “may live in top bar” vs Lot B lock.
+  evidence: Already deferred in build review; product locked in top bar.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: ASCII chrome sim cited without Lot B stale banner.
+  evidence: Already deferred in build review; planning reference hygiene.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: Color SV/hue `role=slider` focusable without arrow-key adjustment.
+  evidence: Lot B NFR-8 scoped to tabs + focus ring; full picker keyboard is a later a11y pass.

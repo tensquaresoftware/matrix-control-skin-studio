@@ -12,6 +12,8 @@ import {
 import type { PaletteSelectionController } from './palette-selection'
 
 const IDLE_HEX = '#000000'
+/** Below this saturation, RGB has no meaningful hue (black / white / grey). */
+const ACHROMATIC_SAT_EPS = 1
 
 /**
  * Color tab: SV square + vertical hue + `#` / RGB row.
@@ -42,17 +44,40 @@ export function mountPickerPane(
   crosshair.setAttribute('aria-hidden', 'true')
   square.append(crosshair)
 
-  const hue = document.createElement('input')
-  hue.type = 'range'
-  hue.min = '0'
-  hue.max = '360'
-  hue.step = '1'
+  // Pointer-driven strip (not a native vertical <input type="range">) — range
+  // + writing-mode / appearance:none is unreliable in Chromium/WebKit for drag.
+  const hue = document.createElement('div')
   hue.className = 'picker-hue-strip'
   hue.setAttribute('data-picker-hue', '')
+  hue.setAttribute('role', 'slider')
   hue.setAttribute('aria-label', 'Hue')
-  hue.setAttribute('orient', 'vertical')
+  hue.setAttribute('aria-valuemin', '0')
+  hue.setAttribute('aria-valuemax', '360')
+  hue.tabIndex = 0
 
-  stage.append(square, hue)
+  const hueThumb = document.createElement('div')
+  hueThumb.className = 'picker-hue-thumb'
+  hueThumb.setAttribute('data-picker-hue-thumb', '')
+  hueThumb.setAttribute('aria-hidden', 'true')
+  hue.append(hueThumb)
+
+  let hueValue = 0
+  /** Matrix hooks set `.value` then dispatch `input` (range-input shape). */
+  type HueStripEl = HTMLDivElement & { value: string }
+  const hueStrip = hue as HueStripEl
+  Object.defineProperty(hueStrip, 'value', {
+    configurable: true,
+    get(): string {
+      return String(Math.round(hueValue))
+    },
+    set(next: string | number) {
+      const n = Number(next)
+      hueValue = Number.isFinite(n) ? Math.min(360, Math.max(0, n)) : 0
+      paintHueThumb()
+    },
+  })
+
+  stage.append(square, hueStrip)
 
   const fields = document.createElement('div')
   fields.className = 'picker-fields-row'
@@ -92,6 +117,10 @@ export function mountPickerPane(
   let rgbFocused: 'r' | 'g' | 'b' | null = null
   let syncing = false
   let hsv = { h: 0, s: 0, v: 0 }
+  let hueDragging = false
+  let huePointerId: number | null = null
+  let svDragging = false
+  let svPointerId: number | null = null
 
   const selectedHex = (): string | null => {
     const id = selection.getSelectedId()
@@ -107,14 +136,29 @@ export function mountPickerPane(
     crosshair.style.top = `${100 - hsv.v}%`
   }
 
+  const paintHueThumb = (): void => {
+    // Gradient is red→…→red top→bottom; hue 0 at top.
+    hueThumb.style.top = `${(hueValue / 360) * 100}%`
+    hue.setAttribute('aria-valuenow', String(Math.round(hueValue)))
+  }
+
   const syncFromStore = (forceFields = false): void => {
+    // Live SV/hue drag owns hsv — a store round-trip mid-gesture would fight
+    // the operator and (for near-black/white) scramble hue from RGB.
+    if (svDragging || hueDragging) return
+
     const hex = selectedHex() ?? IDLE_HEX
-    hsv = hexToHsv(hex)
+    const next = hexToHsv(hex)
+    // Photocraft: achromatic samples carry no hue — keep the last operator hue
+    // so plunging the SV square toward black/white does not thrash the strip.
+    const h = next.s < ACHROMATIC_SAT_EPS ? hsv.h : next.h
+    hsv = { h, s: next.s, v: next.v }
     const rgb = hexToRgb(hex)
     syncing = true
     try {
-      hue.value = String(Math.round(hsv.h))
+      hueValue = hsv.h
       paintSquare()
+      paintHueThumb()
       if (!hexFocused || forceFields) {
         hexField.value = hexDigits(hex)
       }
@@ -152,31 +196,89 @@ export function mountPickerPane(
   }
 
   const commitFromHsv = (): void => {
-    if (selection.getSelectedId() == null) {
-      syncFromStore(true)
-      return
-    }
+    // AD-16: no project write without a Palette selection — but keep the
+    // local SV/hue preview (do not snap the wells back to idle black mid-drag).
+    if (selection.getSelectedId() == null) return
     commitHex(hsvToHex(hsv.h, hsv.s, hsv.v))
   }
 
-  const onHueInput = (): void => {
+  const paintFieldsFromHsv = (): void => {
+    const hex = hsvToHex(hsv.h, hsv.s, hsv.v)
+    const rgb = hexToRgb(hex)
+    syncing = true
+    try {
+      if (!hexFocused) hexField.value = hexDigits(hex)
+      if (rgbFocused !== 'r') rField.input.value = String(rgb.r)
+      if (rgbFocused !== 'g') gField.input.value = String(rgb.g)
+      if (rgbFocused !== 'b') bField.input.value = String(rgb.b)
+    } finally {
+      syncing = false
+    }
+  }
+
+  const applyHueFromValue = (h: number): void => {
     if (syncing) return
-    const h = Number(hue.value)
     if (!Number.isFinite(h)) return
-    hsv = { ...hsv, h }
+    hueValue = Math.min(360, Math.max(0, h))
+    paintHueThumb()
+    // Black (S≈0,V≈0) makes hue changes invisible — lift to a vivid sample
+    // so the strip feels alive (Photoshop-like), then commit if selected.
+    const needsLift = hsv.s < 1 || hsv.v < 1
+    hsv = {
+      h: hueValue,
+      s: needsLift ? 100 : hsv.s,
+      v: needsLift ? 100 : hsv.v,
+    }
     paintSquare()
+    paintFieldsFromHsv()
     commitFromHsv()
   }
 
-  const onPointerUpFlush = (): void => {
+  /** Matrix / programmatic: set `.value` then dispatch `input`. */
+  hueStrip.addEventListener('input', () => {
+    applyHueFromValue(Number(hueStrip.value))
+  })
+
+  const applyHueFromClient = (clientY: number): void => {
+    const rect = hueStrip.getBoundingClientRect?.()
+    if (rect == null || rect.height <= 0) {
+      // Headless / no layout — mid-strip (same spirit as SV centre fallback).
+      applyHueFromValue(180)
+      return
+    }
+    const t = clamp01((clientY - rect.top) / rect.height)
+    applyHueFromValue(t * 360)
+  }
+
+  hueStrip.addEventListener('pointerdown', (event: PointerEvent) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    hueDragging = true
+    huePointerId = event.pointerId
+    hueStrip.setPointerCapture?.(event.pointerId)
+    applyHueFromClient(event.clientY)
+  })
+
+  hueStrip.addEventListener('pointermove', (event: PointerEvent) => {
+    if (!hueDragging || event.pointerId !== huePointerId) return
+    applyHueFromClient(event.clientY)
+  })
+
+  const endHueDrag = (event: PointerEvent): void => {
+    if (!hueDragging || event.pointerId !== huePointerId) return
+    hueDragging = false
+    huePointerId = null
+    try {
+      hueStrip.releasePointerCapture?.(event.pointerId)
+    } catch {
+      // capture may already be gone
+    }
     flushCoalesce(store)
   }
 
-  hue.addEventListener('input', onHueInput)
-  hue.addEventListener('pointerup', onPointerUpFlush)
-  hue.addEventListener('mouseup', onPointerUpFlush)
-  hue.addEventListener('pointercancel', onPointerUpFlush)
-  hue.addEventListener('lostpointercapture', onPointerUpFlush)
+  hueStrip.addEventListener('pointerup', endHueDrag)
+  hueStrip.addEventListener('pointercancel', endHueDrag)
+  hueStrip.addEventListener('lostpointercapture', endHueDrag)
 
   const applySvFromClient = (clientX: number, clientY: number): void => {
     const rect = square.getBoundingClientRect?.()
@@ -184,6 +286,7 @@ export function mountPickerPane(
       // Test / headless hosts without layout — treat as centre.
       hsv = { ...hsv, s: 50, v: 50 }
       paintSquare()
+      paintFieldsFromHsv()
       commitFromHsv()
       return
     }
@@ -191,27 +294,28 @@ export function mountPickerPane(
     const v = (1 - clamp01((clientY - rect.top) / rect.height)) * 100
     hsv = { ...hsv, s, v }
     paintSquare()
+    paintFieldsFromHsv()
     commitFromHsv()
   }
-
-  let svDragging = false
 
   square.addEventListener('pointerdown', (event: PointerEvent) => {
     if (event.button !== 0) return
     event.preventDefault()
     svDragging = true
+    svPointerId = event.pointerId
     square.setPointerCapture?.(event.pointerId)
     applySvFromClient(event.clientX, event.clientY)
   })
 
   square.addEventListener('pointermove', (event: PointerEvent) => {
-    if (!svDragging) return
+    if (!svDragging || event.pointerId !== svPointerId) return
     applySvFromClient(event.clientX, event.clientY)
   })
 
   const endSvDrag = (event: PointerEvent): void => {
-    if (!svDragging) return
+    if (!svDragging || event.pointerId !== svPointerId) return
     svDragging = false
+    svPointerId = null
     try {
       square.releasePointerCapture?.(event.pointerId)
     } catch {
