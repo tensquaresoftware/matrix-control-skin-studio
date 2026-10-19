@@ -5,13 +5,11 @@ import {
   resolvePaletteHex,
   upsertMapping,
 } from '../model/palette-helpers'
-import { resolveStateAfterTypeChange } from '../model/session-helpers'
 import type { ProjectStore } from '../model/store'
 import type {
   InventoryObjectType,
   Mapping,
   ProjectDocument,
-  SessionUiState,
   Skin,
 } from '../model/types'
 import type { CanvasSelectionSync } from './canvas-selection-sync'
@@ -22,8 +20,8 @@ export type MountMappingsPaneOptions = {
 }
 
 /**
- * Mappings tab: Object type + State always visible; Property → Palette-id rows
- * for the active pair (FR-18). Session writes keep the chrome context strip in sync.
+ * Mappings tab: Property → Palette-id rows for the active Object/State (FR-18).
+ * Object/State live in the top bar (Lot B) — not duplicated here.
  */
 export function mountMappingsPane(
   host: HTMLElement,
@@ -33,51 +31,23 @@ export function mountMappingsPane(
 ): void {
   host.classList.add('mappings-pane')
   host.replaceChildren()
-
-  const objectRow = document.createElement('div')
-  objectRow.className = 'mappings-control-row'
-
-  const objectLabel = document.createElement('label')
-  objectLabel.className = 'mappings-field-label type-label'
-  objectLabel.setAttribute('for', 'mappings-object-type')
-  objectLabel.textContent = 'Object type:'
-
-  const objectSelect = document.createElement('select')
-  objectSelect.id = 'mappings-object-type'
-  objectSelect.className = 'mappings-select'
-  objectSelect.setAttribute('data-mappings-object-type', '')
-
-  objectRow.append(objectLabel, objectSelect)
-
-  const stateRow = document.createElement('div')
-  stateRow.className = 'mappings-control-row'
-
-  const stateLabel = document.createElement('label')
-  stateLabel.className = 'mappings-field-label type-label'
-  stateLabel.setAttribute('for', 'mappings-state')
-  stateLabel.textContent = 'State:'
-
-  const stateSelect = document.createElement('select')
-  stateSelect.id = 'mappings-state'
-  stateSelect.className = 'mappings-select'
-  stateSelect.setAttribute('data-mappings-state', '')
-
-  stateRow.append(stateLabel, stateSelect)
+  host.setAttribute('data-mappings-tab', '')
 
   const propertyList = document.createElement('div')
   propertyList.className = 'mappings-property-list'
   propertyList.setAttribute('data-mappings-property-list', '')
 
-  host.append(objectRow, stateRow, propertyList)
+  host.append(propertyList)
 
-  let syncingSelects = false
   /** Last seen active Skin id — focus is Skin-scoped and cleared on switch. */
   let trackedActiveSkinId: string | null | undefined = undefined
   /**
    * Canvas-driven muted highlight (HIGHLIGHT_SCROLL_ONLY) — never MappingFocus.
-   * Cleared on Sidebar Object/State change or explicit Property-row focus.
+   * Cleared on Object/State change (via store) or explicit Property-row focus.
    */
   let canvasHighlightActive = false
+  let lastObjectTypeId: string | null | undefined = undefined
+  let lastStateId: string | null | undefined = undefined
 
   const resolveActiveSkin = (): Skin | null => {
     const { project, session } = store.getState()
@@ -112,26 +82,6 @@ export function mountMappingsPane(
     }
   }
 
-  const fillSelect = (
-    select: HTMLSelectElement,
-    options: readonly { value: string; label: string }[],
-    selected: string | null,
-  ): void => {
-    select.replaceChildren()
-    const empty = document.createElement('option')
-    empty.value = ''
-    empty.textContent = '—'
-    select.append(empty)
-    for (const option of options) {
-      const el = document.createElement('option')
-      el.value = option.value
-      el.textContent = option.label
-      select.append(el)
-    }
-    select.value = selected ?? ''
-    select.disabled = options.length === 0
-  }
-
   const renderPropertyRows = (): void => {
     const { project, session } = store.getState()
     const skin = resolveActiveSkin()
@@ -164,7 +114,6 @@ export function mountMappingsPane(
     propertyList.replaceChildren()
 
     if (objectType == null || stateId == null || properties.length === 0) {
-      // Avoid sticky HIGHLIGHT_SCROLL_ONLY when there is nothing to show.
       canvasHighlightActive = false
       return
     }
@@ -210,7 +159,7 @@ export function mountMappingsPane(
   }
 
   const render = (): void => {
-    const { project, session } = store.getState()
+    const { session } = store.getState()
     const activeSkinId = session.activeSkinId
     if (
       trackedActiveSkinId !== undefined &&
@@ -221,74 +170,19 @@ export function mountMappingsPane(
     }
     trackedActiveSkinId = activeSkinId
 
-    const objectTypes = project.inventory.objectTypes
-    const selectedType = resolveObjectType(
-      objectTypes,
-      session.selectedObjectTypeId,
-    )
-
-    syncingSelects = true
-    try {
-      fillSelect(
-        objectSelect,
-        objectTypes.map((type) => ({ value: type.id, label: type.id })),
-        selectedType?.id ?? null,
-      )
-
-      const states = selectedType?.states ?? []
-      const stateSelected =
-        session.selectedStateId != null &&
-        states.includes(session.selectedStateId)
-          ? session.selectedStateId
-          : null
-      fillSelect(
-        stateSelect,
-        states.map((stateId) => ({ value: stateId, label: stateId })),
-        stateSelected,
-      )
-    } finally {
-      syncingSelects = false
+    if (
+      lastObjectTypeId !== undefined &&
+      (lastObjectTypeId !== session.selectedObjectTypeId ||
+        lastStateId !== session.selectedStateId)
+    ) {
+      canvasHighlightActive = false
+      mappingFocus.setFocused(null)
     }
+    lastObjectTypeId = session.selectedObjectTypeId
+    lastStateId = session.selectedStateId
 
     renderPropertyRows()
   }
-
-  objectSelect.addEventListener('change', () => {
-    if (syncingSelects) return
-    const { project, session } = store.getState()
-    const nextTypeId =
-      objectSelect.value === '' ? null : objectSelect.value
-    const nextType = resolveObjectType(
-      project.inventory.objectTypes,
-      nextTypeId,
-    )
-    const nextStateId = resolveStateAfterTypeChange(
-      nextType,
-      session.selectedStateId,
-    )
-    const nextSession: SessionUiState = {
-      ...session,
-      selectedObjectTypeId: nextTypeId,
-      selectedStateId: nextStateId,
-    }
-    canvasHighlightActive = false
-    mappingFocus.setFocused(null)
-    execute(store, { session: nextSession })
-  })
-
-  stateSelect.addEventListener('change', () => {
-    if (syncingSelects) return
-    const { session } = store.getState()
-    const nextStateId =
-      stateSelect.value === '' ? null : stateSelect.value
-    const nextSession: SessionUiState = {
-      ...session,
-      selectedStateId: nextStateId,
-    }
-    canvasHighlightActive = false
-    mappingFocus.setFocused(null)
-    execute(store, { session: nextSession })
-  })
 
   options.selectionSync?.setHighlightScroll(() => {
     canvasHighlightActive = true
@@ -311,7 +205,6 @@ function applyMappingUpsert(
   if (skinIndex < 0) return false
   const skin = project.skins[skinIndex]
   const mappings = upsertMapping(skin.mappings, next)
-  // Rejected (e.g. hex-shaped id) → no write when reference unchanged.
   if (mappings === skin.mappings) return false
   const nextProject: ProjectDocument = {
     ...project,
@@ -420,7 +313,6 @@ function buildPropertyRow(options: BuildRowOptions): HTMLElement {
 
   row.append(propertyLabel, value)
 
-  // Only bound rows — never invent a null Mapping via Clear on a missing entry.
   if (mapping != null && mapping.paletteEntryId != null) {
     const clearBtn = document.createElement('button')
     clearBtn.type = 'button'

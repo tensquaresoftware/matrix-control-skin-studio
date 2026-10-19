@@ -142,3 +142,30 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-lot-a-seed-inventory-clickable-mock-neutral-palette.md`
   summary: Update epic-1/epic-4 context docs that still teach KEEP_EMPTY seed inventory.
   evidence: Continuity docs contradict Lot A seed-placeholder fixture; agent-context hygiene, not a runtime product defect.
+
+## Deferred from: Correct Course Lot B Photocraft chrome (2026-10-19)
+
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-19.md`
+  summary: Regenerate UX HTML mockups (`editor-main.html`, related) to match Lot B chrome — optional / Soon; DESIGN+EXPERIENCE spines already updated.
+  evidence: Mockups marked stale vs Lot B; not blocking `lot-b-photocraft-chrome` Build.
+- source_spec: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-19.md`
+  summary: Lot C — mock fidelity vs real Matrix-Control (out of Lot B absolute).
+  evidence: Explicit course boundary; do not expand into Lot B Build.
+
+## Deferred from: build review of spec-lot-b-photocraft-chrome.md (2026-10-19)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: EXPERIENCE State Patterns still describe Sidebar Object/State sync after Lot B top-bar move.
+  evidence: Runtime chrome is correct; leftover Correct Course / EXPERIENCE prose vs Interaction Primitives.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: UX-DR2 still lists typography role `context` after context-strip removal.
+  evidence: Orphaned scale entry in epics contract; no live consumer after Lot B.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: Mark `.working/ascii-chrome-simulations.md` stale vs Lot B (same class as HTML mockups).
+  evidence: Agents may treat ASCII as current chrome SSOT without a stale banner.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: Tighten PRD FR-18 / FR-5 wording so Object/State top-bar placement is locked, not soft “may”.
+  evidence: Planning softness vs Lot B locked chrome; product already implements top bar.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-b-photocraft-chrome.md`
+  summary: Optional superseded footnotes on historical Story 2.2–2.4 / 3.1 ACs (320 / four panes / strip).
+  evidence: Proposal optional; Epic 2 narrative already points agents to Lot B spines.

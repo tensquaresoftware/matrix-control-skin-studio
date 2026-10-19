@@ -707,14 +707,18 @@ describe('unbound pane matrix', () => {
       const headBadge = unboundBadge(host)
       assert.ok(headBadge)
       assert.ok(
-        headBadge.parent?.classList?.contains('sidebar-pane-head'),
-        'badge must live in the Unbound pane head',
+        headBadge.parent?.getAttribute?.('data-skin-seg-tab') === 'unbound' ||
+          headBadge.parent?.getAttribute?.('data-sidebar-tab') === 'unbound',
+        'badge must live on the Unbound tab (Lot B)',
       )
 
       // Start on Skin segment so jump must switch back to Mappings.
+      // Badge must remain visible on the Unbound tab while another tab is active.
       const skinTab = host.querySelector('[data-skin-seg-tab="skin"]')
       assert.ok(skinTab)
       skinTab.click()
+      assert.equal(headBadge.hidden, false)
+      assert.equal(headBadge.textContent, '4 unbound')
       const mappingsPanel = host.querySelector('[data-mappings-tab]')
       const skinPanel = host.querySelector('[data-skin-tab]')
       assert.equal(mappingsPanel.hidden, true)

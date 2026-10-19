@@ -21,29 +21,33 @@ export const UNBOUND_NO_SKINS_COPY = 'No skins — nothing to bind'
 export type MountUnboundPaneOptions = {
   mappingFocus: MappingFocusController
   selectionSync?: CanvasSelectionSync
-  /** Pane head — badge mounts here so it stays visible while the body scrolls. */
-  head: HTMLElement
+  /**
+   * Lot B: Unbound tab host — badge mounts here so it stays visible when the
+   * Unbound tab is inactive.
+   */
+  badgeHost: HTMLElement
 }
 
 /**
- * Pane 4: project-total `{n} unbound` badge + active-Skin-filtered clickable
- * list (`Object type · State · Property`). Success copy only when project-total
- * is 0 (PANE_SCOPE / ROW_DISAMBIG / AD-16).
+ * Unbound tab: project-total `{n} unbound` badge on the tab + active-Skin-filtered
+ * clickable list (`Object type · State · Property`). Success copy only when
+ * project-total is 0 (PANE_SCOPE / ROW_DISAMBIG / AD-16).
  */
 export function mountUnboundPane(
   body: HTMLElement,
   store: ProjectStore,
   options: MountUnboundPaneOptions,
 ): void {
-  const { mappingFocus, selectionSync, head } = options
+  const { mappingFocus, selectionSync, badgeHost } = options
   body.classList.add('unbound-pane-body')
   body.replaceChildren()
+  body.setAttribute('data-unbound-tab', '')
 
   const badge = document.createElement('span')
   badge.className = 'unbound-pane-badge'
   badge.setAttribute('data-unbound-badge', '')
   badge.hidden = true
-  head.append(badge)
+  badgeHost.append(badge)
 
   const list = document.createElement('div')
   list.className = 'unbound-pane-list'

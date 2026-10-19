@@ -443,11 +443,11 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
 
       // Context strip follows session
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
+        root.querySelector('[data-context-value="object"]')?.value,
         'headerLed',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
+        root.querySelector('[data-context-value="state"]')?.value,
         'off',
       )
     } finally {
@@ -524,11 +524,11 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
       assert.equal(masterZone?.classList.contains('is-selected'), false)
       assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, false)
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
+        root.querySelector('[data-context-value="object"]')?.value,
         'patchBand',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
+        root.querySelector('[data-context-value="state"]')?.value,
         'default',
       )
       const rows = propertyRows(root)

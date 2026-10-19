@@ -2,15 +2,21 @@
 name: Matrix-Control Skin Studio
 description: Dark calibration console chrome for an internal browser skin editor; the GUI view mock is the bright visual focus.
 status: final
-updated: 2026-10-15
+updated: 2026-10-19
+# Lot B (2026-10-19): Photocraft/Photoshop chrome — sidebar 260px, no context strip,
+# two tabbed zones, square+hue picker. Greys tuned toward Photocraft distinct surfaces;
+# exact hex may shift at Build against Guillaume's captures without reopening product scope.
 colors:
   surface-app: '#1A1B1E'
   surface-chrome: '#222326'
-  surface-panel: '#2A2B30'
+  surface-panel: '#25262B'
   surface-raised: '#32333A'
   surface-sunken: '#141518'
+  surface-gutter: '#1A1B1E'
   border-subtle: '#3A3B42'
   border-strong: '#52545C'
+  tab-inactive: '#2A2B30'
+  tab-active: '#3A3B42'
   text-primary: '#E8E9ED'
   text-secondary: '#A8AAB4'
   text-muted: '#6E707A'
@@ -82,9 +88,11 @@ spacing:
   chrome-pad-x: 12px
   chrome-pad-y: 8px
   top-bar-height: 40px
-  context-strip-height: 28px
-  sidebar-width: 320px
+  sidebar-width: 260px
+  sidebar-skin-zoom-budget: 260px
+  picker-sv-size: 200px
   splitter-hit: 6px
+  pane-gutter: 4px
   pane-gap: 0px
   control-gap: 8px
   section-gap: 12px
@@ -97,32 +105,31 @@ components:
     text: '{colors.text-primary}'
     control-gap: '{spacing.control-gap}'
     group-separator: '{colors.border-strong}'
-  context-strip:
-    background: '{colors.surface-sunken}'
-    border-bottom: '{colors.border-subtle}'
-    height: '{spacing.context-strip-height}'
-    text: '{colors.text-secondary}'
-    label: '{colors.text-muted}'
-    value: '{colors.text-primary}'
-    typography: '{typography.context}'
   canvas-selection:
     outline: '{colors.selection-outline}'
     outline-width: 2px
     outline-offset: 1px
     fill: transparent
   sidebar-splitter:
-    track: '{colors.border-subtle}'
-    hover: '{colors.accent-muted}'
+    track: '{colors.surface-gutter}'
+    hover: '{colors.accent}'
     active: '{colors.accent}'
     hit-height: '{spacing.splitter-hit}'
+    gutter-thickness: '{spacing.pane-gutter}'
+  sidebar-tab:
+    inactive-bg: '{colors.tab-inactive}'
+    active-bg: '{colors.tab-active}'
+    inactive-text: '{colors.text-secondary}'
+    active-text: '{colors.text-primary}'
   picker-pane:
     background: '{colors.surface-panel}'
     padding: '{spacing.3}'
-    slider-track: '{colors.surface-sunken}'
-    slider-fill: '{colors.accent}'
-    hex-field-bg: '{colors.surface-sunken}'
+    sv-square-size: '{spacing.picker-sv-size}'
+    hue-strip-width: 16px
+    field-bg: '{colors.surface-sunken}'
     hex-text: '{colors.text-primary}'
     typography-hex: '{typography.mono}'
+    typography-rgb: '{typography.mono}'
   palette-swatch:
     size: 20px
     radius: '{rounded.sm}'
@@ -178,23 +185,25 @@ Skin Studio is a **dark calibration console** — Figma- and DAW-adjacent chrome
 
 Visual hierarchy: chrome is low-contrast graphite; the mock carries brand and skin colour. Selection, focus, Unbound warning, and destructive actions use chrome tokens only. Project skin colours (including Duo LED baseline `#FFCC00`) live in the product **Palette**, not in this brand colour set.
 
-No left rail, no layers tree, no bottom chrome, no Auto Layout, no overlay editing language. Dense but scannable — Photoshop-like stacked sidebar panes, not a marketing shell.
+No left rail, no layers tree, no bottom chrome, no Auto Layout, no overlay editing language. Dense but scannable — Photocraft/Photoshop grammar (tabbed inspector zones, square+hue picker, marked gutters), not a marketing shell. Not a pixel clone of Photocraft.
 
 ## Colors
 
-All chrome hex values below are **[ASSUMPTION]** invented dark-theme tokens for draft UX; they may shift at implementation without reopening product scope. Project Palette colours are out of band.
+All chrome hex values below are **[ASSUMPTION]** Photocraft-aligned dark-theme tokens (Lot B 2026-10-19); they may shift at Build against Guillaume’s Photocraft captures without reopening product scope. Surfaces must stay **distinct** (not a near-flat grey stack). Project Palette colours are out of band.
 
 | Token | Hex | Role |
 |---|---|---|
 | `{colors.surface-app}` | `#1A1B1E` | App shell behind canvas and sidebar |
 | `{colors.surface-chrome}` | `#222326` | Top bar |
-| `{colors.surface-panel}` | `#2A2B30` | Sidebar panes |
+| `{colors.surface-panel}` | `#25262B` | Sidebar zone panels (darker than prior flat stack) |
 | `{colors.surface-raised}` | `#32333A` | Hover rows, modal surface, raised controls |
-| `{colors.surface-sunken}` | `#141518` | Context strip, input wells, slider tracks |
+| `{colors.surface-sunken}` | `#141518` | Input wells, field backgrounds |
+| `{colors.surface-gutter}` | `#1A1B1E` | Thick Photocraft-style pane gutters |
+| `{colors.tab-inactive}` / `{colors.tab-active}` | `#2A2B30` / `#3A3B42` | Sidebar tabs — inactive grey, active lifts toward white/light panel |
 | `{colors.border-subtle}` / `{colors.border-strong}` | `#3A3B42` / `#52545C` | Pane edges vs control outlines |
 | `{colors.text-primary}` / `{colors.text-secondary}` / `{colors.text-muted}` | `#E8E9ED` / `#A8AAB4` / `#6E707A` | Primary labels, secondary readout, disabled/hint |
-| `{colors.accent}` | `#4C8DFF` | Selection outline, active Skin/Zoom focus, pulse stroke, primary non-destructive emphasis |
-| `{colors.warning}` | `#E0A020` | Unbound count badge and unbound mapping marker (chrome warning — not Duo LED yellow) |
+| `{colors.accent}` | `#4C8DFF` | Selection outline, splitter **hover/drag blue line**, pulse stroke, primary non-destructive emphasis |
+| `{colors.warning}` | `#E0A020` | Unbound tab badge and unbound mapping marker (chrome warning — not Duo LED yellow) |
 | `{colors.destructive}` | `#E05555` | Delete confirms, destructive primary buttons |
 | `{colors.focus-ring}` | `#7AA8FF` | Keyboard focus ring on chrome controls |
 
@@ -209,24 +218,21 @@ All chrome hex values below are **[ASSUMPTION]** invented dark-theme tokens for 
 
 ## Layout & Spacing
 
-Desktop-first single window:
+Desktop-first single window (**Lot B 2026-10-19**):
 
-1. **Top bar** — `{spacing.top-bar-height}` (40px), full width.
-2. **Context strip** — `{spacing.context-strip-height}` (28px), full width under top bar.
-3. **Body** — GUI view (canvas) left/main + right **Sidebar** default `{spacing.sidebar-width}` (320px) [ASSUMPTION default width; user-resizable later is Soon/parked unless trivial].
+1. **Top bar** — `{spacing.top-bar-height}` (40px), full width. **No context strip.**
+2. **Body** — GUI view (canvas) left/main + right **Sidebar** default `{spacing.sidebar-width}` (**260px**).
 
-Sidebar = four stacked panes separated by horizontal drag splitters (`{spacing.splitter-hit}` hit target):
+Sidebar = **two** stacked zones separated by a marked Photocraft gutter + horizontal drag splitter (`{spacing.splitter-hit}` hit target; blue `{colors.accent}` line on hover/drag):
 
-1. **Picker** — fixed height (colour picker + sliders + hex).
-2. **Palette** — scrollable, height via splitter.
-3. **Object / State / Mappings** — scrollable, height via splitter; IA = segmented `[Mappings | Skin]`.
-4. **Unbound** — scrollable, height via splitter; always visible.
+1. **Color | Palette** — real tabs (Photocraft: inactive grey, active lighter / lifts off panel). Color tab = Photoshop picker grammar (see picker-pane). Palette tab = swatch list. Zone height via splitter; persists in prefs.
+2. **Skin → Mappings → Unbound** — real tabs in that order. **No** redundant panel titles above content when tabs already name the view. Unbound tab shows a **count badge** even when Unbound is not the active tab. Zone height via splitter; persists in prefs.
 
-Spacing unit `{spacing.unit}` = 4px. Chrome padding `{spacing.chrome-pad-x}` / `{spacing.chrome-pad-y}`. No inter-pane decorative gaps (`{spacing.pane-gap}` = 0) — splitters carry the seam.
+Spacing unit `{spacing.unit}` = 4px. Chrome padding `{spacing.chrome-pad-x}` / `{spacing.chrome-pad-y}`. Gutters use `{colors.surface-gutter}` / `{spacing.pane-gutter}` — thicker seam than the old flat 1px track.
 
 Zoom control (chrome label **Zoom**) uses discrete PRD UI Scale steps: `50%`, `75%`, `100%` (default), `125%`, `150%`, `175%`, `200%`.
 
-Canonical chrome mock: [`mockups/editor-main.html`](mockups/editor-main.html). Composition reference (ASCII chrome): [`.working/ascii-chrome-simulations.md`](.working/ascii-chrome-simulations.md). GUI view mock fidelity is Figma composition intent; no Collect Object-type inventory invented here.
+Canonical chrome mock: [`mockups/editor-main.html`](mockups/editor-main.html) — **stale vs Lot B** (still useful as pre-Lot-B composition; regenerate optional / Soon). ASCII chrome: [`.working/ascii-chrome-simulations.md`](.working/ascii-chrome-simulations.md). GUI view mock fidelity is Figma composition intent; Lot C (mock ↔ Matrix-Control) is out of Lot B. No Collect Object-type inventory invented here.
 
 ## Elevation & Depth
 
@@ -245,18 +251,16 @@ Tight console radii: controls `{rounded.DEFAULT}` (4px), swatches `{rounded.sm}`
 
 ### top-bar
 
-Anatomy left→right:
+Anatomy left→right (**Lot B**):
 
-`[New] [Import] [Export]` · separator · `[Undo] [Redo]` · `Zoom: [100% ▾]` · flexible spacer · `Skin: [Black/Green ▾]`
+`[New] [Import] [Export]` · separator · `[Undo] [Redo]` · `Object: […]` · `State: […]` · flexible spacer · `Skin: [Black/Green ▾]` · `Zoom: [100% ▾]`
 
 - Background `{colors.surface-chrome}`; bottom border `{colors.border-subtle}`.
+- **Object** and **State** — labels + living controls (same session behaviour as former sidebar / strip). Empty shows explicit `—` [ASSUMPTION exact empty glyph]; do not invent a selection.
 - **Export** uses enabled primary accent styling when unbound count = 0; when unbound > 0, use `{components.export-disabled}` (visually disabled, not clickable).
-- **Skin** combo anchored right above the sidebar; must scale to 15–20 skins (scrollable menu). Not horizontal mode pills.
+- Right block **`Skin` then `Zoom`** sized to fit cleanly in ~`{spacing.sidebar-skin-zoom-budget}` (**260px**) with a few px safety — adapt **Skin** combo width only; **do not** change Zoom combo width. Skin menu scales to 15–20 skins (scrollable). Not horizontal mode pills.
 - Zoom combo lists the discrete step set only.
-
-### context-strip
-
-Readout under top bar: `Object · State · Zoom · Skin` with muted labels and primary values. Reflects sticky context; not a second set of editors. Empty Object/State shows an explicit empty readout (e.g. `—`) rather than inventing a selection [ASSUMPTION exact empty glyph].
+- **No context strip** under the top bar.
 
 ### canvas-selection
 
@@ -264,11 +268,15 @@ On the GUI view mock: 2px `{colors.selection-outline}` outline around the active
 
 ### sidebar-splitter
 
-Horizontal drag handles between the four panes. Default track `{colors.border-subtle}`; hover `{colors.accent-muted}`; dragging `{colors.accent}`. Pane 1 (picker) height is fixed — its bottom splitter moves panes 2–4 only [ASSUMPTION: picker fixed height ≈ 200–240px].
+Horizontal drag handle between the **two** sidebar zones. Gutter `{colors.surface-gutter}` / `{spacing.pane-gutter}`; hover and dragging show a **blue** `{colors.accent}` line. Both zone heights persist in prefs (`sidebarPaneHeights`).
+
+### sidebar-tab
+
+Photocraft-style real tabs: inactive `{colors.tab-inactive}` / secondary text; active `{colors.tab-active}` / primary text — active tab lifts off the panel. Keyboard focusable with `{colors.focus-ring}` (NFR-8). Unbound tab may show warning count badge.
 
 ### picker-pane
 
-Fixed-height top sidebar pane: hue / saturation / value (or RGB) sliders, copyable hex field in `{typography.mono}`, apply commits to the **selected Palette entry** only. Never writes free hex into a Mapping slot.
+**Color** tab content (Photoshop grammar): saturation/brightness **square ≈ `{spacing.picker-sv-size}` (200×200)** + **vertical hue strip** to the right of the square. **No** Hue / Sat / Val sliders. Below (or beside per Photocraft density): one row — `#` hex field (6 characters, mono, no truncation, e.g. `FFCC00`) + `R:` `G:` `B:` decimal fields on the **same line to the right of `#`**. Live sync with square/hue. Commits to the **selected Palette entry** only. Never writes free hex into a Mapping slot. Coalesced undo for micro-edits unchanged (architecture AD-7).
 
 ### palette-swatch
 
@@ -280,7 +288,7 @@ Property → Palette id. Bound rows show swatch + id; Unbound rows show `{colors
 
 ### unbound-pane
 
-Always-visible fourth pane: warning count badge (`{colors.warning}` on `{colors.warning-muted}`) + clickable list of unbound required mappings (Object · Property…). Scrollable; height via splitter. Empty success copy uses secondary text (see EXPERIENCE.md microcopy).
+**Unbound** tab content: clickable list of unbound required mappings (Object · Property…). Scrollable within zone 2. Warning **count badge also on the Unbound tab** (`{colors.warning}` on `{colors.warning-muted}`) so the export signal stays visible when another tab is active. Empty success copy uses secondary text (see EXPERIENCE.md microcopy).
 
 ### export-disabled
 
@@ -301,15 +309,19 @@ On Mapping change: discrete outline pulse on affected mock region(s) using `{col
 - Keep chrome dark and quiet; let the GUI view carry skin colour.
 - Bind Mappings to Palette ids only; edit hex only on Palette entries.
 - Pulse with the chrome accent outline; keep motion short and discrete.
-- Show Unbound count + list permanently in pane 4; keep Export disabled while count > 0.
-- Use the Skin combo on the right; preserve sticky context on Skin change.
+- Keep Unbound reachable via its tab and a **persistent tab badge** when count > 0; keep Export disabled while count > 0.
+- Place **Skin then Zoom** in the right ~260px budget; preserve sticky context on Skin change.
 - Label view scale as **Zoom** in chrome (steps match PRD UI Scale).
+- Use Photocraft tab + gutter grammar; keep Object/State living in the top bar.
 
 **Don't**
 
 - Don't put project skin colours (including Duo `#FFCC00`) into DESIGN.md brand tokens.
 - Don't add left rails, layers, bottom chrome, Auto Layout, or true overlay editing UI.
+- Don't reintroduce a context strip or default sidebar **320px**.
+- Don't use HSV Hue/Sat/Val sliders or truncate the 6-char hex field.
 - Don't use horizontal Skin mode pills that break at 15–20 skins.
 - Don't soft-allow Export with Unbound remaining.
-- Don't chase pixel-perfect JUCE parity on the mock.
+- Don't chase pixel-perfect JUCE or Photocraft parity (grammar only).
 - Don't invent Collect inventory Object types / Properties / States in visual specs — placeholder labels in mocks only.
+- Don't expand Lot C mock fidelity under Lot B chrome work.

@@ -227,6 +227,19 @@ describe('io import I/O matrix', () => {
       { ok: false, reason: 'invalid-project' },
     )
 
+    // Bare palette hex (no #) is fail-closed — picker may accept bare, documents must not.
+    assert.deepEqual(
+      io.parseProjectDocument(
+        JSON.stringify({
+          formatVersion: 1,
+          palette: [{ id: 'x', hex: 'FFCC00' }],
+          skins: [],
+          inventory: { objectTypes: [] },
+        }),
+      ),
+      { ok: false, reason: 'invalid-project' },
+    )
+
     assert.deepEqual(
       io.parseProjectDocument(
         JSON.stringify({

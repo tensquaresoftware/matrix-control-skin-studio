@@ -8,6 +8,37 @@ export type Hsv = {
   v: number
 }
 
+export type Rgb = {
+  r: number
+  g: number
+  b: number
+}
+
+/** Six uppercase hex digits without `#` (Lot B Color field display). */
+export function hexDigits(hex: string): string {
+  const normalized = parseOpaqueHex(hex)
+  return normalized ? normalized.slice(1) : '000000'
+}
+
+export function hexToRgb(hex: string): Rgb {
+  const normalized = parseOpaqueHex(hex)
+  if (!normalized) return { r: 0, g: 0, b: 0 }
+  return {
+    r: Number.parseInt(normalized.slice(1, 3), 16),
+    g: Number.parseInt(normalized.slice(3, 5), 16),
+    b: Number.parseInt(normalized.slice(5, 7), 16),
+  }
+}
+
+export function rgbToHex(r: number, g: number, b: number): string {
+  return `#${toByte(clampByte(r))}${toByte(clampByte(g))}${toByte(clampByte(b))}`
+}
+
+function clampByte(n: number): number {
+  if (!Number.isFinite(n)) return 0
+  return Math.min(255, Math.max(0, Math.round(n)))
+}
+
 export function hexToHsv(hex: string): Hsv {
   const normalized = parseOpaqueHex(hex)
   if (!normalized) return { h: 0, s: 0, v: 0 }

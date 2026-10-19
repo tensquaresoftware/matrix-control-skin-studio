@@ -314,6 +314,53 @@ describe('palette picker I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /palette-picker-matrix\.test\.mjs/)
   })
 
+  it('zone-1 tabs: Color default; Palette click + ArrowRight switch panels', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+
+      const colorTab = host.querySelector('[data-sidebar-tab="color"]')
+      const paletteTab = host.querySelector('[data-sidebar-tab="palette"]')
+      const colorPanel = host.querySelector('[data-sidebar-tab-panel="color"]')
+      const palettePanel = host.querySelector('[data-sidebar-tab-panel="palette"]')
+      assert.ok(colorTab && paletteTab && colorPanel && palettePanel)
+      assert.ok(colorTab.classList.contains('is-on'))
+      assert.equal(paletteTab.classList.contains('is-on'), false)
+      assert.equal(colorPanel.hidden, false)
+      assert.equal(palettePanel.hidden, true)
+      assert.ok(colorPanel.querySelector('[data-picker-sv]'))
+      assert.ok(colorPanel.querySelector('[data-picker-hex]'))
+
+      paletteTab.click()
+      assert.equal(colorTab.classList.contains('is-on'), false)
+      assert.ok(paletteTab.classList.contains('is-on'))
+      assert.equal(colorPanel.hidden, true)
+      assert.equal(palettePanel.hidden, false)
+      assert.ok(palettePanel.querySelector('[data-palette-row="yellow"]'))
+
+      paletteTab.dispatchEvent({
+        type: 'keydown',
+        key: 'ArrowLeft',
+        preventDefault() {},
+      })
+      assert.ok(colorTab.classList.contains('is-on'))
+      assert.equal(paletteTab.classList.contains('is-on'), false)
+      assert.equal(colorPanel.hidden, false)
+      assert.equal(palettePanel.hidden, true)
+    } finally {
+      restore()
+    }
+  })
+
   it('select + recolour: seed yellow live write-through to #112233', async () => {
     const restore = installMinimalDocument()
     try {
@@ -338,7 +385,7 @@ describe('palette picker I/O matrix', () => {
 
       const hexField = host.querySelector('[data-picker-hex]')
       assert.ok(hexField)
-      assert.equal(hexField.value, '#FFCC00')
+      assert.equal(hexField.value, 'FFCC00')
 
       hexField.focus()
       hexField.value = '#112233'
@@ -350,7 +397,7 @@ describe('palette picker I/O matrix', () => {
       assert.equal(entry.constantName, 'kYellow')
       const updatedRow = host.querySelector('[data-palette-row="yellow"]')
       assert.equal(updatedRow?.querySelector('[data-palette-hex]')?.textContent, '#112233')
-      assert.equal(host.querySelector('[data-picker-swatch]')?.style.background, '#112233')
+      assert.equal(host.querySelector('[data-picker-hex]')?.value, '112233')
     } finally {
       restore()
     }
@@ -431,7 +478,7 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
-  it('idle picker: no selection → slider/hex do not commit', async () => {
+  it('idle picker: no selection → hue/hex/RGB/SV do not commit', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model, seed] = await Promise.all([
@@ -448,29 +495,112 @@ describe('palette picker I/O matrix', () => {
       assert.equal(host.querySelector('.is-selected'), null)
 
       const hue = host.querySelector('[data-picker-hue]')
-      const sat = host.querySelector('[data-picker-sat]')
-      const val = host.querySelector('[data-picker-val]')
       const hexField = host.querySelector('[data-picker-hex]')
-      const swatch = host.querySelector('[data-picker-swatch]')
-      assert.ok(hue && sat && val && hexField && swatch)
+      const sv = host.querySelector('[data-picker-sv]')
+      const rField = host.querySelector('[data-picker-r]')
+      assert.ok(hue && hexField && sv && rField)
 
       hue.value = '120'
       hue.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(hue.value, '0')
-      assert.equal(sat.value, '0')
-      assert.equal(val.value, '0')
-      assert.equal(hexField.value, '#000000')
-      assert.equal(swatch.style.background, '#000000')
+      assert.equal(hexField.value, '000000')
 
-      hexField.value = '#ABCDEF'
+      hexField.value = 'ABCDEF'
       hexField.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(hue.value, '0')
-      assert.equal(sat.value, '0')
-      assert.equal(val.value, '0')
-      assert.equal(hexField.value, '#000000')
-      assert.equal(swatch.style.background, '#000000')
+      assert.equal(hexField.value, '000000')
+
+      rField.value = '10'
+      rField.dispatchEvent({ type: 'input' })
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
+      assert.equal(rField.value, '0')
+
+      sv.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
+    } finally {
+      restore()
+    }
+  })
+
+  it('RGB fields: selected entry live write-through + hex sync', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+
+      const hexField = host.querySelector('[data-picker-hex]')
+      const rField = host.querySelector('[data-picker-r]')
+      const gField = host.querySelector('[data-picker-g]')
+      const bField = host.querySelector('[data-picker-b]')
+      assert.ok(hexField && rField && gField && bField)
+      assert.equal(hexField.value, 'FFCC00')
+      assert.equal(rField.value, '255')
+      assert.equal(gField.value, '204')
+      assert.equal(bField.value, '0')
+
+      rField.value = '17'
+      gField.value = '34'
+      bField.value = '51'
+      rField.dispatchEvent({ type: 'input' })
+      assert.equal(paletteHex(store, 'yellow'), '#112233')
+      assert.equal(hexField.value, '112233')
+    } finally {
+      restore()
+    }
+  })
+
+  it('SV square pointer: selected entry commits (headless centre fallback)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const { store, host } = mountWithProject(
+        sidebar,
+        model,
+        seed.createSeedProject(),
+      )
+      host.querySelector('[data-palette-row="yellow"]').click()
+      const before = paletteHex(store, 'yellow')
+      const sv = host.querySelector('[data-picker-sv]')
+      assert.ok(sv)
+      sv.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      sv.dispatchEvent({
+        type: 'pointerup',
+        button: 0,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      const after = paletteHex(store, 'yellow')
+      assert.notEqual(after, before)
+      assert.match(after, /^#[0-9A-F]{6}$/)
     } finally {
       restore()
     }
@@ -495,7 +625,7 @@ describe('palette picker I/O matrix', () => {
       host.querySelector('[data-palette-row="accentGreen"]').click()
 
       const hexField = host.querySelector('[data-picker-hex]')
-      assert.equal(hexField.value, '#00AA55')
+      assert.equal(hexField.value, '00AA55')
       hexField.value = '#112233'
       hexField.dispatchEvent({ type: 'input' })
 
@@ -532,7 +662,7 @@ describe('palette picker I/O matrix', () => {
           `store must stay unchanged for ${JSON.stringify(bad)}`,
         )
         hexField.blur()
-        assert.equal(hexField.value, '#FFCC00')
+        assert.equal(hexField.value, 'FFCC00')
       }
 
       // Case-insensitive valid write normalizes uppercase.
@@ -564,10 +694,8 @@ describe('palette picker I/O matrix', () => {
       const { store, host } = mountWithProject(sidebar, model, project)
       host.querySelector('[data-palette-row="b"]').click()
 
-      const sat = host.querySelector('[data-picker-sat]')
-      assert.ok(sat)
-      // Force a distinct hex via the hex field for deterministic assert.
       const hexField = host.querySelector('[data-picker-hex]')
+      assert.ok(hexField)
       hexField.value = '#333333'
       hexField.dispatchEvent({ type: 'input' })
 
@@ -590,8 +718,7 @@ describe('palette picker I/O matrix', () => {
       const mappingsBody = host.querySelector('[data-sidebar-pane-body="mappings"]')
       assert.ok(mappingsBody)
 
-      // Skin tab may host a rename text field (story 3-3); Mapping bind UI
-      // must still not accept free #RRGGBB typed into a mapping slot.
+      // Mapping bind UI must not accept free #RRGGBB typed into a mapping slot.
       const freeHexInputs = []
       const walk = (el) => {
         if (el.getAttribute?.('data-skin-name') != null) return
@@ -606,7 +733,9 @@ describe('palette picker I/O matrix', () => {
       }
       walk(mappingsBody)
       assert.equal(freeHexInputs.length, 0)
-      assert.ok(mappingsBody.querySelector('[data-skin-name]'))
+      // Skin rename lives on the Skin tab, not under Mappings.
+      assert.equal(mappingsBody.querySelector('[data-skin-name]'), null)
+      assert.ok(host.querySelector('[data-skin-name]'))
 
       // SessionUiState remains Object / State / Skin only (no palette selection).
       const session = model.createEmptySession()
@@ -620,7 +749,7 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
-  it('slider live write-through updates selected entry hex', async () => {
+  it('hue strip live write-through updates selected entry hex', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model, seed] = await Promise.all([
@@ -635,16 +764,18 @@ describe('palette picker I/O matrix', () => {
       )
       host.querySelector('[data-palette-row="yellow"]').click()
 
-      const hue = host.querySelector('[data-picker-hue]')
-      const sat = host.querySelector('[data-picker-sat]')
-      const val = host.querySelector('[data-picker-val]')
-      hue.value = '200'
-      sat.value = '50'
-      val.value = '60'
-      hue.dispatchEvent({ type: 'input' })
-
-      // Golden opaque hex for HSV (200, 50, 60) — not derived from hsvToHex under test.
+      const hexField = host.querySelector('[data-picker-hex]')
+      // Golden opaque hex for HSV (200, 50, 60) — typed via Lot B hex digits field.
+      hexField.value = '4C7F99'
+      hexField.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'yellow'), '#4C7F99')
+      assert.equal(hexField.value, '4C7F99')
+
+      const hue = host.querySelector('[data-picker-hue]')
+      assert.ok(hue)
+      hue.value = '90'
+      hue.dispatchEvent({ type: 'input' })
+      assert.notEqual(paletteHex(store, 'yellow'), '#4C7F99')
     } finally {
       restore()
     }
@@ -690,7 +821,7 @@ describe('palette picker I/O matrix', () => {
     }
   })
 
-  it('rapid hex/slider + pointerup coalesce into one undo step', async () => {
+  it('rapid hex/hue + pointerup coalesce into one undo step', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model, seed, history] = await Promise.all([
@@ -765,7 +896,7 @@ describe('palette picker I/O matrix', () => {
       const row = host.querySelector(`[data-palette-row="${created.id}"]`)
       assert.ok(row?.classList.contains('is-selected'))
       const hexField = host.querySelector('[data-picker-hex]')
-      assert.equal(hexField.value, '#808080')
+      assert.equal(hexField.value, '808080')
 
       // Sequential create fills Colour 2 next.
       addBtn.click()
@@ -1428,12 +1559,12 @@ describe('palette picker I/O matrix', () => {
       })
       host.querySelector('[data-palette-row="orphan"]').click()
       const hexField = host.querySelector('[data-picker-hex]')
-      assert.equal(hexField.value, '#222222')
+      assert.equal(hexField.value, '222222')
 
       host.querySelector('[data-palette-delete]').click()
 
       assert.equal(host.querySelector('.is-selected'), null)
-      assert.equal(hexField.value, '#000000')
+      assert.equal(hexField.value, '000000')
       hexField.value = '#ABCDEF'
       hexField.dispatchEvent({ type: 'input' })
       assert.equal(paletteHex(store, 'a'), '#111111')

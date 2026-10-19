@@ -1,6 +1,6 @@
 import {
   looksLikeOpaqueHexToken,
-  parseOpaqueHex,
+  parseHashedOpaqueHex,
 } from '../model/opaque-hex'
 import { deriveUnbound } from '../model/palette-helpers'
 import type { ProjectDocument } from '../model/types'
@@ -137,7 +137,9 @@ function isValidPalette(palette: unknown): boolean {
     if (entry === null || typeof entry !== 'object') return false
     const e = entry as Record<string, unknown>
     if (typeof e.id !== 'string' || e.id.length === 0) return false
-    if (typeof e.hex !== 'string' || parseOpaqueHex(e.hex) === null) return false
+    if (typeof e.hex !== 'string' || parseHashedOpaqueHex(e.hex) === null) {
+      return false
+    }
     if (e.constantName !== undefined && typeof e.constantName !== 'string') {
       return false
     }

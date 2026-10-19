@@ -26,6 +26,7 @@ import {
   createCanvasSelectionSync,
   mountSidebar,
 } from '../sidebar/index'
+import { mountObjectStateControls } from '../sidebar/object-state-controls'
 import {
   IMPORT_INVALID_PROJECT_ERROR,
   IMPORT_UNSUPPORTED_VERSION_ERROR,
@@ -79,9 +80,8 @@ export type MountChromeShellOptions = {
 }
 
 /**
- * Locked desktop chrome: top bar (40px) + context strip (28px) + body
- * (canvas flex:1 + sidebar 320px). New / Import / Export / Undo / Redo /
- * Zoom / Skin live against store, history, and io contracts.
+ * Lot B desktop chrome: top bar (40px) + body (canvas flex:1 + sidebar 260px).
+ * No context strip. Object/State live in the top bar; right block Skin then Zoom.
  */
 export function mountChromeShell(
   root: HTMLElement | null,
@@ -101,23 +101,6 @@ export function mountChromeShell(
   shell.setAttribute('data-chrome-shell', '')
   shell.setAttribute('aria-label', 'Skin Studio')
 
-  const contextStrip = buildContextStrip()
-  const objectReadout = contextStrip.querySelector('[data-context-value="object"]')
-  const stateReadout = contextStrip.querySelector('[data-context-value="state"]')
-  const zoomReadout = contextStrip.querySelector('[data-context-value="zoom"]')
-  const skinReadout = contextStrip.querySelector('[data-context-value="skin"]')
-  if (!objectReadout || !stateReadout || !zoomReadout || !skinReadout) {
-    throw new Error('Context strip Object/State/Zoom/Skin readouts missing')
-  }
-
-  const syncObjectStateFromStore = (): void => {
-    const { session } = store.getState()
-    objectReadout.textContent = session.selectedObjectTypeId ?? EMPTY_GLYPH
-    stateReadout.textContent = session.selectedStateId ?? EMPTY_GLYPH
-  }
-  syncObjectStateFromStore()
-  store.subscribe(syncObjectStateFromStore)
-
   const canvasHost = document.createElement('main')
   canvasHost.className = 'chrome-canvas-slot'
   canvasHost.setAttribute('data-chrome-canvas-slot', '')
@@ -126,8 +109,6 @@ export function mountChromeShell(
     root,
     store,
     storage,
-    zoomReadout,
-    skinReadout,
     canvasHost,
   )
   const body = document.createElement('div')
@@ -139,8 +120,7 @@ export function mountChromeShell(
   sidebarHost.setAttribute('data-chrome-sidebar-slot', '')
 
   body.append(canvasHost, sidebarHost)
-  shell.append(topBar, contextStrip, body)
-  // Shell first so remount / scaffold still see [data-chrome-shell] as children[0].
+  shell.append(topBar, body)
   root.append(shell, importFileInput)
 
   const selectionSync = createCanvasSelectionSync()
@@ -152,8 +132,6 @@ function buildTopBar(
   modalRoot: HTMLElement,
   store: ProjectStore,
   storage: PersistStorage,
-  zoomReadout: Element,
-  skinReadout: Element,
   canvasHost: HTMLElement,
 ): { topBar: HTMLElement; importFileInput: HTMLInputElement } {
   const topBar = document.createElement('div')
@@ -181,11 +159,12 @@ function buildTopBar(
   const redoBtn = buildHistoryButton(modalRoot, store, 'Redo', 'redo', () => {
     redo(store)
   })
-  const zoom = buildZoomCombo(storage, zoomReadout, canvasHost)
+  const { objectWrap, stateWrap } = mountObjectStateControls(store)
   const spacer = document.createElement('span')
   spacer.className = 'chrome-top-spacer'
   spacer.setAttribute('data-chrome-spacer', '')
-  const skin = buildSkinCombo(store, skinReadout)
+  const skin = buildSkinCombo(store)
+  const zoom = buildZoomCombo(storage, canvasHost)
 
   topBar.append(
     newButton,
@@ -194,9 +173,11 @@ function buildTopBar(
     sep1,
     undoBtn,
     redoBtn,
-    zoom,
+    objectWrap,
+    stateWrap,
     spacer,
     skin,
+    zoom,
   )
   return { topBar, importFileInput }
 }
@@ -241,7 +222,6 @@ async function handleImportFilePicked(
   fileInput: HTMLInputElement,
 ): Promise<void> {
   const file = fileInput.files?.[0] ?? null
-  // Allow re-picking the same path after Cancel / error.
   fileInput.value = ''
   if (file == null) return
 
@@ -256,7 +236,6 @@ async function handleImportFilePicked(
     return
   }
 
-  // Stale read — a newer pick already owns the flow.
   if (gen !== importPickGeneration) return
 
   const result = parseProjectDocument(raw)
@@ -365,7 +344,6 @@ function separator(): HTMLElement {
 
 function buildZoomCombo(
   storage: PersistStorage,
-  zoomReadout: Element,
   canvasHost: HTMLElement,
 ): HTMLElement {
   const wrap = document.createElement('span')
@@ -382,6 +360,8 @@ function buildZoomCombo(
   select.id = selectId
   select.className = 'chrome-combo-select'
   select.setAttribute('data-chrome-zoom-select', '')
+  // Keep strip-era readout hooks for matrices that still query context values.
+  select.setAttribute('data-context-value', 'zoom')
 
   for (const step of ZOOM_STEPS) {
     const option = document.createElement('option')
@@ -392,7 +372,6 @@ function buildZoomCombo(
 
   const zoomStep = clampZoomStep(loadPrefs(storage).zoomStep)
   select.value = zoomStep
-  zoomReadout.textContent = zoomStep
 
   select.addEventListener('change', () => {
     const next = clampZoomStep(select.value)
@@ -400,7 +379,6 @@ function buildZoomCombo(
     const prefs = loadPrefs(storage)
     prefs.zoomStep = next
     savePrefs(prefs, storage)
-    zoomReadout.textContent = next
     applyCanvasViewFromPrefs(canvasHost, storage)
   })
 
@@ -408,7 +386,7 @@ function buildZoomCombo(
   return wrap
 }
 
-function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement {
+function buildSkinCombo(store: ProjectStore): HTMLElement {
   const wrap = document.createElement('span')
   wrap.className = 'chrome-combo chrome-skin-combo'
   wrap.setAttribute('data-chrome-skin', '')
@@ -423,6 +401,7 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
   select.id = selectId
   select.className = 'chrome-combo-select'
   select.setAttribute('data-chrome-skin-select', '')
+  select.setAttribute('data-context-value', 'skin')
 
   const syncSkinFromStore = (): void => {
     let { project, session } = store.getState()
@@ -431,7 +410,6 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
       session.activeSkinId !== null &&
       !project.skins.some((s) => s.id === session.activeSkinId)
     ) {
-      // Orphaned activeSkinId sync — non-undoable (EXCLUDE).
       execute(
         store,
         {
@@ -465,10 +443,8 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
 
     if (activeSkin) {
       select.value = activeSkin.id
-      skinReadout.textContent = activeSkin.displayName
     } else {
       select.value = ''
-      skinReadout.textContent = EMPTY_GLYPH
     }
   }
 
@@ -484,7 +460,6 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
       return
     }
 
-    // Skin combo only updates activeSkinId — never an undo step (EXCLUDE).
     execute(
       store,
       {
@@ -499,36 +474,5 @@ function buildSkinCombo(store: ProjectStore, skinReadout: Element): HTMLElement 
   })
 
   wrap.append(lbl, select)
-  return wrap
-}
-
-function buildContextStrip(): HTMLElement {
-  const strip = document.createElement('div')
-  strip.className = 'chrome-context-strip type-context'
-  strip.setAttribute('data-chrome-context-strip', '')
-
-  strip.append(
-    contextField('Object', EMPTY_GLYPH),
-    contextField('State', EMPTY_GLYPH),
-    contextField('Zoom', EMPTY_GLYPH),
-    contextField('Skin', EMPTY_GLYPH),
-  )
-  return strip
-}
-
-function contextField(label: string, value: string): HTMLElement {
-  const wrap = document.createElement('span')
-  wrap.className = 'chrome-context-field'
-
-  const lbl = document.createElement('span')
-  lbl.className = 'chrome-context-label'
-  lbl.textContent = label
-
-  const val = document.createElement('span')
-  val.className = 'chrome-context-value'
-  val.textContent = value
-  val.setAttribute('data-context-value', label.toLowerCase())
-
-  wrap.append(lbl, val)
   return wrap
 }

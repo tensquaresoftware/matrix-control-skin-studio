@@ -25,8 +25,8 @@ const COLOR_SAMPLES = {
 /** Layout / radius samples from DESIGN.md that must stay pinned. */
 const SPACE_SAMPLES = {
   '--space-top-bar-height': '40px',
-  '--space-context-strip-height': '28px',
-  '--space-sidebar-width': '320px',
+  '--space-sidebar-width': '260px',
+  '--space-picker-sv-size': '200px',
   '--space-unit': '4px',
 }
 
@@ -42,6 +42,9 @@ const REQUIRED_COLOR_VARS = [
   '--color-surface-panel',
   '--color-surface-raised',
   '--color-surface-sunken',
+  '--color-surface-gutter',
+  '--color-tab-inactive',
+  '--color-tab-active',
   '--color-border-subtle',
   '--color-border-strong',
   '--color-text-primary',
@@ -73,8 +76,9 @@ const REQUIRED_SPACE_VARS = [
   '--space-chrome-pad-x',
   '--space-chrome-pad-y',
   '--space-top-bar-height',
-  '--space-context-strip-height',
   '--space-sidebar-width',
+  '--space-picker-sv-size',
+  '--space-pane-gutter',
   '--space-splitter-hit',
   '--space-pane-gap',
   '--space-control-gap',
@@ -108,16 +112,6 @@ const REQUIRED_COMP_VARS = [
   '--comp-top-bar-text',
   '--comp-top-bar-control-gap',
   '--comp-top-bar-group-separator',
-  '--comp-context-strip-background',
-  '--comp-context-strip-border-bottom',
-  '--comp-context-strip-height',
-  '--comp-context-strip-text',
-  '--comp-context-strip-label',
-  '--comp-context-strip-value',
-  '--comp-context-strip-typography',
-  '--comp-context-strip-typography-font-size',
-  '--comp-context-strip-typography-font-weight',
-  '--comp-context-strip-typography-line-height',
   '--comp-canvas-selection-outline',
   '--comp-canvas-selection-outline-width',
   '--comp-canvas-selection-outline-offset',
@@ -126,10 +120,16 @@ const REQUIRED_COMP_VARS = [
   '--comp-sidebar-splitter-hover',
   '--comp-sidebar-splitter-active',
   '--comp-sidebar-splitter-hit-height',
+  '--comp-sidebar-splitter-gutter-thickness',
+  '--comp-sidebar-tab-inactive-bg',
+  '--comp-sidebar-tab-active-bg',
+  '--comp-sidebar-tab-inactive-text',
+  '--comp-sidebar-tab-active-text',
   '--comp-picker-pane-background',
   '--comp-picker-pane-padding',
-  '--comp-picker-pane-slider-track',
-  '--comp-picker-pane-slider-fill',
+  '--comp-picker-pane-sv-size',
+  '--comp-picker-pane-hue-width',
+  '--comp-picker-pane-field-bg',
   '--comp-picker-pane-hex-field-bg',
   '--comp-picker-pane-hex-text',
   '--comp-picker-pane-typography-hex',
@@ -340,6 +340,19 @@ describe('styles I/O matrix', () => {
     assert.match(chromeIndex, /className\s*=\s*'chrome-top-btn'/)
     assert.doesNotMatch(chromeIndex, /style\.cssText/)
 
+    // Lot B Skin+Zoom budget: Zoom keeps base 72px; only Skin combo is adapted.
+    assert.match(
+      baseCss,
+      /\.chrome-combo-select\s*\{[^}]*min-width:\s*72px/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-skin-combo\s+\.chrome-combo-select\s*\{[^}]*min-width:\s*88px/s,
+    )
+    assert.doesNotMatch(
+      baseCss,
+      /\.chrome-zoom[^{]*\{[^}]*min-width:\s*(?!72px)/s,
+    )
     assert.match(
       baseCss,
       /\.chrome-top-btn\s*\{[^}]*background:\s*var\(--color-surface-panel\)/s,

@@ -2,7 +2,11 @@ import { PREFS_KEY } from './keys'
 import type { PersistStorage } from './storage'
 import { getBrowserStorage } from './storage'
 
-/** Prefs-only document (AD-8) — never written into the project envelope. */
+/**
+ * Prefs-only document (AD-8) — never written into the project envelope.
+ * `sidebarPaneHeights` Lot B keys: `colorPalette`, `skinMappingsUnbound`.
+ * Legacy three-key shapes are ignored by the sidebar (defaults), not migrated.
+ */
 export type PrefsDocument = {
   zoomStep: string
   panXY: { x: number; y: number }

@@ -371,6 +371,10 @@ function mountSidebarWithStore(sidebar, storeMod, project, session) {
   const host = createRoot()
   host.setAttribute('data-sidebar', '')
   sidebar.mountSidebar(host, { storage: memoryStorage(), store })
+  // Lot B: Object/State live in the top bar; inject the same controls for
+  // sidebar-only matrix hosts so session editors stay exerciseable.
+  const { objectWrap, stateWrap } = sidebar.mountObjectStateControls(store)
+  host.append(objectWrap, stateWrap)
   return { store, host }
 }
 
@@ -788,13 +792,11 @@ describe('mappings I/O matrix', () => {
       )
       assert.equal(host.querySelector('[data-mapping-instance]'), null)
       assert.equal(host.querySelector('[data-per-instance]'), null)
-      // Skin tab reminder still documents type-level rule.
+      // Lot B: type-level reminder sentence removed; Skin tab has no override UI.
       const skinTab = host.querySelector('[data-skin-seg-tab="skin"]')
       skinTab.click()
-      assert.match(
-        host.querySelector('[data-skin-reminder]')?.textContent ?? '',
-        /Type-level only/,
-      )
+      assert.equal(host.querySelector('[data-skin-reminder]'), null)
+      assert.equal(host.querySelector('[data-skin-create]')?.textContent, 'Create')
     } finally {
       restore()
     }
@@ -1127,6 +1129,47 @@ describe('mappings I/O matrix', () => {
       )
 
       host.querySelector('[data-skin-seg-tab="skin"]').click()
+      assert.equal(
+        host.querySelector('[data-mappings-tab]')?.hidden,
+        true,
+      )
+
+      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      assert.deepEqual(skinMappings(store), [])
+    } finally {
+      restore()
+    }
+  })
+
+  it('Unbound tab clears Mapping focus; Palette cannot bind while Unbound shown', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        fixtureProject(),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'off',
+        }),
+      )
+
+      const fillRow = propertyRows(host).find(
+        (row) => row.getAttribute('data-mapping-row') === 'fill',
+      )
+      assert.ok(fillRow)
+      fillRow.click()
+      assert.ok(
+        propertyRows(host)
+          .find((row) => row.getAttribute('data-mapping-row') === 'fill')
+          ?.classList.contains('is-focused'),
+      )
+
+      host.querySelector('[data-skin-seg-tab="unbound"]').click()
       assert.equal(
         host.querySelector('[data-mappings-tab]')?.hidden,
         true,

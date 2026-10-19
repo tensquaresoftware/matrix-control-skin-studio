@@ -84,7 +84,8 @@ FR-27: Simple contrast advisories (not full WCAG productization).
 
 FR-28: Collect re-import merges / re-maps rather than wiping operator work by default.
 
-**V2 / parked (do not pull into MVP without course correction):** layers tree; named history panel; JSON/Dev Mode; comments; object×property matrix; alias tokens; contributor tooling; denser chrome; keyboard-only power modes; optional left Palette rail; external contributor Skin shipping.
+**V2 / parked (do not pull into MVP without course correction):** layers tree; named history panel; JSON/Dev Mode; comments; object×property matrix; alias tokens; contributor tooling; keyboard-only power modes; optional left Palette rail; external contributor Skin shipping.  
+*(Lot B 2026-10-19 delivered denser Photocraft **chrome grammar** via sprint change proposal — not a promotion of Epic 6 / Lot C.)*
 
 ### NonFunctional Requirements
 
@@ -119,10 +120,10 @@ NFR-10: Hosting — static Vite SPA (local or static file host); no server API o
 - AD-5: MVP packing — one JSON document = whole Project for export/import; per-skin multi-file packing Deferred.
 - AD-6: `SessionUiState` holds `selectedObjectTypeId`, `selectedStateId`, `activeSkinId` only; Skin switch changes `activeSkinId` only; Zoom/pan are prefs (not session).
 - AD-7: Coalesce picker/Palette hex at **400 ms idle or pointer-up**; Zoom/pan never undo steps.
-- AD-8: Autosave key `skin-studio:project` = envelope `{ project, session }`; prefs key `skin-studio:prefs` = `{ zoomStep, panXY, sidebarPaneHeights }`; first open / New after confirm → seed.
+- AD-8: Autosave key `skin-studio:project` = envelope `{ project, session }`; prefs key `skin-studio:prefs` = `{ zoomStep, panXY, sidebarPaneHeights }` with Lot B keys `colorPalette` / `skinMappingsUnbound` (legacy three-key → defaults); first open / New after confirm → seed.
 - AD-9: Export disabled while `unboundCount > 0`; export target MVP = all skins; import replace-all after confirm; `io/` asks `model` for unbound count.
 - AD-10: Sole `deriveUnbound` in `model/`; required slots = every Inventory Property for each Skin × ObjectType × State in **loaded** inventory; MVP may ship one seed inventory `source: "seed-placeholder"` — builders must not invent ObjectTypes outside that file.
-- AD-11: UX chrome contracts — Top bar order `[New][Import][Export]` · undo/redo · `Zoom` · `Skin` combo right-anchored; Sidebar four panes (picker fixed → palette → mappings/skin → unbound); Skin tab = rename/duplicate/delete only; no layers/bottom chrome/left rail.
+- AD-11: UX chrome contracts (**Lot B 2026-10-19**) — Top bar `[New][Import][Export]` · undo/redo · `Object` · `State` · spacer · `Skin` then `Zoom` (~260px budget); no context strip; sidebar two zones Color\|Palette and Skin→Mappings→Unbound (Unbound tab badge); Color = square+hue+`#`/RGB; Skin buttons Create/Duplicate/Delete; no layers/bottom chrome/left rail.
 - AD-12: Hosting envelope — static SPA; Matrix-Control mirror/submodule optional later ops.
 - AD-13: Orchestrator zone accents simulated in `canvas/` mock layout metadata only; inventory Object types stay generic; LED fully-on paint.
 - AD-14: Runtime collection shapes fixed to AD-4 arrays/nested inventory — no alternate topologies without new AD.
@@ -147,21 +148,21 @@ UX-DR1: Implement DESIGN.md chrome design tokens as CSS variables in `styles/` �
 
 UX-DR2: Load IBM Plex Sans + IBM Plex Mono; apply typography scale (`ui`, `ui-strong`, `label`, `title-bar`, `mono`, `mono-sm`, `context`) and spacing/radius tokens from DESIGN.md.
 
-UX-DR3: Desktop chrome layout — Top bar 40px + Context strip 28px + body (canvas main + Sidebar default 320px). No left rail, layers tree, or bottom chrome.
+UX-DR3: Desktop chrome layout (**Lot B**) — Top bar 40px + body (canvas main + Sidebar default **260px**). **No** context strip. No left rail, layers tree, or bottom chrome.
 
-UX-DR4: Top bar anatomy left→right: `[New][Import][Export]` · undo/redo · `Zoom` combo (discrete steps) · spacer · `Skin` combo right-anchored (scrollable menu for 15–20 skins — not horizontal pills). Export uses enabled accent when unbound=0; `{components.export-disabled}` when unbound>0.
+UX-DR4: Top bar anatomy left→right: `[New][Import][Export]` · undo/redo · `Object` · `State` · spacer · `Skin` then `Zoom` (Skin+Zoom ≈ 260px budget; Zoom combo width unchanged; Skin combo width adapted; scrollable Skin menu for 15–20 skins — not horizontal pills). Export uses enabled accent when unbound=0; `{components.export-disabled}` when unbound>0.
 
-UX-DR5: Context strip readout `Object · State · Zoom · Skin` with muted labels / primary values; empty Object/State shows explicit empty glyph (e.g. `—`); not independently editable.
+UX-DR5: Object and State live in the top bar (labels + controls); empty Object/State shows explicit empty glyph (e.g. `—`); sticky Skin switch does not invent a selection. No separate context-strip band.
 
-UX-DR6: Sidebar four stacked panes with horizontal splitters — (1) picker fixed height ≈200–240px, (2) Palette scrollable, (3) Mappings|Skin segmented IA, (4) Unbound always visible; panes 2–4 resizable; pane heights persist in prefs.
+UX-DR6: Sidebar **two** stacked zones with Photocraft gutters + horizontal splitter (blue accent on resize hover) — (1) tabs `Color` \| `Palette`, (2) tabs `Skin` → `Mappings` → `Unbound` with Unbound count badge on the tab; both zones resizable; heights persist in prefs (`colorPalette` / `skinMappingsUnbound`).
 
-UX-DR7: Picker pane — HSV/RGB sliders + mono hex field; commits hex only to selected Palette entry; never writes free hex into a Mapping slot.
+UX-DR7: Color tab — SV square ≈200×200 + vertical hue + `#` (6 hex chars, no truncation) + `R:` `G:` `B:` on the same line; no HSV sliders; commits hex only to selected Palette entry; never writes free hex into a Mapping slot.
 
 UX-DR8: Palette swatch rows — chip + optional constant name + hex; selected ring accent; Add/Delete CRUD; referenced delete opens modal-confirm listing n mappings that will become Unbound.
 
 UX-DR9: Mapping rows — Property → Palette id only; bound shows swatch+id; Unbound shows warning marker + `Unbound` label; selected row accent-muted from canvas sync; click Unbound focuses bind path.
 
-UX-DR10: Unbound pane — warning count badge + clickable list (`{Object type} · {Property}`); empty success copy `All required mappings bound`; row click jumps to Object type + Mapping row (and State if encoded).
+UX-DR10: Unbound tab — clickable list (`{Object type} · {Property}`) + **warning count badge on the Unbound tab** (visible when another tab is active); empty success copy `All required mappings bound`; row click jumps to Object type + Mapping row (and State if encoded).
 
 UX-DR11: Modal confirm pattern for Delete Skin, Delete referenced Palette, Import replace-all, and New (seed replace) — scrim + raised surface; destructive primary where applicable; one modal deep.
 
@@ -317,7 +318,9 @@ So that I always start from a known v1 baseline.
 
 ## Epic 2: Navigate the Calibration Console
 
-Operator works in the locked desktop chrome — top bar, context strip, canvas + four-pane sidebar — with discrete Zoom, pan, and a right-anchored Skin combo that preserves sticky context.
+Operator works in the locked desktop chrome — top bar, canvas + sidebar — with discrete Zoom, pan, and a right-anchored Skin combo that preserves sticky context.
+
+> **Lot B (2026-10-19) supersession:** Ongoing chrome SSOT is DESIGN.md / EXPERIENCE.md / AD-11 as updated by sprint-change-proposal-2026-10-19 (260px, no context strip, two tabbed zones, Photocraft picker, Object/State in top bar). Historical Stories 2.1–2.5 remain **done**; do not reopen this epic. Implement Lot B via story `lot-b-photocraft-chrome`.
 
 ### Story 2.1: Design Tokens and Typography
 

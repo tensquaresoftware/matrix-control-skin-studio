@@ -11,12 +11,13 @@ sources:
   - _bmad-output/planning-artifacts/ux-designs/ux-Matrix-Control-Skin-Studio-2026-10-15/.working/extract-brief-brainstorm.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Matrix-Control-Skin-Studio-2026-10-15/.working/ascii-chrome-simulations.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Matrix-Control-Skin-Studio-2026-10-15/.memlog.md
-updated: 2026-10-15
+updated: 2026-10-19
 ---
 
 # Matrix-Control Skin Studio — Experience Spine
 
-> Status: **final**. Paired with `DESIGN.md`. Spines (`DESIGN.md` + this file) win on conflict with any mock, wireframe, ASCII simulation, or import.
+> Status: **final**. Paired with `DESIGN.md`. Spines (`DESIGN.md` + this file) win on conflict with any mock, wireframe, ASCII simulation, or import.  
+> **Lot B (2026-10-19):** Photocraft/Photoshop chrome IA — no context strip; two tabbed sidebar zones; Object/State in top bar; Color square+hue picker. Lot A / Lot C out of this course.
 
 ## Foundation
 
@@ -34,56 +35,65 @@ v1 seed skins: `Black/Green`, `Cream/Green`, `Black/Duo`, `Cream/Duo`, `Monochro
 
 | Region | Purpose |
 |---|---|
-| Top bar | Project ops, history, Zoom, Skin switcher |
-| Context strip | Sticky readout: Object · State · Zoom · Skin |
+| Top bar | Project ops, history, **Object**, **State**, Skin, Zoom |
 | GUI view (canvas) | Interactive Matrix-Control mock — select, pan, zoom |
-| Sidebar pane 1 | Colour picker + sliders (**fixed height**) |
-| Sidebar pane 2 | Palette swatches (scrollable, resizable) |
-| Sidebar pane 3 | Object / State / Mappings + Skin CRUD (scrollable, resizable) |
-| Sidebar pane 4 | Unbound count + clickable list (scrollable, resizable) |
+| Sidebar zone 1 | Tabs **`Color` \| `Palette`** (Color = square+hue+`#`/RGB; Palette = swatches) |
+| Sidebar zone 2 | Tabs **`Skin` → `Mappings` → `Unbound`** (Unbound badge on tab) |
 
-**Absent in MVP:** left layers tree, bottom chrome, left Palette rail, Auto Layout, overlays, named history panel, JSON Dev Mode, side-by-side compare.
+**Absent in MVP:** context strip; left layers tree; bottom chrome; left Palette rail; Auto Layout; overlays; named history panel; JSON Dev Mode; side-by-side compare. **Lot C** mock fidelity ↔ Matrix-Control is a separate course.
 
 ### Top bar (left → right)
 
-`[New] [Import] [Export]` | `[Undo] [Redo]` | `Zoom: [100% ▾]` …… `Skin: [Black/Green ▾]`
+`[New] [Import] [Export]` | `[Undo] [Redo]` | `Object: […]` | `State: […]` …… `Skin: [Black/Green ▾]` | `Zoom: [100% ▾]`
 
-- Skin control = labeled **combo/dropdown** anchored **right** above the sidebar; scales to 15–20 skins. **Not** horizontal mode pills.
+- **Object** and **State** live in the top bar (labels + controls). Empty = `—`; sticky Skin switch does not invent a selection.
+- Right block: **Skin then Zoom**, fitted to ~260px (sidebar width) with a few px safety. Adapt Skin combo width only; **do not** change Zoom combo width. Skin = labeled **combo/dropdown**; scales to 15–20 skins. **Not** horizontal mode pills.
 - Zoom label in chrome = **Zoom**; discrete steps match PRD UI Scale: `50%` / `75%` / `100%` / `125%` / `150%` / `175%` / `200%` (default `100%`). Local preference — never in JSON export.
 - Export uses hard Unbound gate (see State Patterns).
+- **No context strip** under the top bar.
 
-### Context strip
+### Sidebar zone 1 — Color | Palette
 
-Under top bar: `Object · State · Zoom · Skin` as readout of sticky context. Editors remain in sidebar / Zoom combo / Skin combo.
+Real Photocraft-style tabs.
 
-### Sidebar pane 3 — IA variant A (locked)
+**Color tab**
 
-Segmented control: **`[Mappings | Skin]`** (Mappings default).
+- Photoshop grammar: SV square ≈ 200×200 + vertical hue strip; `#` (6 hex chars, no truncation) + `R:` `G:` `B:` on the same line to the right of `#`. No Hue/Sat/Val sliders.
+- Commits only to selected Palette entry; micro-gestures coalesce for undo.
 
-**Mappings tab**
+**Palette tab**
 
-- Object type control always visible.
-- State control always visible.
-- Mapping rows for the active Object type + State (Property → Palette id).
-- Canvas sync highlights the corresponding mapping row; does **not** reset State.
+- Swatch CRUD list; select → Color tab edits that entry.
+
+### Sidebar zone 2 — Skin → Mappings → Unbound
+
+Real tabs in that order. **No** redundant panel titles above content.
 
 **Skin tab**
 
-- Rename, Duplicate, Delete only.
-- No per-instance overrides reminder if needed; type-level only.
+- Buttons: **`Create`**, **`Duplicate`**, **`Delete`** (not “Create Skin”, not “…”). Rename field may remain as a non-button control.
+- Do **not** show the sentence “Type-level only — no per-instance colour overrides.”
 
-### Sidebar pane 4 — Unbound
+**Mappings tab**
 
-Always visible. Count badge + clickable list. Height adjustable via horizontal drag splitter. Export stays disabled while count > 0. No soft allow.
+- Mapping rows for the active Object type + State (Property → Palette id).
+- Object/State controls are **not** duplicated here (they live in the top bar).
+- Canvas sync highlights the corresponding mapping row; does **not** reset State.
+
+**Unbound tab**
+
+- Clickable list + empty success copy. **Count badge on the Unbound tab** remains visible when another tab is active. Export stays disabled while count > 0. No soft allow.
+
+Zones are separated by a marked gutter; drag splitter resizes both; blue line on resize hover. Heights persist in prefs.
 
 ### Visual references
 
-Canonical chrome: [`mockups/editor-main.html`](mockups/editor-main.html). ASCII composition: [`.working/ascii-chrome-simulations.md`](.working/ascii-chrome-simulations.md).
+Canonical chrome mock [`mockups/editor-main.html`](mockups/editor-main.html) is **stale vs Lot B** (pre-Lot-B composition). ASCII: [`.working/ascii-chrome-simulations.md`](.working/ascii-chrome-simulations.md).
 
 | Coverage | Surfaces |
 |---|---|
-| **Mocked** | Editor main; export blocked; delete Palette modal |
-| **Spine-only** | Skin tab CRUD view alone; All required mappings bound empty Unbound; import `formatVersion` error; first-open seed (no dedicated mock) |
+| **Mocked (pre-Lot-B)** | Editor main; export blocked; delete Palette modal |
+| **Spine-only** | Lot B tabbed chrome; Skin Create/Duplicate/Delete; All required mappings bound empty Unbound; import `formatVersion` error; first-open seed |
 
 ## Voice and Tone
 
@@ -116,14 +126,14 @@ Behavioral rules. Visual specs: `DESIGN.md` → Components (`{components.*}`).
 
 | Component | Use | Behavioral rules |
 |---|---|---|
-| `{components.top-bar}` | Global ops | New / Import / Export / Undo / Redo / Zoom / Skin as locked order. Skin combo right-anchored. |
-| `{components.context-strip}` | Sticky readout | Updates on Object, State, Zoom, Skin changes; not independently editable. |
+| `{components.top-bar}` | Global ops | New / Import / Export / Undo / Redo / **Object** / **State** / spacer / **Skin then Zoom**. Skin+Zoom ≈ 260px budget. No context strip. |
 | `{components.canvas-selection}` | GUI view | Click selects Object type + highlights Mapping row; does **not** reset State. |
-| `{components.sidebar-splitter}` | Between panes 1–4 | Horizontal drag. Pane 1 height fixed; panes 2–4 resizable. |
-| `{components.picker-pane}` | Edit Palette hex | Commits only to selected Palette entry. Micro-gestures coalesce for undo. |
-| `{components.palette-swatch}` | Palette CRUD | Select → picker edits that entry. Delete may open confirm if referenced. |
+| `{components.sidebar-splitter}` | Between two zones | Horizontal drag; thick gutter; blue accent line on hover/drag. Both zones resizable; heights in prefs. |
+| `{components.sidebar-tab}` | Zone tabs | Color\|Palette and Skin\|Mappings\|Unbound. Photocraft inactive/active. Unbound tab badge when count > 0. Focus ring (NFR-8). |
+| `{components.picker-pane}` | Color tab | Square + hue + `#`/RGB text. Commits only to selected Palette entry. Micro-gestures coalesce for undo. |
+| `{components.palette-swatch}` | Palette tab | Select → Color tab edits that entry. Delete may open confirm if referenced. |
 | `{components.mapping-row}` | Property → Palette id | Commit Palette id only — never free hex. Unbound rows clickable → focus bind path. |
-| `{components.unbound-pane}` | Export readiness | Always on; click row jumps to Object type + Mapping row [ASSUMPTION also sets State if encoded in list]. |
+| `{components.unbound-pane}` | Unbound tab | List + tab badge; click row jumps to Object type + Mapping row [ASSUMPTION also sets State if encoded in list]. |
 | `{components.export-disabled}` | Hard gate | Disabled while unbound count > 0; no click-to-reject soft path in MVP. |
 | `{components.modal-confirm}` | Destructive | Skin delete always; referenced Palette delete lists n→Unbound then apply; Import replace-all. Visual: [`mockups/delete-palette-modal.html`](mockups/delete-palette-modal.html). |
 | `{components.pulse-highlight}` | Mapping change cue | Discrete outline pulse 1–2× ~400ms with chrome accent `{colors.pulse-outline}`. |
@@ -135,9 +145,9 @@ Behavioral rules. Visual specs: `DESIGN.md` → Components (`{components.*}`).
 | **Sticky context on Skin change** | Preserve Object type, State, pan/zoom. Do **not** invent a selection if none existed (empty Object/State stay empty). |
 | **Canvas ↔ Sidebar sync** | Canvas click → Object type + scroll/highlight Mapping row; State unchanged. Sidebar Object type → outline mock region when present. |
 | **Mapping change** | Preview paints immediately; pulse affected mock region(s). |
-| **Unbound > 0** | Pane 4 shows count + list; Export disabled (`{components.export-disabled}`). Visual: [`mockups/export-blocked.html`](mockups/export-blocked.html). |
-| **Unbound = 0** | Empty success copy; Export enabled. Spine-only (no dedicated mock). |
-| **No Palette entry selected** | Picker shows last values or idle wells but does not commit hex until a Palette row is selected [ASSUMPTION idle wells]. |
+| **Unbound > 0** | Unbound tab list + **tab badge**; Export disabled (`{components.export-disabled}`). Visual: [`mockups/export-blocked.html`](mockups/export-blocked.html). |
+| **Unbound = 0** | Empty success copy; badge clear; Export enabled. Spine-only (no dedicated mock). |
+| **No Palette entry selected** | Color tab shows last values or idle wells but does not commit hex until a Palette row is selected [ASSUMPTION idle wells]. |
 | **LED preview** | Fully-on Palette colour; no intensity/dim slider. |
 | **Palette hex edit** | All Properties mapped to that id update on next preview paint. |
 | **Delete Skin** | Always confirm; cancel = no change. |
@@ -148,12 +158,12 @@ Behavioral rules. Visual specs: `DESIGN.md` → Components (`{components.*}`).
 | **First open (no prior project)** | **[ASSUMPTION]** Seed v1 skins + base palette ready to calibrate. |
 | **Undo / Redo** | Restores project JSON mutations + Object type / State selection. Does **not** reverse Zoom or pan. |
 | **Coalesced undo** | Rapid picker / Palette hex micro-gestures collapse to one step. **[ASSUMPTION]** coalesce window ~300–500 ms idle or until pointer-up. Discrete commits (rename, mapping id change, Skin CRUD) stay separate. |
-| **Focus (chrome)** | Visible `{colors.focus-ring}` on focused controls; reading order top bar → context strip → sidebar → canvas when tabbing [ASSUMPTION exact order]. |
+| **Focus (chrome)** | Visible `{colors.focus-ring}` on focused controls; reading order top bar → sidebar → canvas when tabbing [ASSUMPTION exact order]. |
 
 ## Interaction Primitives
 
-- **Select:** canvas click or Sidebar Object type control.
-- **State:** Sidebar State control; changing State refreshes Property mappings + mock paint for that Object type.
+- **Select:** canvas click or top-bar Object control.
+- **State:** top-bar State control; changing State refreshes Property mappings + mock paint for that Object type.
 - **Map:** Mapping row → Palette id only.
 - **Pan:** click-drag on GUI view; arrow keys when canvas focused.
 - **Zoom:** discrete combo steps only (local pref).
@@ -174,7 +184,8 @@ Internal tool floor — not a WCAG productization pass.
 ## Inspiration & Anti-patterns
 
 - **Lifted from Figma:** selection outline; type = edit once for all instances; palette ≈ variables; skin switch ≈ mode; click-to-map; reopen last file.
-- **Lifted from Photoshop:** stacked resizable inspector panes; constrained picker above swatches.
+- **Lifted from Photoshop:** SV square + vertical hue + numeric `#`/RGB; constrained Color tab above Palette.
+- **Lifted from Photocraft:** tabbed inspector zones; marked gutters + blue resize hover; inactive grey / active light tabs.
 - **Lifted from DAW consoles:** dark dense chrome; bright content stage.
 - **Rejected — Soft export with warnings:** hard Unbound gate only for MVP.
 - **Rejected — Horizontal Skin pills:** breaks at 15–20 skins; combo/dropdown instead.
@@ -199,13 +210,13 @@ Desktop browser first. Local persistence + file import/export. Not native shell,
 3. Clicks a control region on the mock → Object type selected; Mapping row highlights; State unchanged.
 4. Chooses State if needed; binds Unbound properties to Palette ids via mapping rows + picker (hex only on Palette entries).
 5. Edits Duo LED Palette entry (baseline `#FFCC00`); LEDs preview fully-on; Patch/Master accents show via Orchestrator zones on the mock.
-6. Switches Skin via right combo → Object type, State, pan/zoom preserved (sticky context); context strip updates Skin.
+6. Switches Skin via right combo → Object type, State, pan/zoom preserved (sticky context); top-bar Object/State/Skin/Zoom prove place was kept.
 7. Mapping change pulses affected mock regions (discrete outline).
-8. Unbound pane still lists gaps → Export remains disabled (`{components.export-disabled}`). Visual: [`mockups/export-blocked.html`](mockups/export-blocked.html).
-9. Clears remaining unbound rows until pane shows `All required mappings bound` (spine-only — no dedicated empty-Unbound mock).
+8. Unbound tab badge / list still show gaps → Export remains disabled (`{components.export-disabled}`). Visual: [`mockups/export-blocked.html`](mockups/export-blocked.html).
+9. Clears remaining unbound rows until Unbound tab shows `All required mappings bound` (spine-only — no dedicated empty-Unbound mock).
 10. **Climax:** Export enables; Guillaume exports JSON. Unbound never soft-allowed.
 
-**Failure path:** Tries Export while unbound remain → control stays disabled; pane 4 count + list show why ([`mockups/export-blocked.html`](mockups/export-blocked.html)); maps gaps and retries. Import of newer/unknown `formatVersion` → fail closed with clear error (spine-only; Zoom/pan prefs unchanged).
+**Failure path:** Tries Export while unbound remain → control stays disabled; Unbound tab badge + list show why ([`mockups/export-blocked.html`](mockups/export-blocked.html)); maps gaps and retries. Import of newer/unknown `formatVersion` → fail closed with clear error (spine-only; Zoom/pan prefs unchanged).
 
 ### UJ-2 — Sticky Skin switch (Alex explores looks)
 
@@ -216,8 +227,8 @@ Desktop browser first. Local persistence + file import/export. Not native shell,
 2. Uses Skin combo (right) to move among `Black/Green` → `Cream/Duo` without hunting pills.
 3. Selects Object type from canvas; State stays put while checking Hover vs Normal mappings.
 4. On `Black/Duo` / `Cream/Duo`, Patch/Master accents read via Orchestrator zones on the mock — not frozen into generic Object types.
-5. **Climax:** Skin switch keeps the same Object type, State, Zoom, and pan; context strip proves place was kept; no invented selection when none existed.
-6. May rename via Skin tab; Delete Skin always confirms. Does not need layers, compare mode, or where-used (Soon).
+5. **Climax:** Skin switch keeps the same Object type, State, Zoom, and pan; top-bar controls prove place was kept; no invented selection when none existed.
+6. May Create / Duplicate / Delete via Skin tab; Delete Skin always confirms. Does not need layers, compare mode, or where-used (Soon).
 
 **Failure path:** Deletes a Palette colour still in use → confirm lists n mappings that will become Unbound ([`mockups/delete-palette-modal.html`](mockups/delete-palette-modal.html)) → after confirm, Export disables until rebound. Cancels delete → no change.
 
@@ -238,7 +249,8 @@ Intent only — **not** MVP exit criteria.
 
 ### V2 / parked
 
-Layers tree; named history panel; JSON/Dev Mode inspect; comments; object×property matrix; alias tokens; contributor tooling; denser chrome; keyboard-only power modes; optional left Palette rail; external contributors shipping non-Black/Cream-derived Skins once Matrix-Control import is stable.
+Layers tree; named history panel; JSON/Dev Mode inspect; comments; object×property matrix; alias tokens; contributor tooling; keyboard-only power modes; optional left Palette rail; external contributors shipping non-Black/Cream-derived Skins once Matrix-Control import is stable.  
+*(Note: denser Photocraft **grammar** for chrome shipped as **Lot B** 2026-10-19 — not a promotion of Epic 6 / Lot C.)*
 
 ## Open for architecture / Collect
 

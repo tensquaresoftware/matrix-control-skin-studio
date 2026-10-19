@@ -393,16 +393,17 @@ describe('skin tab I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /skin-tab-matrix\.test\.mjs/)
   })
 
-  it('segment default: Mappings selected; Skin body hidden until Skin chosen', async () => {
+  it('zone-2 tabs default: Mappings selected; Skin body hidden until Skin chosen', async () => {
     const restore = installMinimalDocument()
     try {
-      const [sidebar, model, seed] = await Promise.all([
+      const [sidebar, model, seed, chrome] = await Promise.all([
         importCompiledTs('src/sidebar/index.ts'),
         importCompiledTs('src/model/index.ts'),
         importCompiledTs('src/seed/index.ts'),
+        importCompiledTs('src/chrome/index.ts'),
       ])
-      const { host } = mountSidebarWithStore(
-        sidebar,
+      const { root: host } = mountChromeWithStore(
+        chrome,
         model,
         seed.createSeedProject(),
         defaultSession(),
@@ -416,12 +417,12 @@ describe('skin tab I/O matrix', () => {
       assert.equal(skinBtn?.classList.contains('is-on'), false)
       assert.equal(mappingsPanel?.hidden, false)
       assert.equal(skinPanel?.hidden, true)
-      // Mappings editor mounts Object type / State / property list (story 4-2).
-      assert.ok(mappingsPanel?.querySelector('[data-mappings-object-type]'))
-      assert.ok(mappingsPanel?.querySelector('[data-mappings-state]'))
+      // Object/State live in top bar (Lot B); Mappings tab is property rows only.
+      assert.ok(host.querySelector('[data-mappings-object-type]'))
+      assert.ok(host.querySelector('[data-mappings-state]'))
       assert.ok(mappingsPanel?.querySelector('[data-mappings-property-list]'))
-      // Lot A seed inventory: Object types selectable; property rows when type+state chosen.
-      const objectSelect = mappingsPanel.querySelector('[data-mappings-object-type]')
+      assert.equal(mappingsPanel?.querySelector('[data-mappings-object-type]'), null)
+      const objectSelect = host.querySelector('[data-mappings-object-type]')
       assert.equal(objectSelect?.disabled, false)
       assert.ok(objectSelect.children.length >= 4) // "—" + headerLed/patchBand/masterBand
       assert.equal(
@@ -460,7 +461,7 @@ describe('skin tab I/O matrix', () => {
       assert.equal(name.value, 'Black/Green')
       assert.equal(name.disabled, false)
       const createBtn = host.querySelector('[data-skin-create]')
-      assert.equal(createBtn?.textContent, 'Create Skin')
+      assert.equal(createBtn?.textContent, 'Create')
       assert.equal(createBtn?.disabled, false)
       assert.equal(host.querySelector('[data-skin-duplicate]')?.disabled, false)
       assert.equal(host.querySelector('[data-skin-delete]')?.disabled, false)
@@ -501,7 +502,7 @@ describe('skin tab I/O matrix', () => {
       const option = select.children.find((o) => o.value === 'black-green')
       assert.equal(option?.textContent, 'Night/Green')
       assert.equal(
-        root.querySelector('[data-context-value="skin"]')?.textContent,
+        (() => { const s = root.querySelector('[data-chrome-skin-select]'); if (!s || s.value === '') return '—'; const o = [...s.children].find(c => c.value === s.value); return o?.textContent })(),
         'Night/Green',
       )
 

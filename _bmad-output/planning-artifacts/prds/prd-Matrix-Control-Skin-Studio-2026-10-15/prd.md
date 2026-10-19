@@ -264,11 +264,12 @@ Operator can start from a Collect / Matrix-Control-derived inventory that seeds 
 
 #### FR-18: Object selection and States
 
-Operator can select an Object type (canvas click or Sidebar control) and choose a State, then edit Property → Palette id Mappings.
+Operator can select an Object type (canvas click or chrome Object control) and choose a State, then edit Property → Palette id Mappings.
 
 **Consequences (testable):**
 - Changing State refreshes which Property Mappings are shown and how the mock paints that Object type.
-- Selection mechanisms include both canvas and Sidebar (FR-5).
+- Selection mechanisms include both canvas and chrome Object/State controls (FR-5).
+- `[NOTE FOR UX Lot B 2026-10-19: Object type and State controls may live in the top bar (not only in the sidebar); sticky-context and mapping semantics are unchanged.]`
 
 #### FR-19: Real-time preview
 

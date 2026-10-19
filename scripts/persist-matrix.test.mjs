@@ -285,6 +285,16 @@ describe('persist I/O matrix', () => {
         },
         session: sampleSession(),
       }),
+      // bare palette hex (no #) must CLEAR — document gate requires #RRGGBB
+      JSON.stringify({
+        project: {
+          formatVersion: 1,
+          palette: [{ id: 'duoLedYellow', hex: 'FFCC00' }],
+          skins: [],
+          inventory: { objectTypes: [] },
+        },
+        session: sampleSession(),
+      }),
       'null',
       '"string"',
     ]

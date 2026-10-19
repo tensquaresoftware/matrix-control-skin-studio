@@ -282,8 +282,22 @@ function findButtonByLabel(root, label) {
   return walk(root)
 }
 
+
+function skinSelectDisplay(root) {
+  const select = root.querySelector('[data-chrome-skin-select]')
+  if (!select) return undefined
+  if (select.value === '') return '—'
+  const kids = Array.isArray(select.children)
+    ? select.children
+    : [...(select.children || [])]
+  const opt = kids.find((c) => c.value === select.value)
+  return opt?.textContent ?? select.value
+}
+
 function paneHeight(root, id) {
-  const pane = root.querySelector(`[data-sidebar-pane="${id}"]`)
+  const pane =
+    root.querySelector(`[data-sidebar-zone="${id}"]`) ||
+    root.querySelector(`[data-sidebar-pane="${id}"]`)
   assert.ok(pane, `expected pane ${id}`)
   return pane.style.height
 }
@@ -320,18 +334,13 @@ describe('chrome shell I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /chrome-shell-matrix\.test\.mjs/)
   })
 
-  it('layout tokens + flex caps: top bar 40px, context 28px, sidebar 320px (no canvas crush), splitter hit 6px', () => {
+  it('layout tokens + flex caps: top bar 40px, sidebar 260px (no canvas crush), splitter hit 6px', () => {
     assert.match(baseCss, /--space-top-bar-height\s*:\s*40px/)
-    assert.match(baseCss, /--space-context-strip-height\s*:\s*28px/)
-    assert.match(baseCss, /--space-sidebar-width\s*:\s*320px/)
+    assert.match(baseCss, /--space-sidebar-width\s*:\s*260px/)
     assert.match(baseCss, /--space-splitter-hit\s*:\s*6px/)
     assert.match(
       baseCss,
       /\.chrome-top-bar\s*\{[^}]*height:\s*var\(--space-top-bar-height\)/s,
-    )
-    assert.match(
-      baseCss,
-      /\.chrome-context-strip\s*\{[^}]*height:\s*var\(--space-context-strip-height\)/s,
     )
     assert.match(
       baseCss,
@@ -376,7 +385,7 @@ describe('chrome shell I/O matrix', () => {
     )
   })
 
-  it('fresh shell mount: chrome geometry, four panes, live Zoom/Skin + stub ops', async () => {
+  it('fresh shell mount: chrome geometry, two zones, live Zoom/Skin + stub ops', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
     const seed = await importCompiledTs('src/seed/index.ts')
@@ -392,8 +401,7 @@ describe('chrome shell I/O matrix', () => {
 
       assert.ok(root.querySelector('[data-chrome-shell]'))
       assert.ok(root.querySelector('[data-chrome-top-bar]'))
-      assert.ok(root.querySelector('[data-chrome-context-strip]'))
-      assert.ok(root.querySelector('[data-chrome-body]'))
+            assert.ok(root.querySelector('[data-chrome-body]'))
       assert.ok(root.querySelector('[data-canvas-host]'))
       assert.ok(root.querySelector('[data-sidebar]'))
       assert.ok(root.querySelector('[data-palette-row="yellow"]'))
@@ -410,7 +418,7 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(zoneMaster.style.backgroundColor, '#FF8A1F')
       assert.equal(zoneDuoLed.style.backgroundColor, '#FFCC00')
 
-      // Layout slot classes must survive mountCanvas / mountSidebar (flex:1 + 320px).
+      // Layout slot classes must survive mountCanvas / mountSidebar (flex:1 + 260px).
       const canvasHost = root.querySelector('[data-canvas-host]')
       const sidebarHost = root.querySelector('[data-sidebar]')
       assert.ok(canvasHost.classList.contains('chrome-canvas-slot'))
@@ -418,10 +426,8 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(sidebarHost.classList.contains('chrome-sidebar-slot'))
       assert.ok(sidebarHost.classList.contains('sidebar'))
 
-      assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
-      assert.equal(paneHeight(root, 'palette'), `${sidebar.DEFAULT_PALETTE_HEIGHT_PX}px`)
-      assert.equal(paneHeight(root, 'mappings'), `${sidebar.MIN_MAPPINGS_HEIGHT_PX}px`)
-      assert.equal(paneHeight(root, 'unbound'), `${sidebar.MIN_UNBOUND_HEIGHT_PX}px`)
+      assert.equal(paneHeight(root, 'colorPalette'), `${sidebar.DEFAULT_COLOR_PALETTE_HEIGHT_PX}px`)
+      assert.equal(paneHeight(root, 'skinMappingsUnbound'), `${sidebar.DEFAULT_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX}px`)
 
       assert.ok(root.querySelector('[data-chrome-new]'))
       assert.ok(root.querySelector('[data-chrome-import]'))
@@ -450,24 +456,24 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-chrome-skin-select]'))
 
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '100%',
       )
       assert.equal(
-        root.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(root),
         '—',
       )
 
       const splitters = root.querySelectorAll('[data-sidebar-splitter]')
-      assert.equal(splitters.length, 3)
+      assert.equal(splitters.length, 1)
 
       assert.throws(
         () => mountChromeShell(null, store, { storage }),
@@ -685,7 +691,7 @@ describe('chrome shell I/O matrix', () => {
     }
   })
 
-  it('top-bar order: New Import Export · Undo Redo · Zoom · spacer · Skin', async () => {
+  it('top-bar order: New Import Export · Undo Redo · Object State · spacer · Skin Zoom', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
     const { mountChromeShell } = await importCompiledTs('src/chrome/index.ts')
@@ -705,6 +711,8 @@ describe('chrome shell I/O matrix', () => {
         if (child.classList.contains('chrome-top-sep')) return 'sep'
         if (child.getAttribute('data-chrome-undo') !== null) return 'undo'
         if (child.getAttribute('data-chrome-redo') !== null) return 'redo'
+        if (child.getAttribute('data-chrome-object') !== null) return 'object'
+        if (child.getAttribute('data-chrome-state') !== null) return 'state'
         if (child.getAttribute('data-chrome-zoom') !== null) return 'zoom'
         if (child.getAttribute('data-chrome-spacer') !== null) return 'spacer'
         if (child.getAttribute('data-chrome-skin') !== null) return 'skin'
@@ -717,9 +725,11 @@ describe('chrome shell I/O matrix', () => {
         'sep',
         'undo',
         'redo',
-        'zoom',
+        'object',
+        'state',
         'spacer',
         'skin',
+        'zoom',
       ])
       assert.equal(findButtonByLabel(root, 'New')?.disabled, false)
       assert.equal(findButtonByLabel(root, 'Import')?.disabled, false)
@@ -781,7 +791,7 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(zoomSelect.tagName, 'SELECT')
       assert.equal(zoomSelect.value, '100%')
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '100%',
       )
 
@@ -800,9 +810,9 @@ describe('chrome shell I/O matrix', () => {
         palette: 140,
         mappings: 160,
         unbound: 120,
-      })
+      }) // zoom change must not rewrite heights; legacy keys may remain until splitter persist
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '150%',
       )
       assert.equal(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
@@ -826,7 +836,7 @@ describe('chrome shell I/O matrix', () => {
       const corruptSelect = rootCorrupt.querySelector('[data-chrome-zoom-select]')
       assert.equal(corruptSelect.value, '100%')
       assert.equal(
-        rootCorrupt.querySelector('[data-context-value="zoom"]')?.textContent,
+        rootCorrupt.querySelector('[data-context-value="zoom"]')?.value,
         '100%',
       )
       assert.equal(
@@ -862,7 +872,7 @@ describe('chrome shell I/O matrix', () => {
         throwSelect.dispatchEvent({ type: 'change' })
       })
       assert.equal(
-        rootThrow.querySelector('[data-context-value="zoom"]')?.textContent,
+        rootThrow.querySelector('[data-context-value="zoom"]')?.value,
         '200%',
       )
     } finally {
@@ -909,16 +919,16 @@ describe('chrome shell I/O matrix', () => {
         seedProject.skins.map((s) => s.id),
       )
       assert.equal(
-        rootNull.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(rootNull),
         '—',
       )
       assert.equal(
-        rootNull.querySelector('[data-context-value="object"]')?.textContent,
-        '—',
+        rootNull.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        rootNull.querySelector('[data-context-value="state"]')?.textContent,
-        '—',
+        rootNull.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
       assert.ok(rootNull.querySelector('[data-chrome-skin]')?.classList.contains('chrome-skin-combo'))
 
@@ -929,15 +939,15 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(afterNullSwitch.selectedObjectTypeId, null)
       assert.equal(afterNullSwitch.selectedStateId, null)
       assert.equal(
-        rootNull.querySelector('[data-context-value="object"]')?.textContent,
-        '—',
+        rootNull.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        rootNull.querySelector('[data-context-value="state"]')?.textContent,
-        '—',
+        rootNull.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
       assert.equal(
-        rootNull.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(rootNull),
         'Monochrome',
       )
 
@@ -956,8 +966,8 @@ describe('chrome shell I/O matrix', () => {
       store.apply({
         project: seedProject,
         session: {
-          selectedObjectTypeId: 'ot-1',
-          selectedStateId: 'idle',
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'default',
           activeSkinId: 'black-green',
         },
       })
@@ -967,21 +977,21 @@ describe('chrome shell I/O matrix', () => {
       mountChromeShell(root, store, { storage })
       const objectVal = root.querySelector('[data-context-value="object"]')
       const stateVal = root.querySelector('[data-context-value="state"]')
-      assert.equal(objectVal?.tagName, 'SPAN')
-      assert.equal(stateVal?.tagName, 'SPAN')
+      assert.equal(objectVal?.tagName, 'SELECT')
+      assert.equal(stateVal?.tagName, 'SELECT')
       assert.equal(objectVal.hasAttribute('contenteditable'), false)
       assert.equal(stateVal.hasAttribute('contenteditable'), false)
 
       const skinSelect = root.querySelector('[data-chrome-skin-select]')
       assert.equal(skinSelect.value, 'black-green')
       assert.equal(
-        root.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(root),
         'Black/Green',
       )
-      assert.equal(objectVal.textContent, 'ot-1')
-      assert.equal(stateVal.textContent, 'idle')
+      assert.equal(objectVal.value, 'headerLed')
+      assert.equal(stateVal.value, 'default')
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '150%',
       )
 
@@ -990,31 +1000,32 @@ describe('chrome shell I/O matrix', () => {
 
       const after = store.getState().session
       assert.equal(after.activeSkinId, 'monochrome')
-      assert.equal(after.selectedObjectTypeId, 'ot-1')
-      assert.equal(after.selectedStateId, 'idle')
+      assert.equal(after.selectedObjectTypeId, 'headerLed')
+      assert.equal(after.selectedStateId, 'default')
       assert.equal(
-        root.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(root),
         'Monochrome',
       )
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        'ot-1',
+        root.querySelector('[data-context-value="object"]')?.value,
+        'headerLed',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        'idle',
+        root.querySelector('[data-context-value="state"]')?.value,
+        'default',
       )
       assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
       assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)), stickyPrefs)
       assert.notEqual(storage.getItem(persist.PROJECT_ENVELOPE_KEY), envelopeBefore)
       const envelope = JSON.parse(storage.getItem(persist.PROJECT_ENVELOPE_KEY))
       assert.equal(envelope.session.activeSkinId, 'monochrome')
-      assert.equal(envelope.session.selectedObjectTypeId, 'ot-1')
-      assert.equal(envelope.session.selectedStateId, 'idle')
+      assert.equal(envelope.session.selectedObjectTypeId, 'headerLed')
+      assert.equal(envelope.session.selectedStateId, 'default')
       assert.equal(Object.hasOwn(envelope, 'zoomStep'), false)
       assert.equal(Object.hasOwn(envelope, 'panXY'), false)
 
-      // Live strip sync via store.apply (no selection UI)
+      // Live Object/State selects sync via store.apply when ids exist in inventory.
+      // Unknown ids stay in session but the living select shows empty (Lot B).
       store.apply({
         session: {
           selectedObjectTypeId: 'ot-live',
@@ -1022,13 +1033,15 @@ describe('chrome shell I/O matrix', () => {
           activeSkinId: 'monochrome',
         },
       })
+      assert.equal(store.getState().session.selectedObjectTypeId, 'ot-live')
+      assert.equal(store.getState().session.selectedStateId, 'pressed')
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        'ot-live',
+        root.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        'pressed',
+        root.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
 
       store.apply({
@@ -1039,19 +1052,19 @@ describe('chrome shell I/O matrix', () => {
         },
       })
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
 
       // Restore sticky ids for clear-skin path
       store.apply({
         session: {
-          selectedObjectTypeId: 'ot-1',
-          selectedStateId: 'idle',
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'default',
           activeSkinId: 'monochrome',
         },
       })
@@ -1068,20 +1081,20 @@ describe('chrome shell I/O matrix', () => {
       skinSelect.dispatchEvent({ type: 'change' })
       const afterClear = store.getState().session
       assert.equal(afterClear.activeSkinId, null)
-      assert.equal(afterClear.selectedObjectTypeId, 'ot-1')
-      assert.equal(afterClear.selectedStateId, 'idle')
+      assert.equal(afterClear.selectedObjectTypeId, 'headerLed')
+      assert.equal(afterClear.selectedStateId, 'default')
       assert.equal(skinSelect.value, '')
       assert.equal(
-        root.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(root),
         '—',
       )
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        'ot-1',
+        root.querySelector('[data-context-value="object"]')?.value,
+        'headerLed',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        'idle',
+        root.querySelector('[data-context-value="state"]')?.value,
+        'default',
       )
       assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
 
@@ -1105,16 +1118,17 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(orphanSession.selectedStateId, 'state-orphan')
       assert.equal(skinSelectOrphan.value, '')
       assert.equal(
-        rootOrphan.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(rootOrphan),
         '—',
       )
+      // Session keeps sticky Object/State ids; living selects only list inventory.
       assert.equal(
-        rootOrphan.querySelector('[data-context-value="object"]')?.textContent,
-        'ot-orphan',
+        rootOrphan.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        rootOrphan.querySelector('[data-context-value="state"]')?.textContent,
-        'state-orphan',
+        rootOrphan.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
       const orphanLabels = skinSelectOrphan.children
         .filter((c) => c.tagName === 'OPTION')
@@ -1163,16 +1177,14 @@ describe('chrome shell I/O matrix', () => {
 
     try {
       const storage = persist.createMemoryStorage()
-      // Headroom on mappings so palette↔mappings drag can move without hitting mins.
       storage.setItem(
         persist.PREFS_KEY,
         JSON.stringify({
           zoomStep: '100%',
           panXY: { x: 0, y: 0 },
           sidebarPaneHeights: {
-            palette: 140,
-            mappings: 220,
-            unbound: 180,
+            colorPalette: 280,
+            skinMappingsUnbound: 300,
           },
         }),
       )
@@ -1180,10 +1192,10 @@ describe('chrome shell I/O matrix', () => {
       const root = createRoot()
       mountChromeShell(root, store, { storage })
 
-      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
-      assert.ok(splitter1)
+      const splitter0 = root.querySelector('[data-sidebar-splitter="0"]')
+      assert.ok(splitter0)
 
-      splitter1.dispatchEvent({
+      splitter0.dispatchEvent({
         type: 'pointerdown',
         button: 0,
         clientY: 200,
@@ -1195,9 +1207,8 @@ describe('chrome shell I/O matrix', () => {
         clientY: 240,
         pointerId: 1,
       })
-      assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
-      assert.equal(paneHeight(root, 'palette'), '180px')
-      assert.equal(paneHeight(root, 'mappings'), '180px')
+      assert.equal(paneHeight(root, 'colorPalette'), '320px')
+      assert.equal(paneHeight(root, 'skinMappingsUnbound'), '260px')
 
       globalThis.window.dispatchEvent({
         type: 'pointerup',
@@ -1205,114 +1216,52 @@ describe('chrome shell I/O matrix', () => {
       })
 
       const saved = JSON.parse(storage.getItem(persist.PREFS_KEY))
-      assert.equal(saved.sidebarPaneHeights.palette, 180)
-      assert.equal(saved.sidebarPaneHeights.mappings, 180)
-      assert.equal(saved.sidebarPaneHeights.unbound, 180)
+      assert.equal(saved.sidebarPaneHeights.colorPalette, 320)
+      assert.equal(saved.sidebarPaneHeights.skinMappingsUnbound, 260)
       assert.equal(saved.zoomStep, '100%')
       assert.deepEqual(saved.panXY, { x: 0, y: 0 })
 
-      // Remount restores the committed prefs heights.
       const remount = createRoot()
       mountChromeShell(remount, model.createStore(), { storage })
-      assert.equal(paneHeight(remount, 'palette'), '180px')
-      assert.equal(paneHeight(remount, 'mappings'), '180px')
-      assert.equal(paneHeight(remount, 'unbound'), '180px')
+      assert.equal(paneHeight(remount, 'colorPalette'), '320px')
+      assert.equal(paneHeight(remount, 'skinMappingsUnbound'), '260px')
 
-      // Non-finite deltaY leaves heights unchanged.
       assert.deepEqual(
-        sidebar.resizeFromDrag(1, Number.NaN, {
-          palette: 140,
-          mappings: 220,
-          unbound: 180,
+        sidebar.resizeFromDrag(0, Number.NaN, {
+          colorPalette: 280,
+          skinMappingsUnbound: 300,
         }),
-        { palette: 140, mappings: 220, unbound: 180 },
+        { colorPalette: 280, skinMappingsUnbound: 300 },
       )
 
-      // Splitter-0 grow: picker stays 220px; panes 2–4 actually move.
-      const before0 = {
-        palette: paneHeight(root, 'palette'),
-        mappings: paneHeight(root, 'mappings'),
-        unbound: paneHeight(root, 'unbound'),
-      }
-      const splitter0 = root.querySelector('[data-sidebar-splitter="0"]')
-      splitter0.dispatchEvent({
-        type: 'pointerdown',
-        button: 0,
-        clientY: 100,
-        pointerId: 2,
-        preventDefault() {},
+      const grown = sidebar.resizeFromDrag(0, 40, {
+        colorPalette: 280,
+        skinMappingsUnbound: 300,
       })
-      globalThis.window.dispatchEvent({
-        type: 'pointermove',
-        clientY: 130,
-        pointerId: 2,
-      })
-      globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 2 })
-      assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
-      assert.notEqual(paneHeight(root, 'palette'), before0.palette)
-      assert.notEqual(
-        `${paneHeight(root, 'mappings')}|${paneHeight(root, 'unbound')}`,
-        `${before0.mappings}|${before0.unbound}`,
-      )
+      assert.equal(grown.colorPalette, 320)
+      assert.equal(grown.skinMappingsUnbound, 260)
 
-      // Grow-beyond-absorb: palette only grows by what mappings/unbound free.
-      const capped = sidebar.resizeFromDrag(
-        0,
-        500,
-        { palette: 140, mappings: 160, unbound: 120 },
-      )
-      assert.equal(capped.palette, 140)
-      assert.equal(capped.mappings, 160)
-      assert.equal(capped.unbound, 120)
-
-      // Splitter-0 shrink: palette decreases; mappings+unbound absorb the freed space.
       const shrunk = sidebar.resizeFromDrag(0, -40, {
-        palette: 140,
-        mappings: 200,
-        unbound: 180,
+        colorPalette: 280,
+        skinMappingsUnbound: 300,
       })
-      assert.equal(shrunk.palette, 100)
+      assert.equal(shrunk.colorPalette, 240)
+      assert.equal(shrunk.skinMappingsUnbound, 340)
+
+      // Hitting min on the lower zone stops growth of the upper zone.
+      const capped = sidebar.resizeFromDrag(0, 500, {
+        colorPalette: 280,
+        skinMappingsUnbound: sidebar.MIN_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX,
+      })
+      assert.equal(capped.colorPalette, 280)
       assert.equal(
-        shrunk.mappings + shrunk.unbound,
-        200 + 180 + 40,
+        capped.skinMappingsUnbound,
+        sidebar.MIN_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX,
       )
-
-      // Splitter-2: mappings ↔ unbound boundary moves with mins.
-      const split2 = sidebar.resizeFromDrag(2, 30, {
-        palette: 140,
-        mappings: 200,
-        unbound: 180,
-      })
-      assert.equal(split2.palette, 140)
-      assert.equal(split2.mappings, 230)
-      assert.equal(split2.unbound, 150)
-
-      const split2Dom = root.querySelector('[data-sidebar-splitter="2"]')
-      const before2 = {
-        mappings: paneHeight(root, 'mappings'),
-        unbound: paneHeight(root, 'unbound'),
-      }
-      split2Dom.dispatchEvent({
-        type: 'pointerdown',
-        button: 0,
-        clientY: 300,
-        pointerId: 3,
-        preventDefault() {},
-      })
-      globalThis.window.dispatchEvent({
-        type: 'pointermove',
-        clientY: 330,
-        pointerId: 3,
-      })
-      globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 3 })
-      assert.notEqual(paneHeight(root, 'mappings'), before2.mappings)
-      assert.notEqual(paneHeight(root, 'unbound'), before2.unbound)
-      assert.equal(paneHeight(root, 'picker'), `${sidebar.PICKER_PANE_HEIGHT_PX}px`)
     } finally {
       restoreDoc()
     }
   })
-
   it('prefs restore: saved heights, below-min clamp, and distribute defaults', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
@@ -1328,9 +1277,8 @@ describe('chrome shell I/O matrix', () => {
           zoomStep: '125%',
           panXY: { x: 3, y: 4 },
           sidebarPaneHeights: {
-            palette: 180,
-            mappings: 200,
-            unbound: 150,
+            colorPalette: 300,
+            skinMappingsUnbound: 250,
           },
         }),
       )
@@ -1338,73 +1286,123 @@ describe('chrome shell I/O matrix', () => {
       const root = createRoot()
       mountChromeShell(root, model.createStore(), { storage })
 
-      assert.equal(paneHeight(root, 'palette'), '180px')
-      assert.equal(paneHeight(root, 'mappings'), '200px')
-      assert.equal(paneHeight(root, 'unbound'), '150px')
-      assert.equal(paneHeight(root, 'picker'), '220px')
+      assert.equal(paneHeight(root, 'colorPalette'), '300px')
+      assert.equal(paneHeight(root, 'skinMappingsUnbound'), '250px')
       assert.equal(root.querySelector('[data-chrome-zoom-select]')?.value, '125%')
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '125%',
       )
 
-      // Below-min prefs → clamp to mins.
+      // Legacy three-key prefs → Lot B defaults (no partial migrate).
       storage.setItem(
         persist.PREFS_KEY,
         JSON.stringify({
           zoomStep: '100%',
           panXY: { x: 0, y: 0 },
           sidebarPaneHeights: {
-            palette: 40,
-            mappings: 50,
-            unbound: 10,
+            palette: 180,
+            mappings: 200,
+            unbound: 150,
+          },
+        }),
+      )
+      const rootLegacy = createRoot()
+      mountChromeShell(rootLegacy, model.createStore(), { storage })
+      assert.equal(
+        paneHeight(rootLegacy, 'colorPalette'),
+        `${sidebar.DEFAULT_COLOR_PALETTE_HEIGHT_PX}px`,
+      )
+      assert.equal(
+        paneHeight(rootLegacy, 'skinMappingsUnbound'),
+        `${sidebar.DEFAULT_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX}px`,
+      )
+
+      // One-key Lot B shape (missing the sibling key) → defaults, not hybrid.
+      for (const partial of [
+        { colorPalette: 300 },
+        { skinMappingsUnbound: 250 },
+      ]) {
+        storage.setItem(
+          persist.PREFS_KEY,
+          JSON.stringify({
+            zoomStep: '100%',
+            panXY: { x: 0, y: 0 },
+            sidebarPaneHeights: partial,
+          }),
+        )
+        const rootPartial = createRoot()
+        mountChromeShell(rootPartial, model.createStore(), { storage })
+        assert.equal(
+          paneHeight(rootPartial, 'colorPalette'),
+          `${sidebar.DEFAULT_COLOR_PALETTE_HEIGHT_PX}px`,
+          `partial ${JSON.stringify(partial)} must fall back colorPalette`,
+        )
+        assert.equal(
+          paneHeight(rootPartial, 'skinMappingsUnbound'),
+          `${sidebar.DEFAULT_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX}px`,
+          `partial ${JSON.stringify(partial)} must fall back skinMappingsUnbound`,
+        )
+      }
+
+      // Below-min Lot B prefs → clamp to mins.
+      storage.setItem(
+        persist.PREFS_KEY,
+        JSON.stringify({
+          zoomStep: '100%',
+          panXY: { x: 0, y: 0 },
+          sidebarPaneHeights: {
+            colorPalette: 40,
+            skinMappingsUnbound: 10,
           },
         }),
       )
       const rootClamp = createRoot()
       mountChromeShell(rootClamp, model.createStore(), { storage })
-      assert.equal(paneHeight(rootClamp, 'palette'), `${sidebar.MIN_PALETTE_HEIGHT_PX}px`)
-      assert.equal(paneHeight(rootClamp, 'mappings'), `${sidebar.MIN_MAPPINGS_HEIGHT_PX}px`)
-      assert.equal(paneHeight(rootClamp, 'unbound'), `${sidebar.MIN_UNBOUND_HEIGHT_PX}px`)
+      assert.equal(
+        paneHeight(rootClamp, 'colorPalette'),
+        `${sidebar.MIN_COLOR_PALETTE_HEIGHT_PX}px`,
+      )
+      assert.equal(
+        paneHeight(rootClamp, 'skinMappingsUnbound'),
+        `${sidebar.MIN_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX}px`,
+      )
 
       // Corrupt prefs → defaults
       storage.setItem(persist.PREFS_KEY, '{not-json')
       const root2 = createRoot()
       mountChromeShell(root2, model.createStore(), { storage })
-      assert.equal(paneHeight(root2, 'palette'), '140px')
-
-      // resolvePaneHeights distribute branch when host has measurable height.
-      const distributed = sidebar.resolvePaneHeights({}, { clientHeight: 800 })
-      assert.equal(distributed.palette, sidebar.DEFAULT_PALETTE_HEIGHT_PX)
-      assert.ok(distributed.mappings > sidebar.MIN_MAPPINGS_HEIGHT_PX)
-      assert.ok(distributed.unbound > sidebar.MIN_UNBOUND_HEIGHT_PX)
       assert.equal(
-        distributed.mappings + distributed.unbound,
-        800 - sidebar.PICKER_PANE_HEIGHT_PX - 3 - sidebar.DEFAULT_PALETTE_HEIGHT_PX,
+        paneHeight(root2, 'colorPalette'),
+        `${sidebar.DEFAULT_COLOR_PALETTE_HEIGHT_PX}px`,
       )
 
-      // Mount path with measurable host height (not only the helper call).
+      const distributed = sidebar.resolvePaneHeights({}, { clientHeight: 800 })
+      assert.ok(distributed.colorPalette >= sidebar.MIN_COLOR_PALETTE_HEIGHT_PX)
+      assert.ok(
+        distributed.skinMappingsUnbound >= sidebar.MIN_SKIN_MAPPINGS_UNBOUND_HEIGHT_PX,
+      )
+      assert.equal(
+        distributed.colorPalette + distributed.skinMappingsUnbound,
+        799,
+      )
+
       const emptyStorage = persist.createMemoryStorage()
       const measurableHost = createElement('aside')
       measurableHost.clientHeight = 800
       sidebar.mountSidebar(measurableHost, { storage: emptyStorage })
       assert.equal(
-        paneHeight(measurableHost, 'palette'),
-        `${sidebar.DEFAULT_PALETTE_HEIGHT_PX}px`,
+        paneHeight(measurableHost, 'colorPalette'),
+        `${distributed.colorPalette}px`,
       )
       assert.equal(
-        paneHeight(measurableHost, 'mappings'),
-        `${distributed.mappings}px`,
-      )
-      assert.equal(
-        paneHeight(measurableHost, 'unbound'),
-        `${distributed.unbound}px`,
+        paneHeight(measurableHost, 'skinMappingsUnbound'),
+        `${distributed.skinMappingsUnbound}px`,
       )
     } finally {
       restoreDoc()
     }
   })
-
   it('prefs isolation: splitter commit does not mutate project envelope', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
@@ -1421,9 +1419,8 @@ describe('chrome shell I/O matrix', () => {
           zoomStep: '100%',
           panXY: { x: 0, y: 0 },
           sidebarPaneHeights: {
-            palette: 140,
-            mappings: 220,
-            unbound: 180,
+            colorPalette: 280,
+            skinMappingsUnbound: 300,
           },
         }),
       )
@@ -1435,8 +1432,8 @@ describe('chrome shell I/O matrix', () => {
       const root = createRoot()
       mountChromeShell(root, store, { storage })
 
-      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
-      splitter1.dispatchEvent({
+      const splitter0 = root.querySelector('[data-sidebar-splitter="0"]')
+      splitter0.dispatchEvent({
         type: 'pointerdown',
         button: 0,
         clientY: 200,
@@ -1459,9 +1456,14 @@ describe('chrome shell I/O matrix', () => {
       const remount = createRoot()
       mountChromeShell(remount, model.createStore(), { storage })
       const prefs = JSON.parse(storage.getItem(persist.PREFS_KEY))
-      assert.equal(paneHeight(remount, 'palette'), `${prefs.sidebarPaneHeights.palette}px`)
-      assert.equal(paneHeight(remount, 'mappings'), `${prefs.sidebarPaneHeights.mappings}px`)
-      assert.equal(paneHeight(remount, 'unbound'), `${prefs.sidebarPaneHeights.unbound}px`)
+      assert.equal(
+        paneHeight(remount, 'colorPalette'),
+        `${prefs.sidebarPaneHeights.colorPalette}px`,
+      )
+      assert.equal(
+        paneHeight(remount, 'skinMappingsUnbound'),
+        `${prefs.sidebarPaneHeights.skinMappingsUnbound}px`,
+      )
     } finally {
       restoreDoc()
     }
@@ -1479,7 +1481,10 @@ describe('chrome shell I/O matrix', () => {
           {
             zoomStep: '100%',
             panXY: { x: 0, y: 0 },
-            sidebarPaneHeights: { palette: 140, mappings: 160, unbound: 120 },
+            sidebarPaneHeights: {
+              colorPalette: 280,
+              skinMappingsUnbound: 240,
+            },
           },
           {
             getItem() {
@@ -1500,9 +1505,8 @@ describe('chrome shell I/O matrix', () => {
               zoomStep: '100%',
               panXY: { x: 0, y: 0 },
               sidebarPaneHeights: {
-                palette: 140,
-                mappings: 220,
-                unbound: 180,
+                colorPalette: 280,
+                skinMappingsUnbound: 300,
               },
             })
           }
@@ -1516,9 +1520,9 @@ describe('chrome shell I/O matrix', () => {
 
       const root = createRoot()
       mountChromeShell(root, model.createStore(), { storage: throwingStorage })
-      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
+      const splitter0 = root.querySelector('[data-sidebar-splitter="0"]')
       assert.doesNotThrow(() => {
-        splitter1.dispatchEvent({
+        splitter0.dispatchEvent({
           type: 'pointerdown',
           button: 0,
           clientY: 200,
@@ -1549,18 +1553,17 @@ describe('chrome shell I/O matrix', () => {
         zoomStep: '100%',
         panXY: { x: 0, y: 0 },
         sidebarPaneHeights: {
-          palette: 140,
-          mappings: 220,
-          unbound: 180,
+          colorPalette: 280,
+          skinMappingsUnbound: 300,
         },
       }
       storage.setItem(persist.PREFS_KEY, JSON.stringify(prefsBefore))
 
       const root = createRoot()
       mountChromeShell(root, model.createStore(), { storage })
-      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
+      const splitter0 = root.querySelector('[data-sidebar-splitter="0"]')
 
-      splitter1.dispatchEvent({
+      splitter0.dispatchEvent({
         type: 'pointerdown',
         button: 0,
         clientY: 200,
@@ -1572,25 +1575,21 @@ describe('chrome shell I/O matrix', () => {
         clientY: 240,
         pointerId: 1,
       })
-      assert.equal(paneHeight(root, 'palette'), '180px')
+      assert.equal(paneHeight(root, 'colorPalette'), '320px')
 
       globalThis.window.dispatchEvent({
         type: 'pointercancel',
         pointerId: 1,
       })
 
-      // Cancel must not commit prefs (spec: write on pointer-up only).
       assert.deepEqual(JSON.parse(storage.getItem(persist.PREFS_KEY)), prefsBefore)
-      assert.equal(splitter1.classList.contains('is-dragging'), false)
-      // Live heights must snap back (same contract as canvas pan cancel).
-      assert.equal(paneHeight(root, 'palette'), '140px')
-      assert.equal(paneHeight(root, 'mappings'), '220px')
-      assert.equal(paneHeight(root, 'unbound'), '180px')
+      assert.equal(splitter0.classList.contains('is-dragging'), false)
+      assert.equal(paneHeight(root, 'colorPalette'), '280px')
+      assert.equal(paneHeight(root, 'skinMappingsUnbound'), '300px')
 
-      // Remount from saved prefs; a full pointerup cycle must commit.
       const root2 = createRoot()
       mountChromeShell(root2, model.createStore(), { storage })
-      const splitter2 = root2.querySelector('[data-sidebar-splitter="1"]')
+      const splitter2 = root2.querySelector('[data-sidebar-splitter="0"]')
       splitter2.dispatchEvent({
         type: 'pointerdown',
         button: 0,
@@ -1605,14 +1604,13 @@ describe('chrome shell I/O matrix', () => {
       })
       globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 2 })
       const afterUp = JSON.parse(storage.getItem(persist.PREFS_KEY))
-      assert.equal(afterUp.sidebarPaneHeights.palette, 180)
-      assert.equal(afterUp.sidebarPaneHeights.mappings, 180)
+      assert.equal(afterUp.sidebarPaneHeights.colorPalette, 320)
+      assert.equal(afterUp.sidebarPaneHeights.skinMappingsUnbound, 260)
 
-      // releasePointerCapture throw must not skip listener cleanup / commit.
       storage.setItem(persist.PREFS_KEY, JSON.stringify(prefsBefore))
       const root3 = createRoot()
       mountChromeShell(root3, model.createStore(), { storage })
-      const splitterThrow = root3.querySelector('[data-sidebar-splitter="1"]')
+      const splitterThrow = root3.querySelector('[data-sidebar-splitter="0"]')
       splitterThrow.releasePointerCapture = () => {
         throw new Error('already released')
       }
@@ -1633,7 +1631,7 @@ describe('chrome shell I/O matrix', () => {
       })
       assert.equal(splitterThrow.classList.contains('is-dragging'), false)
       const afterThrow = JSON.parse(storage.getItem(persist.PREFS_KEY))
-      assert.equal(afterThrow.sidebarPaneHeights.palette, 170)
+      assert.equal(afterThrow.sidebarPaneHeights.colorPalette, 310)
     } finally {
       restoreDoc()
     }
@@ -1653,17 +1651,16 @@ describe('chrome shell I/O matrix', () => {
           zoomStep: '100%',
           panXY: { x: 0, y: 0 },
           sidebarPaneHeights: {
-            palette: 140,
-            mappings: 220,
-            unbound: 180,
+            colorPalette: 280,
+            skinMappingsUnbound: 300,
           },
         }),
       )
       const root = createRoot()
       mountChromeShell(root, model.createStore(), { storage })
-      const splitter1 = root.querySelector('[data-sidebar-splitter="1"]')
+      const splitter0 = root.querySelector('[data-sidebar-splitter="0"]')
 
-      splitter1.dispatchEvent({
+      splitter0.dispatchEvent({
         type: 'pointerdown',
         button: 0,
         clientY: 200,
@@ -1671,16 +1668,14 @@ describe('chrome shell I/O matrix', () => {
         preventDefault() {},
       })
 
-      // Foreign move must not resize.
       globalThis.window.dispatchEvent({
         type: 'pointermove',
         clientY: 280,
         pointerId: 99,
       })
-      assert.equal(paneHeight(root, 'palette'), '140px')
+      assert.equal(paneHeight(root, 'colorPalette'), '280px')
 
-      // Re-entrant pointerdown must not stack a second session.
-      splitter1.dispatchEvent({
+      splitter0.dispatchEvent({
         type: 'pointerdown',
         button: 0,
         clientY: 200,
@@ -1692,16 +1687,15 @@ describe('chrome shell I/O matrix', () => {
         clientY: 240,
         pointerId: 1,
       })
-      assert.equal(paneHeight(root, 'palette'), '180px')
+      assert.equal(paneHeight(root, 'colorPalette'), '320px')
 
-      // Foreign up must not end the active drag.
       globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 99 })
-      assert.equal(splitter1.classList.contains('is-dragging'), true)
+      assert.equal(splitter0.classList.contains('is-dragging'), true)
 
       globalThis.window.dispatchEvent({ type: 'pointerup', pointerId: 1 })
-      assert.equal(splitter1.classList.contains('is-dragging'), false)
+      assert.equal(splitter0.classList.contains('is-dragging'), false)
       const saved = JSON.parse(storage.getItem(persist.PREFS_KEY))
-      assert.equal(saved.sidebarPaneHeights.palette, 180)
+      assert.equal(saved.sidebarPaneHeights.colorPalette, 320)
     } finally {
       restoreDoc()
     }
@@ -1754,16 +1748,16 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(storage.getItem(persist.PREFS_KEY), prefsBefore)
       assert.equal(root.querySelector('[data-chrome-skin-select]')?.value, '')
       assert.equal(
-        root.querySelector('[data-context-value="skin"]')?.textContent,
+        skinSelectDisplay(root),
         '—',
       )
       assert.equal(
-        root.querySelector('[data-context-value="object"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="object"]')?.value,
+        '',
       )
       assert.equal(
-        root.querySelector('[data-context-value="state"]')?.textContent,
-        '—',
+        root.querySelector('[data-context-value="state"]')?.value,
+        '',
       )
     } finally {
       restoreDoc()
@@ -2097,7 +2091,7 @@ describe('chrome shell I/O matrix', () => {
       zoomSelect.dispatchEvent({ type: 'change' })
 
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '150%',
       )
       assert.equal(
@@ -2121,7 +2115,7 @@ describe('chrome shell I/O matrix', () => {
         '150%',
       )
       assert.equal(
-        remount.querySelector('[data-context-value="zoom"]')?.textContent,
+        remount.querySelector('[data-context-value="zoom"]')?.value,
         '150%',
       )
       assert.equal(
@@ -2253,7 +2247,7 @@ describe('chrome shell I/O matrix', () => {
         '150%',
       )
       assert.equal(
-        root.querySelector('[data-context-value="zoom"]')?.textContent,
+        root.querySelector('[data-context-value="zoom"]')?.value,
         '150%',
       )
     } finally {

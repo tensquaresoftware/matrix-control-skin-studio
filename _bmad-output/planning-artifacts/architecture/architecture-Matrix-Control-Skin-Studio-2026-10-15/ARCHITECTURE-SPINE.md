@@ -127,7 +127,7 @@ v1 seed Skin display names: `Black/Green`, `Cream/Green`, `Black/Duo`, `Cream/Du
 
 - **Binds:** FR-2, UX sticky context
 - **Prevents:** Skin switch resetting Object type / State / pan / zoom; dual homes for selection
-- **Rule:** `SessionUiState` holds `selectedObjectTypeId`, `selectedStateId`, `activeSkinId` only. Skin switch changes `activeSkinId` only. Never invent a selection when none exists. Zoom / pan are **not** in SessionUiState (prefs only — AD-8). Context strip reads session + prefs.
+- **Rule:** `SessionUiState` holds `selectedObjectTypeId`, `selectedStateId`, `activeSkinId` only. Skin switch changes `activeSkinId` only. Never invent a selection when none exists. Zoom / pan are **not** in SessionUiState (prefs only — AD-8). Top-bar Object/State/Skin/Zoom controls read session + prefs (no context strip — Lot B 2026-10-19).
 
 ### AD-7 — Coalesced undo / redo `[ASSUMPTION]`
 
@@ -139,7 +139,7 @@ v1 seed Skin display names: `Black/Green`, `Cream/Green`, `Black/Duo`, `Cream/Du
 
 - **Binds:** FR-11, FR-21
 - **Prevents:** Zoom / pan / sidebar layout leaking into handoff JSON; selection stored in two places
-- **Rule:** Autosave key `skin-studio:project` stores envelope `{ project, session }` where `session` is AD-6 fields only. Prefs key `skin-studio:prefs` stores `{ zoomStep, panXY, sidebarPaneHeights }` only. Export / import serialize **project only**. Reopen restores envelope + prefs. First open with no project, and **New** after confirm, load seed (v1 skins + base palette + seed-placeholder inventory). Default `zoomStep` = `100%`. Pan includes click-drag and arrow keys when canvas focused. Discrete Zoom steps: `50%`, `75%`, `100%`, `125%`, `150%`, `175%`, `200%`.
+- **Rule:** Autosave key `skin-studio:project` stores envelope `{ project, session }` where `session` is AD-6 fields only. Prefs key `skin-studio:prefs` stores `{ zoomStep, panXY, sidebarPaneHeights }` only. Export / import serialize **project only**. Reopen restores envelope + prefs. First open with no project, and **New** after confirm, load seed (v1 skins + base palette + seed-placeholder inventory). Default `zoomStep` = `100%`. Pan includes click-drag and arrow keys when canvas focused. Discrete Zoom steps: `50%`, `75%`, `100%`, `125%`, `150%`, `175%`, `200%`. **Lot B (2026-10-19):** `sidebarPaneHeights` stores the **two** sidebar zone heights with keys `colorPalette` and `skinMappingsUnbound` (px). If legacy three-key shape (`palette` / `mappings` / `unbound`) or invalid data is present on load, **fall back to defaults** — do not invent a partial migrate that leaves a broken layout.
 
 ### AD-9 — Import / export gate `[ADOPTED]`
 
@@ -155,9 +155,9 @@ v1 seed Skin display names: `Black/Green`, `Cream/Green`, `Black/Duo`, `Cream/Du
 
 ### AD-11 — UX chrome contracts bind implementation `[ADOPTED]`
 
-- **Binds:** FR-8…FR-11 as refined by UX final (Skin **combo**, not PRD segmented pills)
-- **Prevents:** regressing to Skin mode pills; adding layers tree / bottom chrome / left Palette rail in MVP
-- **Rule:** Top bar order: `[New][Import][Export]` · undo/redo · `Zoom` · `Skin` combo right-anchored. Sidebar four panes: fixed-height picker → palette → mappings/skin → unbound (splitters; panes 2–4 resizable). Pane 3 IA: segmented `[Mappings | Skin]`; Skin tab = rename / duplicate / delete only. No layers tree; no bottom chrome; no left Palette rail; no Auto Layout / true overlay editing UI. UI microcopy English per EXPERIENCE.md. Visual tokens from DESIGN.md.
+- **Binds:** FR-8…FR-11 as refined by UX final (Skin **combo**, not PRD segmented pills); **Lot B 2026-10-19** Photocraft/Photoshop chrome
+- **Prevents:** regressing to Skin mode pills; reintroducing context strip / 320px sidebar / four-pane HSV chrome; adding layers tree / bottom chrome / left Palette rail in MVP
+- **Rule:** Top bar order: `[New][Import][Export]` · undo/redo · **`Object` · `State`** · spacer · **`Skin` then `Zoom`** right-anchored (Skin+Zoom block ≈ sidebar width **260px**; Zoom combo width unchanged; Skin combo width adapted). **No context strip.** Sidebar **two** resizable zones (thick Photocraft gutters; blue accent line on resize hover): (1) tabs **`Color` \| `Palette`**; (2) tabs **`Skin` → `Mappings` → `Unbound`** with **Unbound count badge** on the tab. Color tab: SV square ≈200×200 + vertical hue + `#` + R/G/B text (no HSV sliders). Skin tab buttons: Create / Duplicate / Delete (English). No layers tree; no bottom chrome; no left Palette rail; no Auto Layout / true overlay editing UI. UI microcopy English per EXPERIENCE.md. Visual tokens from DESIGN.md (Photocraft-aligned greys). Lot A inventory / Lot C mock fidelity are **out of** this AD’s chrome scope.
 
 ### AD-12 — Hosting envelope (MVP)
 
@@ -232,9 +232,9 @@ v1 seed Skin display names: `Black/Green`, `Cream/Green`, `Black/Duo`, `Cream/Du
     persist/                # localStorage envelope + prefs
     io/                     # formatVersion validate; export gate
     seed/                   # v1 skins, base palette, seed-placeholder inventory
-    chrome/                 # top bar + context strip
+    chrome/                 # top bar only (Object/State/Skin/Zoom; no context strip)
     canvas/                 # GUI view mock + zone metadata + pan/zoom + pulse
-    sidebar/                # picker | palette | mappings-skin | unbound
+    sidebar/                # Color|Palette zone + Skin|Mappings|Unbound zone
     styles/                 # DESIGN.md tokens as CSS variables
   public/
 ```
