@@ -334,9 +334,9 @@ describe('chrome shell I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /chrome-shell-matrix\.test\.mjs/)
   })
 
-  it('layout tokens + flex caps: top bar 40px, sidebar 260px (no canvas crush), splitter hit 6px', () => {
+  it('layout tokens + flex caps: top bar 40px, sidebar 236px (no canvas crush), splitter hit 6px', () => {
     assert.match(baseCss, /--space-top-bar-height\s*:\s*40px/)
-    assert.match(baseCss, /--space-sidebar-width\s*:\s*260px/)
+    assert.match(baseCss, /--space-sidebar-width\s*:\s*236px/)
     assert.match(baseCss, /--space-splitter-hit\s*:\s*6px/)
     assert.match(
       baseCss,
@@ -725,6 +725,7 @@ describe('chrome shell I/O matrix', () => {
         'sep',
         'undo',
         'redo',
+        'sep',
         'object',
         'state',
         'spacer',
@@ -1774,7 +1775,11 @@ describe('chrome shell I/O matrix', () => {
     const restoreDoc = installMinimalDocument()
 
     try {
-      assert.match(baseCss, /\[data-canvas-host\]:focus/)
+      // Canvas stays focusable for pan arrows, but must not show a focus ring.
+      assert.match(
+        baseCss,
+        /\[data-canvas-host\]:focus-visible\s*\{[^}]*outline:\s*none/s,
+      )
       assert.match(baseCss, /\.canvas-host\s*\{[^}]*overflow:\s*hidden/s)
 
       const storage = persist.createMemoryStorage()

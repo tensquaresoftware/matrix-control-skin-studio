@@ -45,15 +45,18 @@
   --space-chrome-pad-x: 12px;
   --space-chrome-pad-y: 8px;
   --space-top-bar-height: 40px;
-  --space-sidebar-width: 260px;
-  --space-sidebar-skin-zoom-budget: 260px;
-  --space-picker-sv-size: 200px;
+  /* Color stage ~186 + gap + hue + triangle; panel pad-right 2px → ~236. */
+  --space-sidebar-width: 236px;
+  --space-sidebar-skin-zoom-budget: 236px;
+  --space-picker-sv-size: 186px;
   --space-picker-hue-width: 16px;
   --space-picker-stage-gap: 8px;
+  /* Triangle overhang only (1px margin + 5px tip); panel pad-right supplies the 2px gap. */
+  --space-picker-hue-trail: 6px;
   --space-splitter-hit: 6px;
   --space-pane-gutter: 4px;
   --space-pane-gap: 0px;
-  --space-sidebar-float: 4px;
+  --space-sidebar-float: 2px;
   --space-control-gap: 8px;
   --space-section-gap: 12px;
 
@@ -65,14 +68,14 @@
   --radius-lg: 8px;
   --radius-full: 9999px;
 
-  /* typography scale — PhotoCraft Inter + JetBrains Mono */
+  /* typography scale — PhotoCraft Inter + JetBrains Mono (11px chrome) */
   --type-ui-font-family: 'Inter', system-ui, sans-serif;
-  --type-ui-font-size: 13px;
+  --type-ui-font-size: 11px;
   --type-ui-font-weight: 400;
   --type-ui-line-height: 1.35;
 
   --type-ui-strong-font-family: 'Inter', system-ui, sans-serif;
-  --type-ui-strong-font-size: 13px;
+  --type-ui-strong-font-size: 11px;
   --type-ui-strong-font-weight: 600;
   --type-ui-strong-line-height: 1.35;
 
@@ -83,12 +86,12 @@
   --type-label-letter-spacing: 0.04em;
 
   --type-title-bar-font-family: 'Inter', system-ui, sans-serif;
-  --type-title-bar-font-size: 12px;
+  --type-title-bar-font-size: 11px;
   --type-title-bar-font-weight: 500;
   --type-title-bar-line-height: 1.3;
 
   --type-mono-font-family: 'JetBrains Mono', ui-monospace, monospace;
-  --type-mono-font-size: 12px;
+  --type-mono-font-size: 11px;
   --type-mono-font-weight: 400;
   --type-mono-line-height: 1.35;
 
@@ -98,9 +101,11 @@
   --type-mono-sm-line-height: 1.3;
 
   --type-context-font-family: 'Inter', system-ui, sans-serif;
-  --type-context-font-size: 12px;
+  --type-context-font-size: 11px;
   --type-context-font-weight: 400;
   --type-context-line-height: 1.3;
+
+  --space-sidebar-tab-height: 25px;
 
   /* component roles — aliases via var(...) where DESIGN.md uses {colors.…} */
   --comp-top-bar-background: var(--color-surface-chrome);
@@ -110,6 +115,14 @@
   --comp-top-bar-text: var(--color-text-primary);
   --comp-top-bar-control-gap: var(--space-control-gap);
   --comp-top-bar-group-separator: var(--color-border-strong);
+
+  /* Shared chrome button look (Mappings Clear): transparent + secondary → hover fill. */
+  --comp-btn-background: transparent;
+  --comp-btn-text: var(--color-text-secondary);
+  --comp-btn-border: var(--color-border-strong);
+  /* One step above surface-raised so Clear stays visible on hovered/selected mapping rows. */
+  --comp-btn-hover-background: #4a4a4a;
+  --comp-btn-hover-text: var(--color-text-primary);
 
   --comp-canvas-selection-outline: var(--color-selection-outline);
   --comp-canvas-selection-outline-width: 2px;
@@ -126,6 +139,7 @@
   --comp-sidebar-tab-active-bg: var(--color-tab-active);
   --comp-sidebar-tab-inactive-text: var(--color-text-secondary);
   --comp-sidebar-tab-active-text: var(--color-text-primary);
+  --comp-sidebar-tab-height: var(--space-sidebar-tab-height);
   --comp-sidebar-float-gap: var(--space-sidebar-float);
   --comp-sidebar-panel-rim: var(--color-border-sidebar-rim);
 
@@ -134,6 +148,7 @@
   --comp-picker-pane-sv-size: var(--space-picker-sv-size);
   --comp-picker-pane-hue-width: var(--space-picker-hue-width);
   --comp-picker-pane-stage-gap: var(--space-picker-stage-gap);
+  --comp-picker-pane-hue-trail: var(--space-picker-hue-trail);
   --comp-picker-pane-field-bg: var(--color-surface-sunken);
   --comp-picker-pane-hex-field-bg: var(--color-surface-sunken);
   --comp-picker-pane-field-border: var(--color-border-strong);
@@ -144,7 +159,8 @@
   --comp-picker-pane-typography-hex-font-weight: var(--type-mono-font-weight);
   --comp-picker-pane-typography-hex-line-height: var(--type-mono-line-height);
 
-  --comp-palette-swatch-size: 20px;
+  --comp-palette-swatch-size: 12px;
+  --comp-mapping-swatch-size: 12px;
   --comp-palette-swatch-radius: var(--radius-sm);
   --comp-palette-swatch-border: var(--color-border-strong);
   --comp-palette-swatch-selected-ring: var(--color-accent);
@@ -162,7 +178,9 @@
 
   --comp-mapping-row-background: transparent;
   --comp-mapping-row-hover: var(--color-surface-raised);
-  --comp-mapping-row-selected: var(--color-accent-muted);
+  /* Same grey highlight as Palette selected rows (#3A3A3A via surface-raised). */
+  --comp-mapping-row-selected: var(--color-surface-raised);
+  /* Warning triangle (filled + cutout !) — not a solid swatch disc. */
   --comp-mapping-row-unbound-marker: var(--color-warning);
   --comp-mapping-row-property-text: var(--color-text-primary);
   --comp-mapping-row-palette-text: var(--color-text-secondary);
@@ -172,8 +190,9 @@
   --comp-mapping-row-typography-line-height: var(--type-ui-line-height);
 
   --comp-unbound-pane-background: var(--color-surface-panel);
-  --comp-unbound-pane-count-color: var(--color-warning);
-  --comp-unbound-pane-count-bg: var(--color-warning-muted);
+  /* Pill on Unbound tab: fill = selected-tab text; digits = selected-tab bg. */
+  --comp-unbound-pane-count-bg: var(--comp-sidebar-tab-active-text);
+  --comp-unbound-pane-count-color: var(--comp-sidebar-tab-active-bg);
   --comp-unbound-pane-row-text: var(--color-text-primary);
   --comp-unbound-pane-empty-text: var(--color-text-secondary);
   --comp-unbound-pane-border-top: var(--color-border-subtle);
@@ -246,10 +265,10 @@ body {
 .chrome-top-btn {
   height: 26px;
   padding: 0 10px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--comp-btn-border);
   border-radius: var(--radius-default);
-  background: var(--color-surface-panel);
-  color: var(--color-text-primary);
+  background: var(--comp-btn-background);
+  color: var(--comp-btn-text);
   font: inherit;
   font-size: var(--type-ui-font-size);
   cursor: pointer;
@@ -257,8 +276,13 @@ body {
   align-items: center;
 }
 
+.chrome-top-btn:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--comp-btn-hover-background);
+  color: var(--comp-btn-hover-text);
+}
+
 .chrome-top-btn:disabled {
-  background: var(--comp-export-disabled-background);
+  background: var(--comp-btn-background);
   color: var(--comp-export-disabled-text);
   border-color: var(--comp-export-disabled-border);
   opacity: var(--comp-export-disabled-opacity);
@@ -267,26 +291,26 @@ body {
 
 /* Blocked Export stays in tab order (aria-disabled, not native disabled). */
 .chrome-top-btn[data-chrome-export][aria-disabled='true'] {
-  background: var(--comp-export-disabled-background);
+  background: var(--comp-btn-background);
   color: var(--comp-export-disabled-text);
   border-color: var(--comp-export-disabled-border);
   opacity: var(--comp-export-disabled-opacity);
   cursor: default;
 }
 
-/* Clear Export — primary accent (DESIGN top-bar). */
+/* Export ready keeps the shared transparent look (no accent fill). */
 .chrome-top-btn-export-ready {
-  background: var(--color-accent);
-  color: var(--color-text-on-accent);
-  border-color: var(--color-accent);
+  background: var(--comp-btn-background);
+  color: var(--comp-btn-text);
+  border-color: var(--comp-btn-border);
 }
 
 .chrome-top-btn-ghost {
-  background: transparent;
+  background: var(--comp-btn-background);
 }
 
 .chrome-top-btn-ghost:disabled {
-  background: transparent;
+  background: var(--comp-btn-background);
 }
 
 .chrome-top-sep {
@@ -328,8 +352,16 @@ body {
   cursor: pointer;
 }
 
+/* Zoom: forced width — native <select> ignores min-width when options are wider. */
+.chrome-zoom .chrome-combo-select {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+  padding: 0 4px;
+}
+
 .chrome-skin-combo .chrome-combo-select {
-  /* Lot B: Skin combo narrowed so Skin+Zoom fit ~260px; Zoom width unchanged. */
+  /* Skin combo narrowed so Skin+Zoom fit the sidebar budget. */
   min-width: 88px;
   max-width: 112px;
 }
@@ -381,12 +413,12 @@ body {
   cursor: grabbing;
 }
 
+/* Pan surface stays keyboard-focusable for arrows, but no chrome focus ring. */
 .canvas-host:focus,
 .canvas-host:focus-visible,
 [data-canvas-host]:focus,
 [data-canvas-host]:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: -2px;
+  outline: none;
 }
 
 .canvas-surface {
@@ -455,14 +487,14 @@ body {
 }
 
 .mock-led-duo {
-  /* Fallback until Palette resolves; paint sets inline backgroundColor */
-  background: var(--color-surface-sunken);
+  /* Fallback until Mapping/Palette resolves; paint sets inline backgroundColor */
+  background-color: var(--color-surface-sunken);
   outline: var(--comp-canvas-selection-outline-width) solid transparent;
   outline-offset: var(--comp-canvas-selection-outline-offset);
 }
 
 .mock-led-duo[data-zone-unbound] {
-  background: var(--color-surface-sunken);
+  background-color: var(--color-surface-sunken);
 }
 
 .mock-led-duo.is-selectable,
@@ -669,7 +701,7 @@ body {
   overflow: hidden;
   background: var(--color-surface-panel);
   border: 1px solid var(--comp-sidebar-panel-rim);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
 }
 
@@ -692,6 +724,8 @@ body {
   display: flex;
   align-items: stretch;
   width: 100%;
+  height: var(--comp-sidebar-tab-height);
+  flex-shrink: 0;
   gap: 0;
   background: transparent;
   border-bottom: none;
@@ -699,28 +733,47 @@ body {
 
 .sidebar-tab {
   flex: 1 1 0;
+  box-sizing: border-box;
   min-width: 0;
+  height: var(--comp-sidebar-tab-height);
   margin: 0;
-  padding: 6px 8px;
+  padding: 0 6px;
   border: none;
   border-radius: 0;
   background: var(--comp-sidebar-tab-inactive-bg);
   color: var(--comp-sidebar-tab-inactive-text);
   font-family: var(--type-ui-font-family);
-  font-size: 12px;
+  font-size: var(--type-ui-font-size);
   font-weight: var(--type-ui-font-weight);
-  line-height: var(--type-ui-line-height);
+  line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
+  overflow: hidden;
+}
+
+/* Zone 2: shrink Skin so Unbound can show a 2–3 digit capsule badge. */
+.sidebar-tab[data-sidebar-tab='skin'] {
+  flex: 0.7 1 0;
+  padding: 0 4px;
+}
+
+.sidebar-tab[data-sidebar-tab='mappings'] {
+  flex: 1.05 1 0;
+}
+
+.sidebar-tab[data-sidebar-tab='unbound'] {
+  flex: 1.35 1 0;
+  padding: 0 4px;
+  gap: 5px;
 }
 
 .sidebar-tab.is-on {
   background: var(--comp-sidebar-tab-active-bg);
   color: var(--comp-sidebar-tab-active-text);
-  font-weight: 600;
+  font-weight: var(--type-ui-font-weight);
 }
 
 .sidebar-tab-panel {
@@ -729,8 +782,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* space-2 keeps Color stage (200 + hue + equal gaps) inside 260px with float padding. */
   padding: 0 var(--space-2) var(--space-2);
+}
+
+/* Color: 2px after the hue triangle tip to the panel edge. */
+.sidebar-tab-panel[data-sidebar-tab-panel='color'] {
+  padding-right: 2px;
 }
 
 .sidebar-tab-panel[hidden] {
@@ -759,15 +816,21 @@ body {
 .unbound-pane-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
   background: var(--comp-unbound-pane-count-bg);
   color: var(--comp-unbound-pane-count-color);
   font-family: var(--type-ui-font-family);
-  font-size: var(--type-ui-font-size);
+  font-size: 9px;
   font-weight: 600;
+  line-height: 1;
   text-transform: none;
   letter-spacing: 0;
+  flex-shrink: 0;
 }
 
 .unbound-pane-badge[hidden] {
@@ -784,30 +847,33 @@ body {
 .unbound-pane-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
   min-height: 0;
 }
 
+/* Match Mappings row chrome (hover/selected grey, radius, padding). */
 .unbound-pane-row {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   width: 100%;
   margin: 0;
-  padding: var(--space-2);
-  border: 1px solid var(--comp-unbound-pane-count-bg);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-raised);
-  color: var(--comp-unbound-pane-row-text);
-  font-family: var(--type-ui-font-family);
-  font-size: var(--type-ui-font-size);
-  font-weight: var(--type-ui-font-weight);
-  line-height: var(--type-ui-line-height);
+  padding: 4px var(--space-2);
+  border: none;
+  border-radius: var(--radius-default);
+  background: transparent;
+  color: var(--comp-mapping-row-property-text);
+  font-family: var(--comp-mapping-row-typography);
+  font-size: var(--comp-mapping-row-typography-font-size);
+  font-weight: var(--comp-mapping-row-typography-font-weight);
+  line-height: var(--comp-mapping-row-typography-line-height);
   text-align: left;
   cursor: pointer;
 }
 
-.unbound-pane-row:hover {
-  background: var(--color-surface-sunken);
+.unbound-pane-row:hover,
+.unbound-pane-row:focus-visible {
+  background: var(--comp-mapping-row-hover);
 }
 
 .unbound-pane-empty {
@@ -837,30 +903,30 @@ body {
 .picker-pane-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   padding-top: var(--space-2);
   background: var(--comp-picker-pane-background);
   overflow: auto;
 }
 
 .picker-sv-stage {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: var(--comp-picker-pane-stage-gap);
-  padding-right: var(--comp-picker-pane-stage-gap);
+  display: grid;
+  grid-template-columns: var(--comp-picker-pane-sv-size) var(--comp-picker-pane-hue-width);
+  grid-template-rows: auto auto;
+  column-gap: var(--comp-picker-pane-stage-gap);
+  row-gap: var(--space-2);
+  /* Clears the triangle + 2px past its tip. */
+  padding-right: var(--comp-picker-pane-hue-trail);
   box-sizing: border-box;
   flex-shrink: 0;
   width: fit-content;
   max-width: 100%;
+  align-items: center;
 }
 
 .picker-sv-square {
   position: relative;
   width: var(--comp-picker-pane-sv-size);
   height: var(--comp-picker-pane-sv-size);
-  max-width: 100%;
-  flex: 0 0 auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--comp-picker-pane-sv-border);
   cursor: crosshair;
@@ -868,16 +934,16 @@ body {
   background: #000000;
 }
 
+/* PhotoCraft: thin black outer ring + thicker white inner ring. */
 .picker-sv-crosshair {
   position: absolute;
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
   border: 2px solid #ffffff;
   border-radius: 50%;
-  box-shadow:
-    0 0 0 1px #111111,
-    0 0 0 2px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 1px #000000;
+  background: transparent;
   pointer-events: none;
   z-index: 1;
 }
@@ -886,10 +952,11 @@ body {
   position: relative;
   box-sizing: border-box;
   width: var(--comp-picker-pane-hue-width);
-  height: var(--comp-picker-pane-sv-size);
+  /* 1px shorter top and bottom than the SV square. */
+  height: calc(var(--comp-picker-pane-sv-size) - 2px);
+  min-height: 0;
   margin: 0;
   padding: 0;
-  flex-shrink: 0;
   cursor: ns-resize;
   touch-action: none;
   /* PhotoCraft invert: yellow in the lower half (hue 0 at bottom). */
@@ -903,19 +970,19 @@ body {
     #ffff00,
     #ff0000
   );
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   border: none;
 }
 
 .picker-hue-thumb {
   position: absolute;
   left: 100%;
-  margin-left: 2px;
+  margin-left: 1px;
   margin-top: -4px;
   width: 0;
   height: 0;
   border-style: solid;
-  border-width: 4px 6px 4px 0;
+  border-width: 4px 5px 4px 0;
   border-color: transparent var(--color-text-primary) transparent transparent;
   background: transparent;
   border-radius: 0;
@@ -927,13 +994,32 @@ body {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
   gap: 4px;
-  width: var(--comp-picker-pane-sv-size);
-  max-width: 100%;
+  width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
+}
+
+/* Live colour sample at the hue strip × B-field corner. */
+.picker-color-preview {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--comp-picker-pane-sv-border);
+  border-radius: var(--radius-sm);
+  background: #000000;
+  justify-self: center;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.picker-hex-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .picker-hash-label {
@@ -945,21 +1031,29 @@ body {
 
 .picker-hex-field {
   flex: 1 1 auto;
-  width: 4.2em;
-  min-width: 3.6em;
-  max-width: 5em;
+  /* 6 hex digits must stay fully visible (e.g. 31B2C2) — ch tracks mono “0”. */
+  min-width: calc(6.5ch + 10px);
+  width: auto;
+  max-width: none;
   height: 26px;
   box-sizing: border-box;
   padding: 0 4px;
   border: 1px solid var(--comp-picker-pane-field-border);
   border-radius: var(--radius-default);
   background: var(--comp-picker-pane-hex-field-bg);
+  background-clip: padding-box;
   color: var(--comp-picker-pane-hex-text);
   font-family: var(--comp-picker-pane-typography-hex);
   font-size: var(--comp-picker-pane-typography-hex-font-size);
   font-weight: var(--comp-picker-pane-typography-hex-font-weight);
   line-height: var(--comp-picker-pane-typography-hex-line-height);
   letter-spacing: 0.02em;
+  outline: none;
+}
+
+.picker-hex-field:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 .picker-rgb-field {
@@ -976,28 +1070,37 @@ body {
 }
 
 .picker-rgb-input {
-  width: 2.2em;
+  width: 2.55em;
   height: 26px;
   box-sizing: border-box;
   padding: 0 2px;
   border: 1px solid var(--comp-picker-pane-field-border);
   border-radius: var(--radius-default);
   background: var(--comp-picker-pane-field-bg);
+  background-clip: padding-box;
   color: var(--comp-picker-pane-hex-text);
   font-family: var(--type-mono-font-family);
   font-size: 11px;
   text-align: center;
+  outline: none;
+}
+
+.picker-rgb-input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 /* Palette swatch rows */
 .palette-pane-body {
   overflow: auto;
+  /* Same top inset as Mappings / Unbound panes. */
+  padding-top: var(--space-2);
 }
 
 .palette-swatch-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 .palette-swatch-row {
@@ -1006,9 +1109,9 @@ body {
   gap: var(--space-2);
   width: 100%;
   margin: 0;
-  padding: 4px 6px;
+  padding: 4px var(--space-2);
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-default);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -1052,6 +1155,9 @@ body {
   font-size: var(--comp-palette-swatch-typography-hex-font-size);
   font-weight: var(--comp-palette-swatch-typography-hex-font-weight);
   line-height: var(--comp-palette-swatch-typography-hex-line-height);
+  /* Hex dblclick opens Color — do not select the text. */
+  user-select: none;
+  cursor: pointer;
 }
 
 .palette-swatch-label-input {
@@ -1079,10 +1185,10 @@ body {
 .palette-action-btn {
   height: 26px;
   padding: 0 10px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--comp-btn-border);
   border-radius: var(--radius-default);
-  background: var(--color-surface-panel);
-  color: var(--color-text-primary);
+  background: var(--comp-btn-background);
+  color: var(--comp-btn-text);
   font: inherit;
   font-size: var(--type-ui-font-size);
   cursor: pointer;
@@ -1090,12 +1196,17 @@ body {
   align-items: center;
 }
 
+.palette-action-btn:hover:not(:disabled) {
+  background: var(--comp-btn-hover-background);
+  color: var(--comp-btn-hover-text);
+}
+
 .palette-action-btn-ghost {
-  background: transparent;
+  background: var(--comp-btn-background);
 }
 
 .palette-action-btn:disabled {
-  background: var(--comp-export-disabled-background);
+  background: var(--comp-btn-background);
   color: var(--comp-export-disabled-text);
   border-color: var(--comp-export-disabled-border);
   opacity: var(--comp-export-disabled-opacity);
@@ -1103,7 +1214,7 @@ body {
 }
 
 .palette-action-btn-ghost:disabled {
-  background: transparent;
+  background: var(--comp-btn-background);
 }
 
 .palette-delete-title {
@@ -1169,7 +1280,8 @@ body {
 
 .skin-field-label {
   color: var(--color-text-muted);
-  text-transform: uppercase;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .skin-name-field {
@@ -1199,29 +1311,40 @@ body {
   display: flex;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .skin-action-btn {
+  flex: 1 1 0;
+  min-width: 0;
   height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border-strong);
+  padding: 0 6px;
+  border: 1px solid var(--comp-btn-border);
   border-radius: var(--radius-default);
-  background: var(--color-surface-panel);
-  color: var(--color-text-primary);
+  background: var(--comp-btn-background);
+  color: var(--comp-btn-text);
   font: inherit;
   font-size: var(--type-ui-font-size);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.skin-action-btn:hover:not(:disabled) {
+  background: var(--comp-btn-hover-background);
+  color: var(--comp-btn-hover-text);
 }
 
 .skin-action-btn-ghost {
-  background: transparent;
+  background: var(--comp-btn-background);
 }
 
 .skin-action-btn:disabled {
-  background: var(--comp-export-disabled-background);
+  background: var(--comp-btn-background);
   color: var(--comp-export-disabled-text);
   border-color: var(--comp-export-disabled-border);
   opacity: var(--comp-export-disabled-opacity);
@@ -1229,7 +1352,7 @@ body {
 }
 
 .skin-action-btn-ghost:disabled {
-  background: transparent;
+  background: var(--comp-btn-background);
 }
 
 /* Mappings tab — Property → Palette id rows only (Lot B; Object/State in top bar) */
@@ -1328,12 +1451,23 @@ body {
   min-width: 0;
 }
 
+/* Warning triangle: filled amber with a punched-out "!". */
 .mapping-row-unbound-marker {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 11px;
+  height: 10px;
   flex-shrink: 0;
-  background: var(--comp-mapping-row-unbound-marker);
+  /* Sit 1px higher so the glyph optically matches the Unbound baseline. */
+  position: relative;
+  top: -1px;
+  background-color: var(--comp-mapping-row-unbound-marker);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 11'%3E%3Cpath fill-rule='evenodd' d='M6 0.6L11.4 10.4H0.6L6 0.6zM5.35 3.4h1.3v3.4h-1.3V3.4zm0 4.2h1.3v1.3h-1.3V7.6z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 11'%3E%3Cpath fill-rule='evenodd' d='M6 0.6L11.4 10.4H0.6L6 0.6zM5.35 3.4h1.3v3.4h-1.3V3.4zm0 4.2h1.3v1.3h-1.3V7.6z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 .mapping-row-unbound-label {
@@ -1341,8 +1475,8 @@ body {
 }
 
 .mapping-row-swatch {
-  width: var(--comp-palette-swatch-size);
-  height: var(--comp-palette-swatch-size);
+  width: var(--comp-mapping-swatch-size);
+  height: var(--comp-mapping-swatch-size);
   border-radius: var(--comp-palette-swatch-radius);
   border: 1px solid var(--comp-palette-swatch-border);
   flex-shrink: 0;
@@ -1360,18 +1494,18 @@ body {
   height: 22px;
   padding: 0 8px;
   margin: 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--comp-btn-border);
   border-radius: var(--radius-default);
-  background: transparent;
-  color: var(--color-text-secondary);
+  background: var(--comp-btn-background);
+  color: var(--comp-btn-text);
   font: inherit;
   font-size: 11px;
   cursor: pointer;
 }
 
 .mapping-row-clear:hover {
-  color: var(--color-text-primary);
-  background: var(--color-surface-raised);
+  color: var(--comp-btn-hover-text);
+  background: var(--comp-btn-hover-background);
 }
 
 .sidebar-splitter {
@@ -1468,13 +1602,13 @@ body {
   line-height: var(--type-context-line-height);
 }
 
-/* Visible keyboard focus on chrome controls */
+/* Visible keyboard focus on chrome controls (canvas host excluded — pan only). */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-[tabindex]:not([tabindex='-1']):focus-visible {
+[tabindex]:not([tabindex='-1']):not([data-canvas-host]):not(.canvas-host):focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
@@ -1516,23 +1650,20 @@ textarea:focus-visible,
   margin-top: var(--space-4);
 }
 
-.boot-confirm-secondary {
+.boot-confirm-secondary,
+.boot-confirm-primary-destructive {
   padding: 0.4rem 0.85rem;
-  border: 1px solid var(--comp-modal-confirm-border);
-  border-radius: var(--radius-sm);
-  background: var(--comp-modal-confirm-secondary-bg);
-  color: var(--comp-modal-confirm-secondary-text);
+  border: 1px solid var(--comp-btn-border);
+  border-radius: var(--radius-default);
+  background: var(--comp-btn-background);
+  color: var(--comp-btn-text);
   font: inherit;
   cursor: pointer;
 }
 
-.boot-confirm-primary-destructive {
-  padding: 0.4rem 0.85rem;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--comp-modal-confirm-primary-destructive-bg);
-  color: var(--comp-modal-confirm-primary-destructive-text);
-  font: inherit;
-  cursor: pointer;
+.boot-confirm-secondary:hover,
+.boot-confirm-primary-destructive:hover {
+  background: var(--comp-btn-hover-background);
+  color: var(--comp-btn-hover-text);
 }
 

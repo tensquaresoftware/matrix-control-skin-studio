@@ -28,7 +28,7 @@ export function mountSkinPane(body: HTMLElement, store: ProjectStore): void {
   const nameLabel = document.createElement('label')
   nameLabel.className = 'skin-field-label type-label'
   nameLabel.setAttribute('for', 'skin-tab-name')
-  nameLabel.textContent = 'Skin name:'
+  nameLabel.textContent = 'Skin Name:'
 
   const nameInput = document.createElement('input')
   nameInput.type = 'text'

@@ -33,11 +33,13 @@ const COLOR_SAMPLES = {
 /** Layout / radius samples from DESIGN.md that must stay pinned. */
 const SPACE_SAMPLES = {
   '--space-top-bar-height': '40px',
-  '--space-sidebar-width': '260px',
-  '--space-picker-sv-size': '200px',
+  '--space-sidebar-width': '236px',
+  '--space-picker-sv-size': '186px',
   '--space-picker-hue-width': '16px',
   '--space-picker-stage-gap': '8px',
-  '--space-sidebar-float': '4px',
+  '--space-picker-hue-trail': '6px',
+  '--space-sidebar-float': '2px',
+  '--space-sidebar-tab-height': '25px',
   '--space-unit': '4px',
 }
 
@@ -92,7 +94,9 @@ const REQUIRED_SPACE_VARS = [
   '--space-picker-sv-size',
   '--space-picker-hue-width',
   '--space-picker-stage-gap',
+  '--space-picker-hue-trail',
   '--space-sidebar-float',
+  '--space-sidebar-tab-height',
   '--space-pane-gutter',
   '--space-splitter-hit',
   '--space-pane-gap',
@@ -140,6 +144,7 @@ const REQUIRED_COMP_VARS = [
   '--comp-sidebar-tab-active-bg',
   '--comp-sidebar-tab-inactive-text',
   '--comp-sidebar-tab-active-text',
+  '--comp-sidebar-tab-height',
   '--comp-sidebar-float-gap',
   '--comp-sidebar-panel-rim',
   '--comp-picker-pane-background',
@@ -147,6 +152,7 @@ const REQUIRED_COMP_VARS = [
   '--comp-picker-pane-sv-size',
   '--comp-picker-pane-hue-width',
   '--comp-picker-pane-stage-gap',
+  '--comp-picker-pane-hue-trail',
   '--comp-picker-pane-field-bg',
   '--comp-picker-pane-hex-field-bg',
   '--comp-picker-pane-field-border',
@@ -157,6 +163,7 @@ const REQUIRED_COMP_VARS = [
   '--comp-picker-pane-typography-hex-font-weight',
   '--comp-picker-pane-typography-hex-line-height',
   '--comp-palette-swatch-size',
+  '--comp-mapping-swatch-size',
   '--comp-palette-swatch-radius',
   '--comp-palette-swatch-border',
   '--comp-palette-swatch-selected-ring',
@@ -322,6 +329,32 @@ describe('styles I/O matrix', () => {
     }
   })
 
+  it('Color picker: 12×12 live preview; enlarged SV crosshair; Unbound tab gap', () => {
+    assert.match(
+      baseCss,
+      /\.picker-color-preview\s*\{[^}]*width:\s*12px[^}]*height:\s*12px/s,
+    )
+    assert.match(
+      baseCss,
+      /\.picker-sv-crosshair\s*\{[^}]*width:\s*14px[^}]*height:\s*14px/s,
+    )
+    assert.match(
+      baseCss,
+      /\.sidebar-tab\[data-sidebar-tab='unbound'\]\s*\{[^}]*gap:\s*5px/s,
+    )
+  })
+
+  it('Mappings Unbound marker: warning triangle with punched-out !', () => {
+    assert.match(
+      baseCss,
+      /--comp-mapping-row-unbound-marker\s*:\s*var\(--color-warning\)/,
+    )
+    assert.match(
+      baseCss,
+      /\.mapping-row-unbound-marker\s*\{[^}]*mask-image:\s*url\("data:image\/svg\+xml/s,
+    )
+  })
+
   it('focus ring: :focus-visible uses focus-ring token #7AA8FF', () => {
     assert.match(
       baseCss,
@@ -360,22 +393,33 @@ describe('styles I/O matrix', () => {
     assert.match(chromeIndex, /className\s*=\s*'chrome-top-btn'/)
     assert.doesNotMatch(chromeIndex, /style\.cssText/)
 
-    // Lot B Skin+Zoom budget: Zoom keeps base 72px; only Skin combo is adapted.
+    // Skin+Zoom budget: Zoom forced to 60px (select ignores min-width alone).
     assert.match(
       baseCss,
       /\.chrome-combo-select\s*\{[^}]*min-width:\s*72px/s,
     )
     assert.match(
       baseCss,
-      /\.chrome-skin-combo\s+\.chrome-combo-select\s*\{[^}]*min-width:\s*88px/s,
-    )
-    assert.doesNotMatch(
-      baseCss,
-      /\.chrome-zoom[^{]*\{[^}]*min-width:\s*(?!72px)/s,
+      /\.chrome-zoom\s+\.chrome-combo-select\s*\{[^}]*width:\s*60px/s,
     )
     assert.match(
       baseCss,
-      /\.chrome-top-btn\s*\{[^}]*background:\s*var\(--color-surface-panel\)/s,
+      /\.chrome-zoom\s+\.chrome-combo-select\s*\{[^}]*max-width:\s*60px/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-skin-combo\s+\.chrome-combo-select\s*\{[^}]*min-width:\s*88px/s,
+    )
+    assert.match(
+      baseCss,
+      /\.chrome-top-btn\s*\{[^}]*background:\s*var\(--comp-btn-background\)/s,
+    )
+    assert.match(baseCss, /--comp-btn-background\s*:\s*transparent/)
+    // Hover fill must sit above surface-raised (#3A3A3A) so Clear shows on mapping rows.
+    assert.match(baseCss, /--comp-btn-hover-background\s*:\s*#4a4a4a/)
+    assert.match(
+      baseCss,
+      /\.chrome-top-btn:hover:not\(:disabled\):not\(\[aria-disabled='true'\]\)\s*\{[^}]*background:\s*var\(--comp-btn-hover-background\)/s,
     )
     assert.match(
       baseCss,
@@ -395,11 +439,7 @@ describe('styles I/O matrix', () => {
     )
     assert.match(
       baseCss,
-      /\.boot-confirm-primary-destructive\s*\{[^}]*background:\s*var\(--comp-modal-confirm-primary-destructive-bg\)/s,
-    )
-    assert.match(
-      baseCss,
-      /\.boot-confirm-secondary\s*\{[^}]*background:\s*var\(--comp-modal-confirm-secondary-bg\)/s,
+      /\.boot-confirm-secondary,\s*\.boot-confirm-primary-destructive\s*\{[^}]*background:\s*var\(--comp-btn-background\)/s,
     )
   })
 })

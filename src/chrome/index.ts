@@ -80,7 +80,7 @@ export type MountChromeShellOptions = {
 }
 
 /**
- * Lot B desktop chrome: top bar (40px) + body (canvas flex:1 + sidebar 260px).
+ * Lot B desktop chrome: top bar (40px) + body (canvas flex:1 + sidebar width token).
  * No context strip. Object/State live in the top bar; right block Skin then Zoom.
  */
 export function mountChromeShell(
@@ -152,13 +152,14 @@ function buildTopBar(
     store,
   )
   const exportBtn = buildExportButton(modalRoot, store)
-  const sep1 = separator()
+  const sepBeforeHistory = separator()
   const undoBtn = buildHistoryButton(modalRoot, store, 'Undo', 'undo', () => {
     undo(store)
   })
   const redoBtn = buildHistoryButton(modalRoot, store, 'Redo', 'redo', () => {
     redo(store)
   })
+  const sepAfterHistory = separator()
   const { objectWrap, stateWrap } = mountObjectStateControls(store)
   const spacer = document.createElement('span')
   spacer.className = 'chrome-top-spacer'
@@ -170,9 +171,10 @@ function buildTopBar(
     newButton,
     importBtn,
     exportBtn,
-    sep1,
+    sepBeforeHistory,
     undoBtn,
     redoBtn,
+    sepAfterHistory,
     objectWrap,
     stateWrap,
     spacer,
@@ -347,7 +349,7 @@ function buildZoomCombo(
   canvasHost: HTMLElement,
 ): HTMLElement {
   const wrap = document.createElement('span')
-  wrap.className = 'chrome-combo'
+  wrap.className = 'chrome-combo chrome-zoom'
   wrap.setAttribute('data-chrome-zoom', '')
 
   const selectId = 'chrome-zoom-select'
