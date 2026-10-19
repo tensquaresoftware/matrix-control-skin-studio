@@ -51,6 +51,8 @@ development_status:
   1-1-scaffold-vite-typescript-spa: done
   1-2-single-writer-project-store: done
   # Collect-dep: seed inventory until Collect replaces it; no invented ObjectTypes
+  # Lot A (2026-10-18): post-MVP seed fixture — provisional headerLed/patchBand/masterBand
+  # + colour-only Palette ids (yellow/blue/orange); still source: seed-placeholder. Not Epic 6.
   1-3-seed-v1-skins-palette-and-placeholder-inventory: done
   1-4-autosave-envelope-and-cold-reopen: done
   1-5-first-open-and-new-load-seed: done

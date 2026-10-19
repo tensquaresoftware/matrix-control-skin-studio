@@ -277,7 +277,7 @@ describe('canvas mock I/O matrix (story 4.1)', () => {
     const canvas = await importCompiledTs('src/canvas/index.ts')
     const project = seed.createSeedProject()
 
-    assert.deepEqual(project.inventory.objectTypes, [])
+    assert.equal(project.inventory.objectTypes.length, 3)
     for (const zone of canvas.ORCHESTRATOR_ZONES) {
       assert.equal(
         project.inventory.objectTypes.some((ot) => ot.id === zone.id),
@@ -288,23 +288,42 @@ describe('canvas mock I/O matrix (story 4.1)', () => {
         project.palette.some((e) => e.id === zone.paletteEntryId),
         `zone ${zone.id} palette id ${zone.paletteEntryId} must exist in seed`,
       )
+      const bridgeId = canvas.resolveZoneSelectableObjectTypeId(
+        zone.role,
+        project.inventory,
+      )
+      assert.ok(bridgeId, `zone role ${zone.role} should bridge to a seed ObjectType`)
+      assert.ok(
+        project.inventory.objectTypes.some((ot) => ot.id === bridgeId),
+      )
     }
+    assert.equal(
+      canvas.resolveZoneSelectableObjectTypeId('patch', {
+        source: 'fixture',
+        objectTypes: [{ id: 'patchBand', states: [], properties: ['fill'] }],
+      }),
+      null,
+      'ObjectType with empty states must not be selectable',
+    )
     assert.ok(canvas.isOrchestratorZoneId('zone-patch'))
-    assert.equal(canvas.isOrchestratorZoneId('duoLedYellow'), false)
+    assert.equal(canvas.isOrchestratorZoneId('yellow'), false)
   })
 
-  it('seed Palette: Patch Blue + Master Orange + duoLedYellow; inventory stays empty', async () => {
+  it('seed Palette: colour-only yellow / blue / orange; provisional inventory ObjectTypes', async () => {
     const seed = await importCompiledTs('src/seed/index.ts')
     const doc = seed.createSeedProject()
     const byId = Object.fromEntries(doc.palette.map((e) => [e.id, e]))
 
     assert.equal(doc.palette.length, 3)
-    assert.equal(byId.duoLedYellow.hex, '#FFCC00')
-    assert.equal(byId.patchZoneBlue.hex, '#3D7EFF')
-    assert.equal(byId.patchZoneBlue.constantName, 'kPatchZoneBlue')
-    assert.equal(byId.masterZoneOrange.hex, '#FF8A1F')
-    assert.equal(byId.masterZoneOrange.constantName, 'kMasterZoneOrange')
-    assert.deepEqual(doc.inventory.objectTypes, [])
+    assert.equal(byId.yellow.hex, '#FFCC00')
+    assert.equal(byId.blue.hex, '#3D7EFF')
+    assert.equal(byId.blue.constantName, 'kBlue')
+    assert.equal(byId.orange.hex, '#FF8A1F')
+    assert.equal(byId.orange.constantName, 'kOrange')
+    assert.deepEqual(
+      doc.inventory.objectTypes.map((ot) => ot.id),
+      ['headerLed', 'patchBand', 'masterBand'],
+    )
     assert.equal(doc.inventory.source, 'seed-placeholder')
   })
 
@@ -332,12 +351,12 @@ describe('canvas mock I/O matrix (story 4.1)', () => {
       assert.equal(zoneFill(host, 'zone-header-duo-led'), '#FFCC00')
       assert.equal(
         zoneFill(host, 'zone-patch'),
-        resolvePaletteHex(store.getState().project, 'patchZoneBlue'),
+        resolvePaletteHex(store.getState().project, 'blue'),
       )
 
       const next = store.getState().project
       next.palette = next.palette.map((e) =>
-        e.id === 'patchZoneBlue' ? { ...e, hex: '#112233' } : e,
+        e.id === 'blue' ? { ...e, hex: '#112233' } : e,
       )
       store.apply({ project: next })
 
@@ -350,18 +369,31 @@ describe('canvas mock I/O matrix (story 4.1)', () => {
     }
   })
 
-  it('empty inventory → zero Object-type hit regions; fixture inventory → only those ids', async () => {
+  it('empty inventory → zero Object-type hit regions; seed / fixture inventory → only those ids', async () => {
     const model = await importCompiledTs('src/model/index.ts')
     const seed = await importCompiledTs('src/seed/index.ts')
     const canvas = await importCompiledTs('src/canvas/index.ts')
     const restore = installMinimalDocument()
     try {
       const host = createElement('div')
-      const store = model.createStore({ project: seed.createSeedProject() })
+      const emptyProject = seed.createSeedProject()
+      emptyProject.inventory = { source: 'seed-placeholder', objectTypes: [] }
+      const store = model.createStore({ project: emptyProject })
       canvas.mountCanvas(host, { storage: memoryStorage(), store })
 
       assert.deepEqual(canvas.listObjectTypeHitRegions(store.getState().project.inventory), [])
       assert.equal(host.querySelectorAll('[data-object-type-id]').length, 0)
+      assert.equal(host.querySelector('[data-zone-object-type-id]'), null)
+
+      const withSeed = seed.createSeedProject()
+      store.apply({ project: withSeed })
+
+      const seedHits = host.querySelectorAll('[data-object-type-id]')
+      assert.equal(seedHits.length, 3)
+      assert.ok(host.querySelector('[data-zone-object-type-id="patchBand"]'))
+      const patchZone = host.querySelector('[data-orch-zone="zone-patch"]')
+      assert.ok(patchZone)
+      assert.equal(patchZone.classList.contains('is-selectable'), true)
 
       const withTypes = store.getState().project
       withTypes.inventory = {
@@ -377,9 +409,10 @@ describe('canvas mock I/O matrix (story 4.1)', () => {
       assert.equal(hits.length, 2)
       assert.equal(hits[0].getAttribute('data-object-type-id'), 'knobLarge')
       assert.equal(hits[1].getAttribute('data-object-type-id'), 'bypassBtn')
-      // Bands remain layout metadata, not ObjectTypes
+      // Bands remain layout metadata, not ObjectTypes; no seed bridge without seed ids
       assert.equal(host.querySelector('[data-object-type-id="zone-patch"]'), null)
       assert.ok(host.querySelector('[data-orch-zone="zone-patch"]'))
+      assert.equal(host.querySelector('[data-zone-object-type-id]'), null)
     } finally {
       restore()
     }

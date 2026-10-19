@@ -314,7 +314,7 @@ describe('palette picker I/O matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /palette-picker-matrix\.test\.mjs/)
   })
 
-  it('select + recolour: seed duoLedYellow live write-through to #112233', async () => {
+  it('select + recolour: seed yellow live write-through to #112233', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model, seed] = await Promise.all([
@@ -328,12 +328,12 @@ describe('palette picker I/O matrix', () => {
         seed.createSeedProject(),
       )
 
-      const row = host.querySelector('[data-palette-row="duoLedYellow"]')
-      assert.ok(row, 'expected duoLedYellow row')
-      assert.equal(row.querySelector('[data-palette-label]')?.textContent, 'kDuoLedYellow')
+      const row = host.querySelector('[data-palette-row="yellow"]')
+      assert.ok(row, 'expected yellow row')
+      assert.equal(row.querySelector('[data-palette-label]')?.textContent, 'kYellow')
       assert.equal(row.querySelector('[data-palette-hex]')?.textContent, '#FFCC00')
       row.click()
-      const selected = host.querySelector('[data-palette-row="duoLedYellow"]')
+      const selected = host.querySelector('[data-palette-row="yellow"]')
       assert.ok(selected?.classList.contains('is-selected'))
 
       const hexField = host.querySelector('[data-picker-hex]')
@@ -344,11 +344,11 @@ describe('palette picker I/O matrix', () => {
       hexField.value = '#112233'
       hexField.dispatchEvent({ type: 'input' })
 
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#112233')
-      const entry = store.getState().project.palette.find((e) => e.id === 'duoLedYellow')
-      assert.equal(entry.id, 'duoLedYellow')
-      assert.equal(entry.constantName, 'kDuoLedYellow')
-      const updatedRow = host.querySelector('[data-palette-row="duoLedYellow"]')
+      assert.equal(paletteHex(store, 'yellow'), '#112233')
+      const entry = store.getState().project.palette.find((e) => e.id === 'yellow')
+      assert.equal(entry.id, 'yellow')
+      assert.equal(entry.constantName, 'kYellow')
+      const updatedRow = host.querySelector('[data-palette-row="yellow"]')
       assert.equal(updatedRow?.querySelector('[data-palette-hex]')?.textContent, '#112233')
       assert.equal(host.querySelector('[data-picker-swatch]')?.style.background, '#112233')
     } finally {
@@ -444,7 +444,7 @@ describe('palette picker I/O matrix', () => {
         model,
         seed.createSeedProject(),
       )
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(host.querySelector('.is-selected'), null)
 
       const hue = host.querySelector('[data-picker-hue]')
@@ -456,7 +456,7 @@ describe('palette picker I/O matrix', () => {
 
       hue.value = '120'
       hue.dispatchEvent({ type: 'input' })
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(hue.value, '0')
       assert.equal(sat.value, '0')
       assert.equal(val.value, '0')
@@ -465,7 +465,7 @@ describe('palette picker I/O matrix', () => {
 
       hexField.value = '#ABCDEF'
       hexField.dispatchEvent({ type: 'input' })
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(hue.value, '0')
       assert.equal(sat.value, '0')
       assert.equal(val.value, '0')
@@ -491,7 +491,7 @@ describe('palette picker I/O matrix', () => {
       ]
       const { store, host } = mountWithProject(sidebar, model, project)
 
-      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      host.querySelector('[data-palette-row="yellow"]').click()
       host.querySelector('[data-palette-row="accentGreen"]').click()
 
       const hexField = host.querySelector('[data-picker-hex]')
@@ -499,7 +499,7 @@ describe('palette picker I/O matrix', () => {
       hexField.value = '#112233'
       hexField.dispatchEvent({ type: 'input' })
 
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(paletteHex(store, 'accentGreen'), '#112233')
     } finally {
       restore()
@@ -519,7 +519,7 @@ describe('palette picker I/O matrix', () => {
         model,
         seed.createSeedProject(),
       )
-      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      host.querySelector('[data-palette-row="yellow"]').click()
       const hexField = host.querySelector('[data-picker-hex]')
 
       for (const bad of ['#GG', '', '#FFCC00AA', '#11223']) {
@@ -527,7 +527,7 @@ describe('palette picker I/O matrix', () => {
         hexField.value = bad
         hexField.dispatchEvent({ type: 'input' })
         assert.equal(
-          paletteHex(store, 'duoLedYellow'),
+          paletteHex(store, 'yellow'),
           '#FFCC00',
           `store must stay unchanged for ${JSON.stringify(bad)}`,
         )
@@ -539,7 +539,7 @@ describe('palette picker I/O matrix', () => {
       hexField.focus()
       hexField.value = '#aabbcc'
       hexField.dispatchEvent({ type: 'input' })
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#AABBCC')
+      assert.equal(paletteHex(store, 'yellow'), '#AABBCC')
     } finally {
       restore()
     }
@@ -633,7 +633,7 @@ describe('palette picker I/O matrix', () => {
         model,
         seed.createSeedProject(),
       )
-      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      host.querySelector('[data-palette-row="yellow"]').click()
 
       const hue = host.querySelector('[data-picker-hue]')
       const sat = host.querySelector('[data-picker-sat]')
@@ -644,7 +644,7 @@ describe('palette picker I/O matrix', () => {
       hue.dispatchEvent({ type: 'input' })
 
       // Golden opaque hex for HSV (200, 50, 60) — not derived from hsvToHex under test.
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#4C7F99')
+      assert.equal(paletteHex(store, 'yellow'), '#4C7F99')
     } finally {
       restore()
     }
@@ -664,7 +664,7 @@ describe('palette picker I/O matrix', () => {
         model,
         seed.createSeedProject(),
       )
-      host.querySelector('[data-palette-row="duoLedYellow"]').click()
+      host.querySelector('[data-palette-row="yellow"]').click()
       const hexField = host.querySelector('[data-picker-hex]')
       assert.ok(hexField)
 
@@ -672,18 +672,18 @@ describe('palette picker I/O matrix', () => {
       hexField.value = '#112233'
       hexField.dispatchEvent({ type: 'input' })
       hexField.blur()
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#112233')
+      assert.equal(paletteHex(store, 'yellow'), '#112233')
 
       hexField.focus()
       hexField.value = '#445566'
       hexField.dispatchEvent({ type: 'input' })
       hexField.blur()
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#445566')
+      assert.equal(paletteHex(store, 'yellow'), '#445566')
 
       history.undo(store)
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#112233')
+      assert.equal(paletteHex(store, 'yellow'), '#112233')
       history.undo(store)
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(history.canUndo(store), false)
     } finally {
       restore()
@@ -704,8 +704,8 @@ describe('palette picker I/O matrix', () => {
         model,
         seed.createSeedProject(),
       )
-      host.querySelector('[data-palette-row="duoLedYellow"]').click()
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      host.querySelector('[data-palette-row="yellow"]').click()
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
 
       const hexField = host.querySelector('[data-picker-hex]')
       const hue = host.querySelector('[data-picker-hue]')
@@ -720,15 +720,15 @@ describe('palette picker I/O matrix', () => {
       hue.dispatchEvent({ type: 'pointerup' })
 
       assert.equal(history.canUndo(store), true)
-      const afterBurst = paletteHex(store, 'duoLedYellow')
+      const afterBurst = paletteHex(store, 'yellow')
       history.undo(store)
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       history.redo(store)
-      assert.equal(paletteHex(store, 'duoLedYellow'), afterBurst)
+      assert.equal(paletteHex(store, 'yellow'), afterBurst)
       assert.equal(history.canUndo(store), true)
       // One coalesced step only — second undo does not change hex further.
       history.undo(store)
-      assert.equal(paletteHex(store, 'duoLedYellow'), '#FFCC00')
+      assert.equal(paletteHex(store, 'yellow'), '#FFCC00')
       assert.equal(history.canUndo(store), false)
     } finally {
       restore()

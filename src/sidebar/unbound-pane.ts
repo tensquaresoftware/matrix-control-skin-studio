@@ -1,11 +1,22 @@
 import { execute } from '../history/index'
 import { deriveUnbound, type UnboundHit } from '../model/palette-helpers'
 import type { ProjectStore } from '../model/store'
-import type { SessionUiState } from '../model/types'
+import type { ProjectDocument, SessionUiState } from '../model/types'
 import type { CanvasSelectionSync } from './canvas-selection-sync'
 import type { MappingFocusController } from './mapping-focus'
 
 export const UNBOUND_SUCCESS_COPY = 'All required mappings bound'
+
+/** Shown when `objectTypes` is empty — not a vacuous “all bound”. */
+export const UNBOUND_EMPTY_INVENTORY_COPY =
+  'No Object types loaded — nothing required to bind'
+
+/** ObjectTypes present but none define a state × property slot. */
+export const UNBOUND_NO_SLOTS_COPY =
+  'Nothing required to bind — no bindable slots'
+
+/** Required slots exist but the project has no Skins. */
+export const UNBOUND_NO_SKINS_COPY = 'No skins — nothing to bind'
 
 export type MountUnboundPaneOptions = {
   mappingFocus: MappingFocusController
@@ -60,7 +71,7 @@ export function mountUnboundPane(
       badge.textContent = ''
       list.replaceChildren()
       empty.hidden = false
-      empty.textContent = UNBOUND_SUCCESS_COPY
+      empty.textContent = emptyUnboundCopy(project)
       return
     }
 
@@ -77,6 +88,29 @@ export function mountUnboundPane(
 
   render()
   store.subscribe(render)
+}
+
+/** True when loaded inventory defines at least one Property × State slot. */
+function hasRequiredMappingSlots(project: ProjectDocument): boolean {
+  for (const objectType of project.inventory.objectTypes) {
+    if (objectType.states.length > 0 && objectType.properties.length > 0) {
+      return true
+    }
+  }
+  return false
+}
+
+/** Empty-state copy when project-total unbound is 0. */
+function emptyUnboundCopy(project: ProjectDocument): string {
+  if (!hasRequiredMappingSlots(project)) {
+    return project.inventory.objectTypes.length === 0
+      ? UNBOUND_EMPTY_INVENTORY_COPY
+      : UNBOUND_NO_SLOTS_COPY
+  }
+  if (project.skins.length === 0) {
+    return UNBOUND_NO_SKINS_COPY
+  }
+  return UNBOUND_SUCCESS_COPY
 }
 
 function createRow(

@@ -425,6 +425,8 @@ describe('mappings I/O matrix', () => {
         importCompiledTs('src/seed/index.ts'),
       ])
       const project = seed.createSeedProject()
+      project.inventory = { source: 'seed-placeholder', objectTypes: [] }
+      project.skins = project.skins.map((skin) => ({ ...skin, mappings: [] }))
       assert.deepEqual(project.inventory.objectTypes, [])
 
       const { host } = mountSidebarWithStore(

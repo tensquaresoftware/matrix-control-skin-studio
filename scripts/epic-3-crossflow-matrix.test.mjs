@@ -499,7 +499,7 @@ describe('epic 3 crossflow matrix', () => {
       assert.deepEqual(store.getState().project, seed.createSeedProject())
       assert.equal(store.getState().project.skins.length, 5)
       assert.ok(
-        store.getState().project.palette.some((e) => e.id === 'duoLedYellow'),
+        store.getState().project.palette.some((e) => e.id === 'yellow'),
       )
     } finally {
       restore()

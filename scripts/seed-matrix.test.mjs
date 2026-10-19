@@ -86,7 +86,7 @@ async function importCompiledTs(relPath) {
 }
 
 describe('seed I/O matrix', () => {
-  it('happy seed build: formatVersion 1, five skins, Duo LED + Patch/Master Palette, marked empty inventory', async () => {
+  it('happy seed build: formatVersion 1, five skins, colour Palette, provisional inventory + fill bindings', async () => {
     const { createSeedProject } = await importCompiledTs('src/seed/index.ts')
     const doc = createSeedProject()
 
@@ -102,14 +102,21 @@ describe('seed I/O matrix', () => {
     )
     assert.equal(doc.palette.length, 3)
     const byId = Object.fromEntries(doc.palette.map((e) => [e.id, e]))
-    assert.equal(byId.duoLedYellow.hex, '#FFCC00')
-    assert.equal(byId.duoLedYellow.constantName, 'kDuoLedYellow')
-    assert.equal(byId.patchZoneBlue.hex, '#3D7EFF')
-    assert.equal(byId.patchZoneBlue.constantName, 'kPatchZoneBlue')
-    assert.equal(byId.masterZoneOrange.hex, '#FF8A1F')
-    assert.equal(byId.masterZoneOrange.constantName, 'kMasterZoneOrange')
+    assert.equal(byId.yellow.hex, '#FFCC00')
+    assert.equal(byId.yellow.constantName, 'kYellow')
+    assert.equal(byId.blue.hex, '#3D7EFF')
+    assert.equal(byId.blue.constantName, 'kBlue')
+    assert.equal(byId.orange.hex, '#FF8A1F')
+    assert.equal(byId.orange.constantName, 'kOrange')
     assert.equal(doc.inventory.source, 'seed-placeholder')
-    assert.deepEqual(doc.inventory.objectTypes, [])
+    assert.deepEqual(
+      doc.inventory.objectTypes.map((ot) => ot.id),
+      ['headerLed', 'patchBand', 'masterBand'],
+    )
+    for (const ot of doc.inventory.objectTypes) {
+      assert.deepEqual(ot.states, ['default'])
+      assert.deepEqual(ot.properties, ['fill'])
+    }
   })
 
   it('rejected names absent from skins[].displayName', async () => {
@@ -121,15 +128,37 @@ describe('seed I/O matrix', () => {
     }
   })
 
-  it('mapping discipline: every skin has mappings: []; no raw-hex mapping fields', async () => {
+  it('mapping discipline: each skin has three fill bindings; no raw-hex mapping fields', async () => {
     const { createSeedProject } = await importCompiledTs('src/seed/index.ts')
     const doc = createSeedProject()
+    const expected = [
+      {
+        objectTypeId: 'headerLed',
+        stateId: 'default',
+        propertyId: 'fill',
+        paletteEntryId: 'yellow',
+      },
+      {
+        objectTypeId: 'patchBand',
+        stateId: 'default',
+        propertyId: 'fill',
+        paletteEntryId: 'blue',
+      },
+      {
+        objectTypeId: 'masterBand',
+        stateId: 'default',
+        propertyId: 'fill',
+        paletteEntryId: 'orange',
+      },
+    ]
 
     for (const skin of doc.skins) {
-      assert.deepEqual(skin.mappings, [])
+      assert.deepEqual(skin.mappings, expected)
       for (const mapping of skin.mappings) {
         assert.equal('hex' in mapping, false)
         assert.ok('paletteEntryId' in mapping)
+        assert.equal(typeof mapping.paletteEntryId, 'string')
+        assert.match(mapping.paletteEntryId, /^[a-zA-Z]/)
       }
     }
   })
@@ -162,13 +191,14 @@ describe('seed I/O matrix', () => {
 
     const doc = createSeedProject()
     assert.equal(doc.palette.length, 3)
-    assert.equal(doc.palette.find((e) => e.id === 'duoLedYellow')?.hex, '#FFCC00')
+    assert.equal(doc.palette.find((e) => e.id === 'yellow')?.hex, '#FFCC00')
     assert.equal(doc.skins.length, 5)
     assert.deepEqual(
       doc.skins.map((s) => s.displayName),
       V1_DISPLAY_NAMES,
     )
     assert.equal(doc.inventory.source, 'seed-placeholder')
+    assert.equal(doc.inventory.objectTypes.length, 3)
   })
 
   it('apply path: caller store.apply holds seeded document; seed does not mutate store', async () => {
@@ -193,11 +223,12 @@ describe('seed I/O matrix', () => {
       V1_SKIN_IDS,
     )
     assert.equal(held.palette.length, 3)
-    assert.equal(held.palette.find((e) => e.id === 'duoLedYellow')?.hex, '#FFCC00')
-    assert.ok(held.palette.some((e) => e.id === 'patchZoneBlue'))
-    assert.ok(held.palette.some((e) => e.id === 'masterZoneOrange'))
+    assert.equal(held.palette.find((e) => e.id === 'yellow')?.hex, '#FFCC00')
+    assert.ok(held.palette.some((e) => e.id === 'blue'))
+    assert.ok(held.palette.some((e) => e.id === 'orange'))
     assert.equal(held.inventory.source, 'seed-placeholder')
-    assert.deepEqual(held.inventory.objectTypes, [])
+    assert.equal(held.inventory.objectTypes.length, 3)
+    assert.equal(held.skins[0].mappings.length, 3)
 
     // Mutation after apply must not leak into store (clone ownership)
     seeded.palette.push({ id: 'leak', hex: '#000000' })

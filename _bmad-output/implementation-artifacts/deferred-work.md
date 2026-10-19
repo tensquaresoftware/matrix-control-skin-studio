@@ -133,3 +133,12 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-5-4-import-replace-all-with-fail-closed-formatversion.md`
   summary: Concurrent overlapping Import file-change handlers could race before prior read finishes.
   evidence: maybe-false / unverified medium — native file picker is usually serial; settle by firing two async change events with delayed text() resolves and asserting a single final modal + project.
+
+## Deferred from: build review of spec-lot-a-seed-inventory-clickable-mock-neutral-palette.md (2026-10-18)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-a-seed-inventory-clickable-mock-neutral-palette.md`
+  summary: Mirror hit-chip Enter/Space coverage for painted Orchestrator zones.
+  evidence: Zone keydown is implemented; Lot A matrix pins click; hit keyboard already covers shared applyObjectTypeHitSelection.
+- source_spec: `_bmad-output/implementation-artifacts/spec-lot-a-seed-inventory-clickable-mock-neutral-palette.md`
+  summary: Update epic-1/epic-4 context docs that still teach KEEP_EMPTY seed inventory.
+  evidence: Continuity docs contradict Lot A seed-placeholder fixture; agent-context hygiene, not a runtime product defect.

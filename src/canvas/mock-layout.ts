@@ -1,13 +1,13 @@
 import type { Inventory } from '../model/types'
 
 /** Seed Palette id for the Patch Orchestrator band (calibratable on every Skin). */
-export const PALETTE_ID_PATCH_ZONE = 'patchZoneBlue'
+export const PALETTE_ID_PATCH_ZONE = 'blue'
 
 /** Seed Palette id for the Master Orchestrator band (calibratable on every Skin). */
-export const PALETTE_ID_MASTER_ZONE = 'masterZoneOrange'
+export const PALETTE_ID_MASTER_ZONE = 'orange'
 
 /** Seed Palette id for the Duo Header LED face. */
-export const PALETTE_ID_DUO_LED = 'duoLedYellow'
+export const PALETTE_ID_DUO_LED = 'yellow'
 
 export type OrchestratorZoneRole = 'patch' | 'master' | 'headerLed'
 
@@ -22,6 +22,18 @@ export type OrchestratorZoneDescriptor = {
 export type ObjectTypeHitRegion = {
   objectTypeId: string
 }
+
+/**
+ * Zone role → provisional seed ObjectType id (Lot A / CLICK_SURFACE = A).
+ * Bands remain paint metadata; selection targets inventory ids only when loaded.
+ */
+const ZONE_ROLE_OBJECT_TYPE_ID: Readonly<
+  Record<OrchestratorZoneRole, string>
+> = Object.freeze({
+  headerLed: 'headerLed',
+  patch: 'patchBand',
+  master: 'masterBand',
+})
 
 /** Structural composition of the GUI-view mock (Header / Body / Footer). */
 export const MOCK_COMPOSITION = {
@@ -59,6 +71,30 @@ export const ORCHESTRATOR_ZONES: readonly OrchestratorZoneDescriptor[] = Object.
 /** Palette ids referenced by Orchestrator zone metadata (for seed/matrix asserts). */
 export function orchestratorZonePaletteIds(): readonly string[] {
   return ORCHESTRATOR_ZONES.map((zone) => zone.paletteEntryId)
+}
+
+/** Provisional ObjectType id associated with a zone role (bridge helper). */
+export function objectTypeIdForZoneRole(role: OrchestratorZoneRole): string {
+  return ZONE_ROLE_OBJECT_TYPE_ID[role]
+}
+
+/**
+ * Selectable ObjectType id for a painted zone when that id is in the loaded
+ * inventory with at least one state × property slot; otherwise null (AD-10).
+ */
+export function resolveZoneSelectableObjectTypeId(
+  role: OrchestratorZoneRole,
+  inventory: Inventory,
+): string | null {
+  const objectTypeId = objectTypeIdForZoneRole(role)
+  const objectType = inventory.objectTypes.find(
+    (type) => type.id === objectTypeId,
+  )
+  if (objectType == null) return null
+  if (objectType.states.length === 0 || objectType.properties.length === 0) {
+    return null
+  }
+  return objectTypeId
 }
 
 /**

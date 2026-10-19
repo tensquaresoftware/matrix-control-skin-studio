@@ -316,7 +316,7 @@ function memoryStorage() {
   }
 }
 
-/** Fixture inventory — tests only; seed stays empty (KEEP_EMPTY). */
+/** Fixture inventory — tests only; not Collect product truth. */
 function fixtureInventory() {
   return {
     source: 'test-fixture',
@@ -339,9 +339,9 @@ function fixtureProject(overrides = {}) {
   return {
     formatVersion: 1,
     palette: [
-      { id: 'duoLedYellow', hex: '#FFCC00', constantName: 'kDuoLedYellow' },
-      { id: 'patchZoneBlue', hex: '#3D7EFF', constantName: 'kPatchZoneBlue' },
-      { id: 'masterZoneOrange', hex: '#FF8A1F', constantName: 'kMasterZoneOrange' },
+      { id: 'yellow', hex: '#FFCC00', constantName: 'kYellow' },
+      { id: 'blue', hex: '#3D7EFF', constantName: 'kBlue' },
+      { id: 'orange', hex: '#FF8A1F', constantName: 'kOrange' },
     ],
     skins: [
       {
@@ -485,6 +485,60 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
     }
   })
 
+  it('painted Orchestrator band click → Object/State + AUTO_MAPPINGS + context strip', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model, seed] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const project = seed.createSeedProject()
+      const { store, root } = mountSyncedShell(
+        chrome,
+        model,
+        project,
+        defaultSession({
+          activeSkinId: 'black-green',
+          selectedObjectTypeId: null,
+          selectedStateId: null,
+        }),
+      )
+
+      const skinTab = root.querySelector('[data-skin-seg-tab="skin"]')
+      assert.ok(skinTab)
+      skinTab.dispatchEvent({ type: 'click' })
+
+      const patchZone = root.querySelector('[data-orch-zone="zone-patch"]')
+      assert.ok(patchZone)
+      assert.equal(patchZone.getAttribute('data-zone-object-type-id'), 'patchBand')
+      assert.ok(patchZone.classList.contains('is-selectable'))
+      patchZone.dispatchEvent({ type: 'click' })
+
+      const session = store.getState().session
+      assert.equal(session.selectedObjectTypeId, 'patchBand')
+      assert.equal(session.selectedStateId, 'default')
+      const patchSelected = root.querySelector('[data-orch-zone="zone-patch"]')
+      const masterZone = root.querySelector('[data-orch-zone="zone-master"]')
+      assert.ok(patchSelected?.classList.contains('is-selected'))
+      assert.equal(masterZone?.classList.contains('is-selected'), false)
+      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, false)
+      assert.equal(
+        root.querySelector('[data-context-value="object"]')?.textContent,
+        'patchBand',
+      )
+      assert.equal(
+        root.querySelector('[data-context-value="state"]')?.textContent,
+        'default',
+      )
+      const rows = propertyRows(root)
+      assert.equal(rows.length, 1)
+      assert.equal(rows[0].getAttribute('data-mapping-row'), 'fill')
+    } finally {
+      restore()
+    }
+  })
+
   it('empty inventory: no hits; no click selection path', async () => {
     const restore = installMinimalDocument()
     try {
@@ -494,6 +548,8 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
         importCompiledTs('src/seed/index.ts'),
       ])
       const project = seed.createSeedProject()
+      project.inventory = { source: 'seed-placeholder', objectTypes: [] }
+      project.skins = project.skins.map((skin) => ({ ...skin, mappings: [] }))
       assert.deepEqual(project.inventory.objectTypes, [])
       const { store, root } = mountSyncedShell(
         chrome,
@@ -503,6 +559,7 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
       )
 
       assert.equal(root.querySelectorAll('[data-object-type-id]').length, 0)
+      assert.equal(root.querySelector('[data-zone-object-type-id]'), null)
       assert.equal(store.getState().session.selectedObjectTypeId, null)
     } finally {
       restore()

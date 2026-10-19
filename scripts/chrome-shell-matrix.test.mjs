@@ -396,7 +396,7 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-chrome-body]'))
       assert.ok(root.querySelector('[data-canvas-host]'))
       assert.ok(root.querySelector('[data-sidebar]'))
-      assert.ok(root.querySelector('[data-palette-row="duoLedYellow"]'))
+      assert.ok(root.querySelector('[data-palette-row="yellow"]'))
       assert.ok(root.querySelector('[data-picker-hex]'))
 
       // Product path: chrome → mountCanvas(store) must paint Orchestrator zones from seed Palette.
@@ -436,7 +436,7 @@ describe('chrome shell I/O matrix', () => {
       assert.equal(root.querySelector('[data-chrome-inert="zoom"]'), null)
       assert.equal(root.querySelector('[data-chrome-inert="skin"]'), null)
 
-      // Seed empty inventory ⇒ unbound 0 ⇒ Export clear (accent, not aria-disabled).
+      // Seed fill slots pre-bound ⇒ unbound 0 ⇒ Export clear (accent, not aria-disabled).
       const exportReady = root.querySelector('[data-chrome-export]')
       assert.equal(exportReady?.disabled, false)
       assert.equal(exportReady?.getAttribute('aria-disabled'), null)

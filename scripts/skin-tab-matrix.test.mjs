@@ -420,9 +420,10 @@ describe('skin tab I/O matrix', () => {
       assert.ok(mappingsPanel?.querySelector('[data-mappings-object-type]'))
       assert.ok(mappingsPanel?.querySelector('[data-mappings-state]'))
       assert.ok(mappingsPanel?.querySelector('[data-mappings-property-list]'))
-      // Seed inventory stays empty — no invented Object types / property rows.
+      // Lot A seed inventory: Object types selectable; property rows when type+state chosen.
       const objectSelect = mappingsPanel.querySelector('[data-mappings-object-type]')
-      assert.equal(objectSelect?.disabled, true)
+      assert.equal(objectSelect?.disabled, false)
+      assert.ok(objectSelect.children.length >= 4) // "—" + headerLed/patchBand/masterBand
       assert.equal(
         mappingsPanel.querySelector('[data-mappings-property-list]')?.children
           .length,
@@ -957,7 +958,7 @@ describe('skin tab I/O matrix', () => {
     }
   })
 
-  it('create: preserves v1 display names, rejects rejected names, Duo LED, empty objectTypes', async () => {
+  it('create: preserves v1 display names, rejects rejected names, yellow Palette, seed ObjectTypes', async () => {
     const restore = installMinimalDocument()
     try {
       const [chrome, model, seed] = await Promise.all([
@@ -997,25 +998,24 @@ describe('skin tab I/O matrix', () => {
         )
       }
 
-      const duo = project.palette.find((e) => e.id === 'duoLedYellow')
-      assert.ok(duo)
-      assert.equal(duo.hex, '#FFCC00')
-      assert.equal(duo.constantName, 'kDuoLedYellow')
+      const yellow = project.palette.find((e) => e.id === 'yellow')
+      assert.ok(yellow)
+      assert.equal(yellow.hex, '#FFCC00')
+      assert.equal(yellow.constantName, 'kYellow')
 
       // Calibratable via Picker path after Create (not a store.apply tautology).
-      root.querySelector('[data-palette-row="duoLedYellow"]').click()
+      root.querySelector('[data-palette-row="yellow"]').click()
       const hexField = root.querySelector('[data-picker-hex]')
       assert.ok(hexField)
       hexField.focus()
       hexField.value = '#AABB00'
       hexField.dispatchEvent({ type: 'input' })
       assert.equal(
-        store.getState().project.palette.find((e) => e.id === 'duoLedYellow')
-          ?.hex,
+        store.getState().project.palette.find((e) => e.id === 'yellow')?.hex,
         '#AABB00',
       )
 
-      assert.deepEqual(store.getState().project.inventory.objectTypes, [])
+      assert.equal(store.getState().project.inventory.objectTypes.length, 3)
       for (const ot of store.getState().project.inventory.objectTypes) {
         assert.equal('hex' in ot, false)
         assert.equal('colour' in ot, false)

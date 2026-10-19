@@ -25,6 +25,7 @@ import {
   MOCK_COMPOSITION,
   ORCHESTRATOR_ZONES,
   type OrchestratorZoneDescriptor,
+  resolveZoneSelectableObjectTypeId,
 } from './mock-layout'
 
 /** Arrow pan step in content-space pixels (4 × spacing unit). */
@@ -42,11 +43,13 @@ export {
   isOrchestratorZoneId,
   listObjectTypeHitRegions,
   MOCK_COMPOSITION,
+  objectTypeIdForZoneRole,
   ORCHESTRATOR_ZONES,
   orchestratorZonePaletteIds,
   PALETTE_ID_DUO_LED,
   PALETTE_ID_MASTER_ZONE,
   PALETTE_ID_PATCH_ZONE,
+  resolveZoneSelectableObjectTypeId,
 } from './mock-layout'
 
 /**
@@ -161,7 +164,17 @@ function renderMockComposition(
 
   const duoLedZone = ORCHESTRATOR_ZONES.find((z) => z.role === 'headerLed')
   if (duoLedZone != null) {
-    leds.append(buildZoneElement(duoLedZone, project, 'mock-led mock-led-duo'))
+    leds.append(
+      buildZoneElement(
+        duoLedZone,
+        project,
+        session,
+        store,
+        selectionSync,
+        pulseTypeIds,
+        'mock-led mock-led-duo',
+      ),
+    )
   }
 
   header.append(title, leds)
@@ -196,7 +209,17 @@ function renderMockComposition(
     const bandZone = ORCHESTRATOR_ZONES.find((z) => z.role === columnRole)
     col.append(zoneLabel, knobRow, widget)
     if (bandZone != null) {
-      col.append(buildZoneElement(bandZone, project, 'mock-orch'))
+      col.append(
+        buildZoneElement(
+          bandZone,
+          project,
+          session,
+          store,
+          selectionSync,
+          pulseTypeIds,
+          'mock-orch',
+        ),
+      )
     }
     body.append(col)
   }
@@ -410,6 +433,10 @@ function applyObjectTypeHitSelection(
 function buildZoneElement(
   zone: OrchestratorZoneDescriptor,
   project: ProjectDocument | null,
+  session: SessionUiState | null,
+  store: ProjectStore | undefined,
+  selectionSync: CanvasSelectionSync | undefined,
+  pulseTypeIds: readonly string[],
   className: string,
 ): HTMLElement {
   const el = document.createElement('div')
@@ -421,6 +448,43 @@ function buildZoneElement(
     el.textContent = zone.label
   }
   applyZonePaint(el, zone.paletteEntryId, project)
+
+  // CLICK_SURFACE = A: painted band selects matching inventory ObjectType when present.
+  const selectableId =
+    project == null
+      ? null
+      : resolveZoneSelectableObjectTypeId(zone.role, project.inventory)
+  if (selectableId != null) {
+    el.classList.add('is-selectable')
+    el.setAttribute('data-zone-object-type-id', selectableId)
+    el.setAttribute('role', 'button')
+    el.setAttribute('aria-label', zone.label)
+    el.tabIndex = 0
+    const selectedId = session?.selectedObjectTypeId ?? null
+    if (selectedId === selectableId) {
+      el.classList.add('is-selected')
+    }
+    if (pulseTypeIds.includes(selectableId)) {
+      el.classList.add('is-pulsing')
+    }
+    el.addEventListener('pointerdown', (event: PointerEvent) => {
+      event.stopPropagation()
+    })
+    el.addEventListener('click', () => {
+      if (store == null) return
+      applyObjectTypeHitSelection(store, selectableId)
+      selectionSync?.notifyCanvasHit()
+    })
+    el.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      if (event.repeat) return
+      event.preventDefault()
+      if (store == null) return
+      applyObjectTypeHitSelection(store, selectableId)
+      selectionSync?.notifyCanvasHit()
+    })
+  }
+
   return el
 }
 

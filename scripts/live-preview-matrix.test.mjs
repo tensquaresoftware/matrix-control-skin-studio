@@ -234,7 +234,7 @@ function memoryStorage(initial = {}) {
   }
 }
 
-/** Fixture inventory — tests only; seed stays empty (KEEP_EMPTY). */
+/** Fixture inventory — tests only; not Collect product truth. */
 function fixtureInventory() {
   return {
     source: 'test-fixture',
@@ -257,9 +257,9 @@ function fixtureProject(overrides = {}) {
   return {
     formatVersion: 1,
     palette: [
-      { id: 'duoLedYellow', hex: '#FFCC00', constantName: 'kDuoLedYellow' },
-      { id: 'patchZoneBlue', hex: '#3D7EFF', constantName: 'kPatchZoneBlue' },
-      { id: 'masterZoneOrange', hex: '#FF8A1F', constantName: 'kMasterZoneOrange' },
+      { id: 'yellow', hex: '#FFCC00', constantName: 'kYellow' },
+      { id: 'blue', hex: '#3D7EFF', constantName: 'kBlue' },
+      { id: 'orange', hex: '#FF8A1F', constantName: 'kOrange' },
       { id: 'faceRed', hex: '#CC2244', constantName: 'kFaceRed' },
     ],
     skins: [
@@ -370,14 +370,21 @@ describe('live preview I/O matrix (story 4.4)', () => {
     const restore = installMinimalDocument()
     try {
       const host = createElement('div')
+      const emptySeed = seed.createSeedProject()
+      emptySeed.inventory = { source: 'seed-placeholder', objectTypes: [] }
+      emptySeed.skins = emptySeed.skins.map((skin) => ({
+        ...skin,
+        mappings: [],
+      }))
       const store = model.createStore({
-        project: seed.createSeedProject(),
+        project: emptySeed,
         session: defaultSession({ activeSkinId: 'black-duo' }),
       })
       canvas.mountCanvas(host, { storage: memoryStorage(), store })
 
       assert.deepEqual(store.getState().project.inventory.objectTypes, [])
       assert.equal(host.querySelectorAll('[data-object-type-id]').length, 0)
+      assert.equal(host.querySelector('[data-zone-object-type-id]'), null)
       assert.equal(zoneFill(host, 'zone-patch'), '#3D7EFF')
 
       const next = store.getState().project
@@ -390,7 +397,7 @@ describe('live preview I/O matrix (story 4.4)', () => {
                   objectTypeId: 'ghostType',
                   stateId: 'normal',
                   propertyId: 'face',
-                  paletteEntryId: 'duoLedYellow',
+                  paletteEntryId: 'yellow',
                 },
               ],
             }
@@ -588,7 +595,7 @@ describe('live preview I/O matrix (story 4.4)', () => {
                 objectTypeId: 'knobLarge',
                 stateId: 'pressed',
                 propertyId: 'face',
-                paletteEntryId: 'duoLedYellow',
+                paletteEntryId: 'yellow',
               },
             ],
           },
@@ -775,7 +782,7 @@ describe('live preview I/O matrix (story 4.4)', () => {
                 objectTypeId: 'knobLarge',
                 stateId: 'normal',
                 propertyId: 'face',
-                paletteEntryId: 'duoLedYellow',
+                paletteEntryId: 'yellow',
               }),
             }
           : s,
@@ -811,7 +818,7 @@ describe('live preview I/O matrix (story 4.4)', () => {
                 objectTypeId: 'knobLarge',
                 stateId: 'pressed',
                 propertyId: 'face',
-                paletteEntryId: 'duoLedYellow',
+                paletteEntryId: 'yellow',
               },
             ],
           },
@@ -873,13 +880,13 @@ describe('live preview I/O matrix (story 4.4)', () => {
               objectTypeId: 'knobLarge',
               stateId: 'normal',
               propertyId: 'face',
-              paletteEntryId: 'duoLedYellow',
+              paletteEntryId: 'yellow',
             },
             {
               objectTypeId: 'bypassBtn',
               stateId: 'normal',
               propertyId: 'fill',
-              paletteEntryId: 'patchZoneBlue',
+              paletteEntryId: 'blue',
             },
           ],
         },
@@ -927,7 +934,7 @@ describe('live preview I/O matrix (story 4.4)', () => {
                 objectTypeId: 'knobLarge',
                 stateId: 'normal',
                 propertyId: 'face',
-                paletteEntryId: 'duoLedYellow',
+                paletteEntryId: 'yellow',
               },
             ],
           },
@@ -982,7 +989,7 @@ describe('live preview I/O matrix (story 4.4)', () => {
 
       const project = store.getState().project
       project.palette = project.palette.map((entry) =>
-        entry.id === 'duoLedYellow' ? { ...entry, hex: '#AABBCC' } : entry,
+        entry.id === 'yellow' ? { ...entry, hex: '#AABBCC' } : entry,
       )
       store.apply({ project })
       assert.equal(zoneFill(host, 'zone-header-duo-led'), '#AABBCC')

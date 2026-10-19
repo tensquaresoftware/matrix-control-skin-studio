@@ -428,7 +428,7 @@ describe('unbound pane matrix', () => {
     assert.match(pkg.scripts?.test ?? '', /unbound-pane-matrix\.test\.mjs/)
   })
 
-  it('empty inventory: project-total 0 → success copy, no badge, no rows', async () => {
+  it('empty inventory: project-total 0 → honest empty copy, no badge, no rows', async () => {
     const restore = installMinimalDocument()
     try {
       const [sidebar, model, seed] = await Promise.all([
@@ -437,6 +437,8 @@ describe('unbound pane matrix', () => {
         importCompiledTs('src/seed/index.ts'),
       ])
       const project = seed.createSeedProject()
+      project.inventory = { source: 'seed-placeholder', objectTypes: [] }
+      project.skins = project.skins.map((skin) => ({ ...skin, mappings: [] }))
       assert.deepEqual(project.inventory.objectTypes, [])
 
       const { host } = mountSidebarWithStore(
@@ -452,8 +454,104 @@ describe('unbound pane matrix', () => {
       assert.ok(empty)
       assert.equal(badge.hidden, true)
       assert.equal(empty.hidden, false)
+      assert.equal(
+        empty.textContent,
+        'No Object types loaded — nothing required to bind',
+      )
+      assert.notEqual(empty.textContent, 'All required mappings bound')
+      assert.equal(unboundRows(host).length, 0)
+    } finally {
+      restore()
+    }
+  })
+
+  it('seed inventory fully bound: project-total 0 → success copy', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const project = seed.createSeedProject()
+      assert.equal(project.inventory.objectTypes.length, 3)
+
+      const { host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        project,
+        defaultSession({ activeSkinId: project.skins[0]?.id ?? null }),
+      )
+
+      const badge = unboundBadge(host)
+      const empty = unboundEmpty(host)
+      assert.equal(badge.hidden, true)
+      assert.equal(empty.hidden, false)
       assert.equal(empty.textContent, 'All required mappings bound')
       assert.equal(unboundRows(host).length, 0)
+    } finally {
+      restore()
+    }
+  })
+
+  it('ObjectTypes without slots: project-total 0 → no-bindable-slots copy', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const project = seed.createSeedProject()
+      project.inventory = {
+        source: 'fixture',
+        objectTypes: [{ id: 'headerLed', states: [], properties: [] }],
+      }
+      project.skins = project.skins.map((skin) => ({ ...skin, mappings: [] }))
+
+      const { host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        project,
+        defaultSession({ activeSkinId: project.skins[0]?.id ?? null }),
+      )
+
+      assert.equal(
+        unboundEmpty(host).textContent,
+        'Nothing required to bind — no bindable slots',
+      )
+      assert.notEqual(
+        unboundEmpty(host).textContent,
+        'No Object types loaded — nothing required to bind',
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('required slots but no skins: project-total 0 → no-skins copy', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [sidebar, model, seed] = await Promise.all([
+        importCompiledTs('src/sidebar/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+        importCompiledTs('src/seed/index.ts'),
+      ])
+      const project = seed.createSeedProject()
+      project.skins = []
+
+      const { host } = mountSidebarWithStore(
+        sidebar,
+        model,
+        project,
+        defaultSession({ activeSkinId: null }),
+      )
+
+      assert.equal(unboundEmpty(host).textContent, 'No skins — nothing to bind')
+      assert.notEqual(
+        unboundEmpty(host).textContent,
+        'All required mappings bound',
+      )
     } finally {
       restore()
     }
