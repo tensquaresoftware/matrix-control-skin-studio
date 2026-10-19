@@ -199,3 +199,10 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - source_spec: `_bmad-output/implementation-artifacts/spec-sidebar-photocraft-cosmetics.md`
   summary: Prior Lot B defer “DESIGN 16px vs runtime 24px” is stale — runtime hue width is now 16px.
   evidence: Cosmetics aligned to DESIGN width; close or rewrite the Lot B defer when grooming deferred-work.
+
+## Deferred from: code review (2026-10-20)
+
+- Working-tree PhotoCraft polish (uncommitted since acd3460): DESIGN.md / planning tokens still lag runtime (sidebar width, type sizes, float gap) — already out of scope for this pass; same class of DESIGN drift deferred earlier.
+- Hex double-click → Color has no keyboard equivalent — pointer gesture only; full Palette a11y jump is a later pass.
+- Zoom select forced to 60px may clip longer labels (e.g. 200%) — intentional PhotoCraft chrome budget; reopen if operators report clipping.
+- canvas-mock ALWAYS_ON band test narrative still says Skin is irrelevant while bridged zones now follow Skin Mappings when inventory is present — documentation/test copy hygiene, not a product bug for this pass.
