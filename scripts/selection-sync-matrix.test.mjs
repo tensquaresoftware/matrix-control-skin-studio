@@ -792,6 +792,139 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
     }
   })
 
+  it('canvas click outside mock clears Object-type selection outline', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountSyncedShell(
+        chrome,
+        model,
+        fixtureProject(),
+        defaultSession(),
+      )
+
+      clickHit(root, 'headerLed')
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
+      assert.ok(
+        root
+          .querySelector('[data-object-type-id="headerLed"]')
+          ?.classList.contains('is-selected'),
+      )
+
+      const host = root.querySelector('[data-canvas-host]')
+      assert.ok(host)
+      // Click the empty host chrome (outside mock) — not a hit / zone.
+      host.dispatchEvent({ type: 'click' })
+
+      assert.equal(store.getState().session.selectedObjectTypeId, null)
+      assert.equal(
+        root
+          .querySelector('[data-object-type-id="headerLed"]')
+          ?.classList.contains('is-selected'),
+        false,
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('pan drag does not clear Object-type selection via trailing host click', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountSyncedShell(
+        chrome,
+        model,
+        fixtureProject(),
+        defaultSession(),
+      )
+
+      clickHit(root, 'headerLed')
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
+
+      const host = root.querySelector('[data-canvas-host]')
+      assert.ok(host)
+
+      // Real pan: pointerdown → move past threshold → pointerup → synthetic click.
+      host.dispatchEvent({
+        type: 'pointerdown',
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        preventDefault() {},
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        clientX: 130,
+        clientY: 115,
+        pointerId: 1,
+      })
+      globalThis.window.dispatchEvent({
+        type: 'pointerup',
+        clientX: 130,
+        clientY: 115,
+        pointerId: 1,
+      })
+      host.dispatchEvent({ type: 'click' })
+
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
+      assert.ok(
+        root
+          .querySelector('[data-object-type-id="headerLed"]')
+          ?.classList.contains('is-selected'),
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it('hit click keeps selection after mock rebuild (no host deselect race)', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountSyncedShell(
+        chrome,
+        model,
+        fixtureProject(),
+        defaultSession(),
+      )
+
+      const hit = root.querySelector('[data-object-type-id="headerLed"]')
+      assert.ok(hit)
+      // Simulate browser path: composedPath still lists the mock even though
+      // selection rebuild detaches the hit before the host would see a bubble.
+      hit.dispatchEvent({
+        type: 'click',
+        composedPath() {
+          return [
+            hit,
+            root.querySelector('[data-canvas-mock]'),
+            root.querySelector('[data-canvas-host]'),
+          ]
+        },
+      })
+
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
+      assert.ok(
+        root
+          .querySelector('[data-object-type-id="headerLed"]')
+          ?.classList.contains('is-selected'),
+      )
+    } finally {
+      restore()
+    }
+  })
+
   it('hit pointerdown stops pan (no drag session on host)', async () => {
     const restore = installMinimalDocument()
     try {

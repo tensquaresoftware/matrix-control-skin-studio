@@ -997,4 +997,82 @@ describe('live preview I/O matrix (story 4.4)', () => {
       restore()
     }
   })
+
+  it('bridged Duo LED follows headerLed fill Mapping + live hex edit', async () => {
+    const model = await importCompiledTs('src/model/index.ts')
+    const { upsertMapping } = await importCompiledTs('src/model/palette-helpers.ts')
+    const seed = await importCompiledTs('src/seed/index.ts')
+    const canvas = await importCompiledTs('src/canvas/index.ts')
+    const restore = installMinimalDocument()
+    try {
+      const host = createElement('div')
+      const store = model.createStore({
+        project: seed.createSeedProject(),
+        session: defaultSession({ activeSkinId: 'black-duo' }),
+      })
+      canvas.mountCanvas(host, { storage: memoryStorage(), store })
+
+      assert.equal(zoneFill(host, 'zone-header-duo-led'), '#FFCC00')
+
+      // Remap fill away from ALWAYS_ON yellow → LED must follow Mapping.
+      let project = store.getState().project
+      project = {
+        ...project,
+        skins: project.skins.map((skin) =>
+          skin.id !== 'black-duo'
+            ? skin
+            : {
+                ...skin,
+                mappings: upsertMapping(skin.mappings, {
+                  objectTypeId: 'headerLed',
+                  stateId: 'default',
+                  propertyId: 'fill',
+                  paletteEntryId: 'blue',
+                }),
+              },
+        ),
+      }
+      store.apply({ project })
+      assert.equal(zoneFill(host, 'zone-header-duo-led'), '#3D7EFF')
+
+      // Edit the mapped Palette entry → LED updates same turn.
+      project = store.getState().project
+      project = {
+        ...project,
+        palette: project.palette.map((entry) =>
+          entry.id === 'blue' ? { ...entry, hex: '#112233' } : entry,
+        ),
+      }
+      store.apply({ project })
+      assert.equal(zoneFill(host, 'zone-header-duo-led'), '#112233')
+
+      // Clear Mapping → LED unbound (empty), never ALWAYS_ON yellow again.
+      project = store.getState().project
+      project = {
+        ...project,
+        skins: project.skins.map((skin) =>
+          skin.id !== 'black-duo'
+            ? skin
+            : {
+                ...skin,
+                mappings: upsertMapping(skin.mappings, {
+                  objectTypeId: 'headerLed',
+                  stateId: 'default',
+                  propertyId: 'fill',
+                  paletteEntryId: null,
+                }),
+              },
+        ),
+      }
+      store.apply({ project })
+      const unboundLed = host.querySelector(
+        '[data-orch-zone="zone-header-duo-led"]',
+      )
+      assert.ok(unboundLed)
+      assert.equal(zoneFill(host, 'zone-header-duo-led'), '')
+      assert.ok(unboundLed.hasAttribute('data-zone-unbound'))
+    } finally {
+      restore()
+    }
+  })
 })

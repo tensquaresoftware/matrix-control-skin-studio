@@ -129,7 +129,90 @@ export function mountCanvas(
   }
 
   applyCanvasViewFromPrefs(host, storage)
-  wirePanInteractions(host, surface, storage)
+  /** Shared with pan: a real drag must not clear selection via the trailing click. */
+  const panClickGuard = { suppressNextClickDeselect: false }
+  wirePanInteractions(host, surface, storage, panClickGuard)
+  wireBackgroundDeselect(host, mockRoot, store, panClickGuard)
+}
+
+/** Pixel movement that counts as a pan drag (not a plain click). */
+const PAN_CLICK_SUPPRESS_THRESHOLD_PX = 3
+
+type PanClickGuard = {
+  suppressNextClickDeselect: boolean
+}
+
+/**
+ * Click in the canvas host but outside the mock clears Object-type selection
+ * (drops the blue selection outline). Clicks inside the mock keep / change it.
+ *
+ * Prefer `composedPath`: hit/zone clicks rebuild the mock mid-event, which
+ * detaches `event.target` so `closest('[data-canvas-mock]')` would fail and
+ * immediately undo the selection.
+ *
+ * Pan drags also synthesize a host `click` after pointer-up — those are
+ * ignored via `panClickGuard` so panning does not clear selection.
+ */
+function wireBackgroundDeselect(
+  host: HTMLElement,
+  mockRoot: HTMLElement,
+  store: ProjectStore | undefined,
+  panClickGuard: PanClickGuard,
+): void {
+  if (store == null) return
+  host.addEventListener('click', (event: MouseEvent) => {
+    if (panClickGuard.suppressNextClickDeselect) {
+      panClickGuard.suppressNextClickDeselect = false
+      return
+    }
+    if (clickOriginatedInsideMock(event, mockRoot)) return
+    const { session } = store.getState()
+    if (session.selectedObjectTypeId == null) return
+    execute(store, {
+      session: {
+        ...session,
+        selectedObjectTypeId: null,
+      },
+    })
+  })
+}
+
+function clickOriginatedInsideMock(
+  event: MouseEvent,
+  mockRoot: HTMLElement,
+): boolean {
+  const path =
+    typeof event.composedPath === 'function' ? event.composedPath() : []
+  for (const node of path) {
+    if (node === mockRoot) return true
+    if (
+      node != null &&
+      typeof node === 'object' &&
+      'getAttribute' in node &&
+      typeof (node as HTMLElement).getAttribute === 'function' &&
+      (node as HTMLElement).getAttribute('data-canvas-mock') != null
+    ) {
+      return true
+    }
+  }
+  // Harness / no composedPath: walk parents (works when DOM was not rebuilt).
+  const target = event.target as {
+    closest?: (sel: string) => unknown
+    parent?: unknown
+  } | null
+  if (target != null && typeof target.closest === 'function') {
+    if (target.closest('[data-canvas-mock]') != null) return true
+  }
+  let current: unknown = target
+  while (current != null && typeof current === 'object') {
+    if (current === mockRoot) return true
+    current =
+      (current as { parent?: unknown }).parent ??
+      (current as { parentElement?: unknown }).parentElement ??
+      (current as { parentNode?: unknown }).parentNode ??
+      null
+  }
+  return false
 }
 
 function renderMockComposition(
@@ -265,7 +348,9 @@ function renderMockComposition(
       hit.addEventListener('pointerdown', (event: PointerEvent) => {
         event.stopPropagation()
       })
-      hit.addEventListener('click', () => {
+      hit.addEventListener('click', (event: MouseEvent) => {
+        // Keep host background-deselect from seeing this after mock rebuild.
+        event.stopPropagation?.()
         if (store == null) return
         applyObjectTypeHitSelection(store, region.objectTypeId)
         selectionSync?.notifyCanvasHit()
@@ -447,7 +532,7 @@ function buildZoneElement(
   if (zone.role !== 'headerLed') {
     el.textContent = zone.label
   }
-  applyZonePaint(el, zone.paletteEntryId, project)
+  applyZonePaint(el, zone, project, session)
 
   // CLICK_SURFACE = A: painted band selects matching inventory ObjectType when present.
   const selectableId =
@@ -470,7 +555,9 @@ function buildZoneElement(
     el.addEventListener('pointerdown', (event: PointerEvent) => {
       event.stopPropagation()
     })
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (event: MouseEvent) => {
+      // Keep host background-deselect from seeing this after mock rebuild.
+      event.stopPropagation?.()
       if (store == null) return
       applyObjectTypeHitSelection(store, selectableId)
       selectionSync?.notifyCanvasHit()
@@ -488,11 +575,45 @@ function buildZoneElement(
   return el
 }
 
+/**
+ * Zone face colour: when the zone bridges to an inventory ObjectType, paint
+ * from the active Skin’s first-Property Mapping (same loop as clicking the
+ * LED → editing fill). Otherwise keep ALWAYS_ON metadata Palette id.
+ */
 function applyZonePaint(
   el: HTMLElement,
-  paletteEntryId: string,
+  zone: OrchestratorZoneDescriptor,
   project: ProjectDocument | null,
+  session: SessionUiState | null,
 ): void {
+  let paletteEntryId: string | null = zone.paletteEntryId
+
+  if (project != null) {
+    const objectTypeId = resolveZoneSelectableObjectTypeId(
+      zone.role,
+      project.inventory,
+    )
+    if (objectTypeId != null) {
+      const objectType = project.inventory.objectTypes.find(
+        (type) => type.id === objectTypeId,
+      )
+      const activeSkin = resolveActiveSkin(project, session)
+      const stateId =
+        objectType == null ? null : resolveHitPaintStateId(objectType, session)
+      const propertyId = objectType?.properties[0] ?? null
+      if (activeSkin != null && stateId != null && propertyId != null) {
+        const mapping = findMapping(activeSkin.mappings, {
+          objectTypeId,
+          stateId,
+          propertyId,
+        })
+        // Bridged zone follows Mapping (including unbound stub) — do not
+        // fall back to ALWAYS_ON yellow/blue/orange or the LED lies.
+        paletteEntryId = mapping?.paletteEntryId ?? null
+      }
+    }
+  }
+
   const hex =
     project == null ? null : resolvePaletteHex(project, paletteEntryId)
   if (hex == null) {
@@ -532,6 +653,7 @@ function wirePanInteractions(
   host: HTMLElement,
   surface: HTMLElement,
   storage: PersistStorage,
+  panClickGuard: PanClickGuard,
 ): void {
   let dragging = false
   let activePointerId: number | null = null
@@ -553,6 +675,10 @@ function wirePanInteractions(
   const endDrag = (event: PointerEvent): void => {
     if (!dragging || event.pointerId !== activePointerId) return
     const shouldPersist = event.type === 'pointerup'
+    const movedPx = Math.hypot(
+      currentPan.x - startPan.x,
+      currentPan.y - startPan.y,
+    )
     dragging = false
     activePointerId = null
 
@@ -569,6 +695,10 @@ function wirePanInteractions(
     }
 
     if (shouldPersist) {
+      if (movedPx >= PAN_CLICK_SUPPRESS_THRESHOLD_PX) {
+        // Browser still fires click after a drag; do not treat it as deselect.
+        panClickGuard.suppressNextClickDeselect = true
+      }
       commitPanXY(currentPan, storage)
       applyCanvasViewFromPrefs(host, storage)
     } else {
