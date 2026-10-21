@@ -206,3 +206,18 @@ Decision: close Epic 4 with debts accepted; Unbound completeness owned by story 
 - Hex double-click → Color has no keyboard equivalent — pointer gesture only; full Palette a11y jump is a later pass.
 - Zoom select forced to 60px may clip longer labels (e.g. 200%) — intentional PhotoCraft chrome budget; reopen if operators report clipping.
 - canvas-mock ALWAYS_ON band test narrative still says Skin is irrelevant while bridged zones now follow Skin Mappings when inventory is present — documentation/test copy hygiene, not a product bug for this pass.
+
+## Deferred from: build review of spec-spike-canvas-widget-exemplar-board.md (2026-10-20)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-spike-canvas-widget-exemplar-board.md`
+  summary: Remounting `mountCanvas` on the same host stacks pan and background-deselect listeners.
+  evidence: Pre-existing single-mount chrome lifetime; no teardown of host listeners (same class as deferred canvas store-subscribe dispose). Everyday remount uncommon until a product remount path appears.
+
+## Deferred from: oneshot review of spec-exemplar-board-black-orbital.md (2026-10-20)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-exemplar-board-black-orbital.md`
+  summary: EnvelopeDisplay / TrackGeneratorDisplay still use a generic diagonal stripe instead of Orbital-shaped ADSR / ramp silhouettes.
+  evidence: Recognizability polish beyond ColourChart + PT Sans Narrow floor; slider/combo/patch were the validated focus.
+- source_spec: `_bmad-output/implementation-artifacts/spec-exemplar-board-black-orbital.md`
+  summary: ModulationBusHeader columns are one flattened string rather than distinct Orbital SOURCE / AMOUNT / DESTINATION column layout.
+  evidence: Flat board still readable; full bus-header chrome is Lot C-adjacent fidelity.
