@@ -100,7 +100,6 @@ function createElement(tagName) {
         else if (force === false) classSet.delete(name)
         else if (classSet.has(name)) classSet.delete(name)
         else classSet.add(name)
-        return classSet.has(name)
       },
       contains(name) {
         return classSet.has(name)
@@ -113,61 +112,50 @@ function createElement(tagName) {
     get className() {
       return [...classSet].join(' ')
     },
-    get id() {
-      return attrs.get('id') ?? ''
-    },
-    set id(value) {
-      attrs.set('id', String(value))
-    },
     get value() {
       return valueProp
     },
-    set value(next) {
-      valueProp = String(next)
+    set value(v) {
+      valueProp = String(v)
     },
     get hidden() {
       return hiddenProp
     },
-    set hidden(next) {
-      hiddenProp = Boolean(next)
-      if (hiddenProp) attrs.set('hidden', '')
-      else attrs.delete('hidden')
+    set hidden(v) {
+      hiddenProp = Boolean(v)
     },
     setAttribute(name, value) {
       attrs.set(name, String(value))
-      if (name === 'value') valueProp = String(value)
-      if (name === 'type') node.type = String(value)
-      if (name === 'hidden') hiddenProp = true
     },
     getAttribute(name) {
       return attrs.has(name) ? attrs.get(name) : null
     },
+    removeAttribute(name) {
+      attrs.delete(name)
+    },
     hasAttribute(name) {
       return attrs.has(name)
     },
-    removeAttribute(name) {
-      attrs.delete(name)
-      if (name === 'hidden') hiddenProp = false
+    closest(sel) {
+      let current = node
+      while (current != null) {
+        if (matchesSelector(current, sel)) return current
+        current = current.parent
+      }
+      return null
     },
-    append(...nodes) {
-      for (const child of nodes) {
-        child.parent = node
-        node.children.push(child)
+    append(...kids) {
+      for (const kid of kids) {
+        if (kid == null) continue
+        if (typeof kid === 'string') continue
+        kid.parent = node
+        node.children.push(kid)
       }
     },
-    appendChild(child) {
-      node.append(child)
-      return child
-    },
-    replaceChildren(...nodes) {
+    replaceChildren(...kids) {
       for (const child of node.children) child.parent = null
       node.children = []
-      node.append(...nodes)
-    },
-    remove() {
-      if (!node.parent) return
-      node.parent.children = node.parent.children.filter((c) => c !== node)
-      node.parent = null
+      node.append(...kids)
     },
     querySelector(selector) {
       return querySelectorDeep(node, selector)
@@ -176,14 +164,6 @@ function createElement(tagName) {
       const out = []
       walkCollect(node, selector, out)
       return out
-    },
-    closest(selector) {
-      let el = node
-      while (el) {
-        if (matchesSelector(el, selector)) return el
-        el = el.parent
-      }
-      return null
     },
     addEventListener(type, fn) {
       if (!listeners.has(type)) listeners.set(type, [])
@@ -252,20 +232,20 @@ function matchesSelector(el, selector) {
   return false
 }
 
-function querySelectorDeep(root, selector) {
+function querySelectorDeep(rootEl, selector) {
   const walk = (el) => {
-    if (el !== root && matchesSelector(el, selector)) return el
+    if (el !== rootEl && matchesSelector(el, selector)) return el
     for (const child of el.children) {
       const found = walk(child)
       if (found) return found
     }
     return null
   }
-  return walk(root)
+  return walk(rootEl)
 }
 
-function walkCollect(root, selector, out) {
-  for (const child of root.children) {
+function walkCollect(rootEl, selector, out) {
+  for (const child of rootEl.children) {
     if (matchesSelector(child, selector)) out.push(child)
     walkCollect(child, selector, out)
   }
@@ -316,7 +296,6 @@ function memoryStorage() {
   }
 }
 
-/** Fixture inventory — tests only; not Collect product truth. */
 function fixtureInventory() {
   return {
     source: 'test-fixture',
@@ -364,23 +343,12 @@ function defaultSession(overrides = {}) {
   }
 }
 
-function createRoot() {
-  return createElement('div')
-}
-
 function mountSyncedShell(chrome, model, project, session) {
   const store = model.createStore({ project, session })
-  const root = createRoot()
+  const root = createElement('div')
   root.id = 'app'
   chrome.mountChromeShell(root, store, { storage: memoryStorage() })
   return { store, root }
-}
-
-function clickHit(root, objectTypeId) {
-  const hit = root.querySelector(`[data-object-type-id="${objectTypeId}"]`)
-  assert.ok(hit, `expected hit for ${objectTypeId}`)
-  hit.dispatchEvent({ type: 'click' })
-  return hit
 }
 
 function propertyRows(root) {
@@ -389,73 +357,18 @@ function propertyRows(root) {
   return list.querySelectorAll('[data-mapping-row]')
 }
 
-describe('selection-sync I/O matrix (story 4.3)', () => {
+describe('selection-sync I/O matrix (story 4.3 — spike dormancy)', () => {
   it('registers selection-sync-matrix in npm test', () => {
     assert.match(pkg.scripts?.test ?? '', /selection-sync-matrix\.test\.mjs/)
   })
 
-  it('CSS: selected hit outline + canvas-highlighted Mapping row', () => {
-    assert.match(baseCss, /\.mock-object-type-hit\.is-selected/)
+  it('CSS: Mapping-row canvas highlight tokens remain; mock hit styles gone', () => {
     assert.match(baseCss, /--comp-canvas-selection-outline/)
-    assert.match(baseCss, /--comp-canvas-selection-fill/)
     assert.match(baseCss, /\.mapping-row\.is-canvas-highlighted/)
-    assert.match(baseCss, /\.mock-object-type-hit\s*\{[^}]*cursor:\s*pointer/s)
+    assert.doesNotMatch(baseCss, /\.mock-object-type-hit/)
   })
 
-  it('canvas → type: session Object type + sticky State; AUTO_MAPPINGS; HIGHLIGHT_SCROLL_ONLY', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession({ selectedStateId: 'off' }),
-      )
-
-      // Start on Skin segment so AUTO_MAPPINGS is observable.
-      const skinTab = root.querySelector('[data-skin-seg-tab="skin"]')
-      assert.ok(skinTab)
-      skinTab.dispatchEvent({ type: 'click' })
-      assert.equal(root.querySelector('[data-skin-tab]')?.hidden, false)
-      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, true)
-
-      clickHit(root, 'headerLed')
-
-      const session = store.getState().session
-      assert.equal(session.selectedObjectTypeId, 'headerLed')
-      assert.equal(session.selectedStateId, 'off')
-
-      // AUTO_MAPPINGS
-      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, false)
-      assert.equal(root.querySelector('[data-skin-tab]')?.hidden, true)
-
-      const rows = propertyRows(root)
-      assert.equal(rows.length, 2)
-      for (const row of rows) {
-        assert.ok(row.classList.contains('is-canvas-highlighted'))
-        assert.equal(row.classList.contains('is-focused'), false)
-      }
-      assert.ok(rows[0]._scrollIntoViewCalls >= 1)
-
-      // Context strip follows session
-      assert.equal(
-        root.querySelector('[data-context-value="object"]')?.value,
-        'headerLed',
-      )
-      assert.equal(
-        root.querySelector('[data-context-value="state"]')?.value,
-        'off',
-      )
-    } finally {
-      restore()
-    }
-  })
-
-  it('sidebar → outline: selected Object type outlines matching hit', async () => {
+  it('canvas dormancy: exemplar board present; zero Object-type / zone hit targets', async () => {
     const restore = installMinimalDocument()
     try {
       const [chrome, model] = await Promise.all([
@@ -469,104 +382,59 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
         defaultSession(),
       )
 
+      assert.ok(root.querySelector('[data-exemplar-board]'))
+      assert.equal(root.querySelector('[data-canvas-mock]'), null)
+      assert.equal(root.querySelectorAll('[data-object-type-id]').length, 0)
+      assert.equal(root.querySelector('[data-orch-zone]'), null)
+      assert.equal(root.querySelector('[data-zone-object-type-id]'), null)
+    } finally {
+      restore()
+    }
+  })
+
+  it('CanvasSelectionSync module still callable (sidebar bridge idle without hits)', async () => {
+    const sidebar = await importCompiledTs('src/sidebar/canvas-selection-sync.ts')
+    const sync = sidebar.createCanvasSelectionSync()
+    let switched = 0
+    let highlighted = 0
+    sync.setSwitchToMappings(() => {
+      switched += 1
+    })
+    sync.setHighlightScroll(() => {
+      highlighted += 1
+    })
+    sync.notifyCanvasHit()
+    assert.equal(switched, 1)
+    assert.equal(highlighted, 1)
+  })
+
+  it('sidebar Object select updates session without canvas outline targets', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountSyncedShell(
+        chrome,
+        model,
+        fixtureProject(),
+        defaultSession(),
+      )
+
       const objectSelect = root.querySelector('[data-mappings-object-type]')
       assert.ok(objectSelect)
       objectSelect.value = 'knobLarge'
       objectSelect.dispatchEvent({ type: 'change' })
 
-      const selected = root.querySelector('[data-object-type-id="knobLarge"]')
-      assert.ok(selected)
-      assert.ok(selected.classList.contains('is-selected'))
-      const other = root.querySelector('[data-object-type-id="headerLed"]')
-      assert.ok(other)
-      assert.equal(other.classList.contains('is-selected'), false)
+      assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
+      assert.equal(root.querySelector('[data-object-type-id="knobLarge"]'), null)
     } finally {
       restore()
     }
   })
 
-  it('painted Orchestrator band click → Object/State + AUTO_MAPPINGS + context strip', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model, seed] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-        importCompiledTs('src/seed/index.ts'),
-      ])
-      const project = seed.createSeedProject()
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        project,
-        defaultSession({
-          activeSkinId: 'black-green',
-          selectedObjectTypeId: null,
-          selectedStateId: null,
-        }),
-      )
-
-      const skinTab = root.querySelector('[data-skin-seg-tab="skin"]')
-      assert.ok(skinTab)
-      skinTab.dispatchEvent({ type: 'click' })
-
-      const patchZone = root.querySelector('[data-orch-zone="zone-patch"]')
-      assert.ok(patchZone)
-      assert.equal(patchZone.getAttribute('data-zone-object-type-id'), 'patchBand')
-      assert.ok(patchZone.classList.contains('is-selectable'))
-      patchZone.dispatchEvent({ type: 'click' })
-
-      const session = store.getState().session
-      assert.equal(session.selectedObjectTypeId, 'patchBand')
-      assert.equal(session.selectedStateId, 'default')
-      const patchSelected = root.querySelector('[data-orch-zone="zone-patch"]')
-      const masterZone = root.querySelector('[data-orch-zone="zone-master"]')
-      assert.ok(patchSelected?.classList.contains('is-selected'))
-      assert.equal(masterZone?.classList.contains('is-selected'), false)
-      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, false)
-      assert.equal(
-        root.querySelector('[data-context-value="object"]')?.value,
-        'patchBand',
-      )
-      assert.equal(
-        root.querySelector('[data-context-value="state"]')?.value,
-        'default',
-      )
-      const rows = propertyRows(root)
-      assert.equal(rows.length, 1)
-      assert.equal(rows[0].getAttribute('data-mapping-row'), 'fill')
-    } finally {
-      restore()
-    }
-  })
-
-  it('empty inventory: no hits; no click selection path', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model, seed] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-        importCompiledTs('src/seed/index.ts'),
-      ])
-      const project = seed.createSeedProject()
-      project.inventory = { source: 'seed-placeholder', objectTypes: [] }
-      project.skins = project.skins.map((skin) => ({ ...skin, mappings: [] }))
-      assert.deepEqual(project.inventory.objectTypes, [])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        project,
-        defaultSession(),
-      )
-
-      assert.equal(root.querySelectorAll('[data-object-type-id]').length, 0)
-      assert.equal(root.querySelector('[data-zone-object-type-id]'), null)
-      assert.equal(store.getState().session.selectedObjectTypeId, null)
-    } finally {
-      restore()
-    }
-  })
-
-  it('missing hit: session type absent from inventory → no outline; session unchanged by canvas', async () => {
+  it('canvas click outside board clears Object-type selection', async () => {
     const restore = installMinimalDocument()
     try {
       const [chrome, model] = await Promise.all([
@@ -578,254 +446,53 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
         model,
         fixtureProject(),
         defaultSession({
-          selectedObjectTypeId: 'ghostType',
+          selectedObjectTypeId: 'headerLed',
           selectedStateId: 'off',
         }),
       )
 
-      assert.equal(root.querySelector('[data-object-type-id="ghostType"]'), null)
-      assert.equal(
-        root.querySelectorAll('.mock-object-type-hit.is-selected').length,
-        0,
-      )
-      assert.equal(store.getState().session.selectedObjectTypeId, 'ghostType')
-      assert.equal(store.getState().session.selectedStateId, 'off')
-    } finally {
-      restore()
-    }
-  })
-
-  it('same-type re-click: session unchanged; still AUTO_MAPPINGS + highlight; no MappingFocus', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession({
-          selectedObjectTypeId: 'headerLed',
-          selectedStateId: 'on',
-        }),
-      )
-
-      const skinTab = root.querySelector('[data-skin-seg-tab="skin"]')
-      skinTab.dispatchEvent({ type: 'click' })
-
-      let applyCount = 0
-      const prevApply = store.apply.bind(store)
-      store.apply = (payload) => {
-        applyCount += 1
-        return prevApply(payload)
-      }
-
-      clickHit(root, 'headerLed')
-
-      assert.equal(applyCount, 0)
       assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
-      assert.equal(store.getState().session.selectedStateId, 'on')
-      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, false)
-
-      const rows = propertyRows(root)
-      assert.ok(rows.every((row) => row.classList.contains('is-canvas-highlighted')))
-      assert.ok(rows.every((row) => !row.classList.contains('is-focused')))
-      assert.ok(
-        rows[0]._scrollIntoViewCalls >= 1,
-        'same-type re-click must scroll Mapping row(s) into view again',
-      )
-    } finally {
-      restore()
-    }
-  })
-
-  it('non-sticky State: canvas type switch falls back to destination first state', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession({
-          selectedObjectTypeId: 'headerLed',
-          selectedStateId: 'on',
-        }),
-      )
-
-      clickHit(root, 'knobLarge')
-
-      assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
-      assert.equal(store.getState().session.selectedStateId, 'normal')
-    } finally {
-      restore()
-    }
-  })
-
-  it('Enter/Space on hit selects Object type like click', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession({ selectedStateId: 'off' }),
-      )
-
-      // Start on Skin so AUTO_MAPPINGS is observable (same as click path).
-      const skinTab = root.querySelector('[data-skin-seg-tab="skin"]')
-      assert.ok(skinTab)
-      skinTab.dispatchEvent({ type: 'click' })
-      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, true)
-
-      const hit = root.querySelector('[data-object-type-id="headerLed"]')
-      assert.ok(hit)
-      hit.dispatchEvent({ type: 'keydown', key: 'Enter', repeat: false })
-
-      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
-      assert.equal(store.getState().session.selectedStateId, 'off')
-      assert.ok(
-        root
-          .querySelector('[data-object-type-id="headerLed"]')
-          ?.classList.contains('is-selected'),
-      )
-      assert.equal(root.querySelector('[data-mappings-tab]')?.hidden, false)
-      assert.equal(root.querySelector('[data-skin-tab]')?.hidden, true)
-
-      const rows = propertyRows(root)
-      assert.ok(rows.every((row) => row.classList.contains('is-canvas-highlighted')))
-      assert.ok(rows.every((row) => !row.classList.contains('is-focused')))
-      assert.ok(rows[0]._scrollIntoViewCalls >= 1)
-
-      // Held key must not re-notify (event.repeat) — pin via scroll, not applyCount
-      // (same-type already no-ops store.apply).
-      const scrollBefore = rows[0]._scrollIntoViewCalls
-      const liveHit = root.querySelector('[data-object-type-id="headerLed"]')
-      assert.ok(liveHit)
-      liveHit.dispatchEvent({ type: 'keydown', key: 'Enter', repeat: true })
-      assert.equal(
-        propertyRows(root)[0]._scrollIntoViewCalls,
-        scrollBefore,
-        'event.repeat must not re-run highlight/scroll',
-      )
-
-      // Space selects a different type the same way as click (bridge + highlight).
-      const knob = root.querySelector('[data-object-type-id="knobLarge"]')
-      assert.ok(knob)
-      knob.dispatchEvent({ type: 'keydown', key: ' ', repeat: false })
-      assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
-      const afterSpace = propertyRows(root)
-      assert.ok(
-        afterSpace.every((row) => row.classList.contains('is-canvas-highlighted')),
-      )
-    } finally {
-      restore()
-    }
-  })
-
-  it('AUTO_MAPPINGS runs before highlightScroll on canvas hit', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [canvas, sidebar, model] = await Promise.all([
-        importCompiledTs('src/canvas/index.ts'),
-        importCompiledTs('src/sidebar/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const order = []
-      const real = sidebar.createCanvasSelectionSync()
-      const selectionSync = {
-        notifyCanvasHit: () => real.notifyCanvasHit(),
-        setSwitchToMappings: (fn) => {
-          real.setSwitchToMappings(() => {
-            order.push('switchToMappings')
-            fn?.()
-          })
-        },
-        setHighlightScroll: (fn) => {
-          real.setHighlightScroll(() => {
-            order.push('highlightScroll')
-            fn?.()
-          })
-        },
-      }
-
-      const store = model.createStore({
-        project: fixtureProject(),
-        session: defaultSession(),
-      })
-      const canvasHost = createRoot()
-      const sidebarHost = createRoot()
-      sidebarHost.setAttribute('data-sidebar', '')
-      canvas.mountCanvas(canvasHost, {
-        storage: memoryStorage(),
-        store,
-        selectionSync,
-      })
-      sidebar.mountSidebar(sidebarHost, {
-        storage: memoryStorage(),
-        store,
-        selectionSync,
-      })
-
-      // Start on Skin so switchToMappings must run.
-      const skinTab = sidebarHost.querySelector('[data-skin-seg-tab="skin"]')
-      assert.ok(skinTab)
-      skinTab.dispatchEvent({ type: 'click' })
-
-      order.length = 0
-      const hit = canvasHost.querySelector('[data-object-type-id="headerLed"]')
-      assert.ok(hit)
-      hit.dispatchEvent({ type: 'click' })
-
-      assert.deepEqual(order, ['switchToMappings', 'highlightScroll'])
-    } finally {
-      restore()
-    }
-  })
-
-  it('canvas click outside mock clears Object-type selection outline', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession(),
-      )
-
-      clickHit(root, 'headerLed')
-      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
-      assert.ok(
-        root
-          .querySelector('[data-object-type-id="headerLed"]')
-          ?.classList.contains('is-selected'),
-      )
 
       const host = root.querySelector('[data-canvas-host]')
       assert.ok(host)
-      // Click the empty host chrome (outside mock) — not a hit / zone.
-      host.dispatchEvent({ type: 'click' })
+      host.dispatchEvent({ type: 'click', target: host })
 
       assert.equal(store.getState().session.selectedObjectTypeId, null)
-      assert.equal(
-        root
-          .querySelector('[data-object-type-id="headerLed"]')
-          ?.classList.contains('is-selected'),
-        false,
+    } finally {
+      restore()
+    }
+  })
+
+  it('canvas click inside exemplar board keeps Object-type selection', async () => {
+    const restore = installMinimalDocument()
+    try {
+      const [chrome, model] = await Promise.all([
+        importCompiledTs('src/chrome/index.ts'),
+        importCompiledTs('src/model/index.ts'),
+      ])
+      const { store, root } = mountSyncedShell(
+        chrome,
+        model,
+        fixtureProject(),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'off',
+        }),
       )
+
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
+
+      const host = root.querySelector('[data-canvas-host]')
+      const board = root.querySelector('[data-exemplar-board]')
+      const brick =
+        root.querySelector('[data-exemplar-widget="slider"]') ?? board
+      assert.ok(host)
+      assert.ok(board)
+      assert.ok(brick)
+      // Bubble through host listeners; closest/parent walk must see the board.
+      brick.dispatchEvent({ type: 'click', target: brick })
+
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
     } finally {
       restore()
     }
@@ -842,140 +509,44 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
         chrome,
         model,
         fixtureProject(),
-        defaultSession(),
+        defaultSession({
+          selectedObjectTypeId: 'headerLed',
+          selectedStateId: 'off',
+        }),
       )
-
-      clickHit(root, 'headerLed')
-      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
 
       const host = root.querySelector('[data-canvas-host]')
       assert.ok(host)
 
-      // Real pan: pointerdown → move past threshold → pointerup → synthetic click.
       host.dispatchEvent({
         type: 'pointerdown',
         button: 0,
-        clientX: 100,
-        clientY: 100,
         pointerId: 1,
-        preventDefault() {},
-      })
-      globalThis.window.dispatchEvent({
-        type: 'pointermove',
-        clientX: 130,
-        clientY: 115,
-        pointerId: 1,
-      })
-      globalThis.window.dispatchEvent({
-        type: 'pointerup',
-        clientX: 130,
-        clientY: 115,
-        pointerId: 1,
-      })
-      host.dispatchEvent({ type: 'click' })
-
-      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
-      assert.ok(
-        root
-          .querySelector('[data-object-type-id="headerLed"]')
-          ?.classList.contains('is-selected'),
-      )
-    } finally {
-      restore()
-    }
-  })
-
-  it('hit click keeps selection after mock rebuild (no host deselect race)', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession(),
-      )
-
-      const hit = root.querySelector('[data-object-type-id="headerLed"]')
-      assert.ok(hit)
-      // Simulate browser path: composedPath still lists the mock even though
-      // selection rebuild detaches the hit before the host would see a bubble.
-      hit.dispatchEvent({
-        type: 'click',
-        composedPath() {
-          return [
-            hit,
-            root.querySelector('[data-canvas-mock]'),
-            root.querySelector('[data-canvas-host]'),
-          ]
-        },
-      })
-
-      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
-      assert.ok(
-        root
-          .querySelector('[data-object-type-id="headerLed"]')
-          ?.classList.contains('is-selected'),
-      )
-    } finally {
-      restore()
-    }
-  })
-
-  it('hit pointerdown stops pan (no drag session on host)', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession(),
-      )
-
-      const host = root.querySelector('[data-canvas-host]')
-      const hit = root.querySelector('[data-object-type-id="headerLed"]')
-      assert.ok(host)
-      assert.ok(hit)
-
-      // Hit stops propagation — host pointerdown handler must not run.
-      let hostPointerDowns = 0
-      const originalDispatch = host.dispatchEvent.bind(host)
-      host.dispatchEvent = (event) => {
-        if (event.type === 'pointerdown') hostPointerDowns += 1
-        return originalDispatch(event)
-      }
-
-      hit.dispatchEvent({
-        type: 'pointerdown',
-        button: 0,
-        pointerId: 7,
         clientX: 10,
         clientY: 10,
       })
-      assert.equal(hostPointerDowns, 0)
-
-      // Empty mock / host still receives pan pointerdown.
-      host.dispatchEvent({
-        type: 'pointerdown',
-        button: 0,
-        pointerId: 8,
-        clientX: 20,
-        clientY: 20,
+      globalThis.window.dispatchEvent({
+        type: 'pointermove',
+        pointerId: 1,
+        clientX: 40,
+        clientY: 10,
       })
-      assert.equal(hostPointerDowns, 1)
+      globalThis.window.dispatchEvent({
+        type: 'pointerup',
+        pointerId: 1,
+        clientX: 40,
+        clientY: 10,
+      })
+      // Synthesized trailing click after drag — pan guard must keep selection.
+      host.dispatchEvent({ type: 'click', target: host })
+
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
     } finally {
       restore()
     }
   })
 
-  it('sticky State across canvas type switch when shared state remains valid', async () => {
+  it('Property-row click still sets MappingFocus (sidebar path independent of hits)', async () => {
     const restore = installMinimalDocument()
     try {
       const [chrome, model] = await Promise.all([
@@ -992,162 +563,18 @@ describe('selection-sync I/O matrix (story 4.3)', () => {
         }),
       )
 
-      clickHit(root, 'knobLarge')
+      // Ensure Mappings segment visible with rows for selected type.
+      const mappingsTab = root.querySelector('[data-skin-seg-tab="mappings"]')
+      if (mappingsTab != null) {
+        mappingsTab.dispatchEvent({ type: 'click' })
+      }
 
-      assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
-      assert.equal(store.getState().session.selectedStateId, 'off')
-    } finally {
-      restore()
-    }
-  })
-
-  it('Property-row click still sets MappingFocus and clears canvas highlight', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession(),
-      )
-
-      clickHit(root, 'headerLed')
       const rows = propertyRows(root)
-      assert.ok(rows[0].classList.contains('is-canvas-highlighted'))
-
+      assert.ok(rows.length >= 1)
       rows[0].dispatchEvent({ type: 'click' })
       const after = propertyRows(root)
       assert.ok(after[0].classList.contains('is-focused'))
-      assert.equal(after[0].classList.contains('is-canvas-highlighted'), false)
-    } finally {
-      restore()
-    }
-  })
-
-  it('Sidebar Object/State change clears canvas highlight after canvas hit', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const { root } = mountSyncedShell(
-        chrome,
-        model,
-        fixtureProject(),
-        defaultSession(),
-      )
-
-      clickHit(root, 'headerLed')
-      assert.ok(
-        propertyRows(root).every((row) =>
-          row.classList.contains('is-canvas-highlighted'),
-        ),
-      )
-
-      const objectSelect = root.querySelector('[data-mappings-object-type]')
-      assert.ok(objectSelect)
-      objectSelect.value = 'knobLarge'
-      objectSelect.dispatchEvent({ type: 'change' })
-
-      const afterType = propertyRows(root)
-      assert.ok(afterType.length >= 1)
-      assert.ok(
-        afterType.every((row) => !row.classList.contains('is-canvas-highlighted')),
-      )
-
-      clickHit(root, 'knobLarge')
-      assert.ok(
-        propertyRows(root).every((row) =>
-          row.classList.contains('is-canvas-highlighted'),
-        ),
-      )
-
-      const stateSelect = root.querySelector('[data-mappings-state]')
-      assert.ok(stateSelect)
-      stateSelect.value = 'normal'
-      stateSelect.dispatchEvent({ type: 'change' })
-
-      const afterState = propertyRows(root)
-      assert.ok(afterState.length >= 1)
-      assert.ok(
-        afterState.every((row) => !row.classList.contains('is-canvas-highlighted')),
-      )
-    } finally {
-      restore()
-    }
-  })
-
-  it('Skin switch / null clears canvas highlight after canvas hit', async () => {
-    const restore = installMinimalDocument()
-    try {
-      const [chrome, model] = await Promise.all([
-        importCompiledTs('src/chrome/index.ts'),
-        importCompiledTs('src/model/index.ts'),
-      ])
-      const project = fixtureProject({
-        skins: [
-          { id: 'black-duo', displayName: 'Black/Duo', mappings: [] },
-          { id: 'cream-duo', displayName: 'Cream/Duo', mappings: [] },
-        ],
-      })
-      const { store, root } = mountSyncedShell(
-        chrome,
-        model,
-        project,
-        defaultSession(),
-      )
-
-      clickHit(root, 'headerLed')
-      assert.ok(
-        propertyRows(root).every((row) =>
-          row.classList.contains('is-canvas-highlighted'),
-        ),
-      )
-
-      const session = store.getState().session
-      store.apply({
-        session: { ...session, activeSkinId: 'cream-duo' },
-      })
-      const afterSwitch = propertyRows(root)
-      assert.ok(afterSwitch.length >= 1)
-      assert.ok(
-        afterSwitch.every(
-          (row) => !row.classList.contains('is-canvas-highlighted'),
-        ),
-      )
-
-      clickHit(root, 'headerLed')
-      assert.ok(
-        propertyRows(root).every((row) =>
-          row.classList.contains('is-canvas-highlighted'),
-        ),
-      )
-
-      store.apply({
-        session: {
-          ...store.getState().session,
-          activeSkinId: null,
-        },
-      })
-      assert.equal(propertyRows(root).length, 0)
-
-      store.apply({
-        session: {
-          ...store.getState().session,
-          activeSkinId: 'black-duo',
-        },
-      })
-      const restored = propertyRows(root)
-      assert.ok(restored.length >= 1)
-      assert.ok(
-        restored.every((row) => !row.classList.contains('is-canvas-highlighted')),
-        'highlight must stay off until a new canvas hit',
-      )
+      assert.equal(store.getState().session.selectedObjectTypeId, 'headerLed')
     } finally {
       restore()
     }

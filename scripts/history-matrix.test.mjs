@@ -760,7 +760,8 @@ describe('history I/O matrix', () => {
     )
   })
 
-  it('UI canvas Object-type selection: canUndo then Undo restores', async () => {
+  it('UI Object-type selection (sidebar): canUndo then Undo restores', async () => {
+    // Spike: canvas has zero hit targets — selection undo is exercised via sidebar.
     const model = await importCompiledTs('src/model/index.ts')
     const history = await importCompiledTs('src/history/index.ts')
     const persist = await importCompiledTs('src/persist/index.ts')
@@ -788,9 +789,11 @@ describe('history I/O matrix', () => {
         storage: persist.createMemoryStorage(),
       })
 
-      const hit = root.querySelector('[data-object-type-id="knobLarge"]')
-      assert.ok(hit)
-      hit.dispatchEvent({ type: 'click' })
+      assert.equal(root.querySelector('[data-object-type-id]'), null)
+      const objectSelect = root.querySelector('[data-mappings-object-type]')
+      assert.ok(objectSelect)
+      objectSelect.value = 'knobLarge'
+      objectSelect.dispatchEvent({ type: 'change' })
       assert.equal(store.getState().session.selectedObjectTypeId, 'knobLarge')
       assert.equal(history.canUndo(store), true)
 

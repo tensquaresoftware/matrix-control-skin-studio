@@ -126,6 +126,9 @@ function createElement(tagName) {
     getAttribute(name) {
       return attrs.has(name) ? attrs.get(name) : null
     },
+    removeAttribute(name) {
+      attrs.delete(name)
+    },
     hasAttribute(name) {
       return attrs.has(name)
     },

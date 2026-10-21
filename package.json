@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --test scripts/scaffold-matrix.test.mjs scripts/store-matrix.test.mjs scripts/seed-matrix.test.mjs scripts/persist-matrix.test.mjs scripts/boot-seed-matrix.test.mjs scripts/styles-matrix.test.mjs scripts/chrome-shell-matrix.test.mjs scripts/palette-picker-matrix.test.mjs scripts/skin-tab-matrix.test.mjs scripts/model-palette-helpers-matrix.test.mjs scripts/epic-3-crossflow-matrix.test.mjs scripts/canvas-mock-matrix.test.mjs scripts/mappings-matrix.test.mjs scripts/selection-sync-matrix.test.mjs scripts/live-preview-matrix.test.mjs scripts/history-matrix.test.mjs scripts/unbound-pane-matrix.test.mjs scripts/io-export-matrix.test.mjs scripts/io-import-matrix.test.mjs"
+    "test": "node --test scripts/scaffold-matrix.test.mjs scripts/store-matrix.test.mjs scripts/seed-matrix.test.mjs scripts/persist-matrix.test.mjs scripts/boot-seed-matrix.test.mjs scripts/styles-matrix.test.mjs scripts/chrome-shell-matrix.test.mjs scripts/palette-picker-matrix.test.mjs scripts/skin-tab-matrix.test.mjs scripts/model-palette-helpers-matrix.test.mjs scripts/epic-3-crossflow-matrix.test.mjs scripts/canvas-exemplar-board-matrix.test.mjs scripts/mappings-matrix.test.mjs scripts/selection-sync-matrix.test.mjs scripts/live-preview-matrix.test.mjs scripts/history-matrix.test.mjs scripts/unbound-pane-matrix.test.mjs scripts/io-export-matrix.test.mjs scripts/io-import-matrix.test.mjs"
   },
   "devDependencies": {
     "typescript": "7.0.2",

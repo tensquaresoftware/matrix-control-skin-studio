@@ -407,16 +407,13 @@ describe('chrome shell I/O matrix', () => {
       assert.ok(root.querySelector('[data-palette-row="yellow"]'))
       assert.ok(root.querySelector('[data-picker-hex]'))
 
-      // Product path: chrome → mountCanvas(store) must paint Orchestrator zones from seed Palette.
-      const zonePatch = root.querySelector('[data-orch-zone="zone-patch"]')
-      const zoneMaster = root.querySelector('[data-orch-zone="zone-master"]')
-      const zoneDuoLed = root.querySelector('[data-orch-zone="zone-header-duo-led"]')
-      assert.ok(zonePatch, 'expected zone-patch')
-      assert.ok(zoneMaster, 'expected zone-master')
-      assert.ok(zoneDuoLed, 'expected zone-header-duo-led')
-      assert.equal(zonePatch.style.backgroundColor, '#3D7EFF')
-      assert.equal(zoneMaster.style.backgroundColor, '#FF8A1F')
-      assert.equal(zoneDuoLed.style.backgroundColor, '#FFCC00')
+      // Spike: chrome → mountCanvas mounts exemplar board; mock/orch zones gone.
+      assert.ok(root.querySelector('[data-exemplar-board]'), 'expected exemplar board')
+      assert.equal(root.querySelector('[data-canvas-mock]'), null)
+      assert.equal(root.querySelector('[data-orch-zone]'), null)
+      assert.equal(root.querySelector('[data-object-type-id]'), null)
+      assert.ok(root.querySelector('[data-exemplar-kind="slider"]'))
+      assert.ok(root.querySelector('[data-exemplar-kind="envelopeDisplay"]'))
 
       // Layout slot classes must survive mountCanvas / mountSidebar (flex:1 + 260px).
       const canvasHost = root.querySelector('[data-canvas-host]')

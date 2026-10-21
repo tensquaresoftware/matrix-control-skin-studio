@@ -1,0 +1,8 @@
+Matrix-Control Skin Studio — exemplar gallery fonts
+
+Source: Matrix-Control/Assets/Fonts/ (sibling repo)
+Files: PTSansNarrow-Regular.ttf, PTSansNarrow-Bold.ttf
+Why: gallery bricks use the same PT Sans Narrow faces as Matrix-Control
+     widgets (TypographyStyles / Skin.cpp). Bold is shipped for product
+     parity even when current bricks paint at weight 400 only.
+License: OFL.txt (SIL Open Font License 1.1)

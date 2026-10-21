@@ -421,261 +421,278 @@ body {
   outline: none;
 }
 
+/*
+ * Pan/zoom transform target — transparent, content-sized (no raised grey
+ * fake-window plaque). Host keeps --color-surface-app behind the board.
+ */
 .canvas-surface {
-  flex: 1;
+  display: block;
+  width: fit-content;
   min-width: 0;
+  max-width: calc(100% - (var(--space-6) * 2));
   margin: var(--space-6);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   transform-origin: top left;
-  overflow: hidden;
 }
 
-/* Matrix-Control GUI mock — structural silhouette (UX-DR14), not pixel-locked */
-.canvas-mock {
-  width: min(640px, 100%);
-  height: min(520px, 100%);
-  min-height: 320px;
-  background: linear-gradient(180deg, #2a2a2e 0%, #1e1e22 100%);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-default);
+/* Spike: labeled Matrix-Control base-widget exemplar board (skin Black) */
+.exemplar-board {
+  /* ColourChart Black tokens used by gallery bricks only */
+  --mc-black: #000000;
+  --mc-green1: #002D0E;
+  --mc-green2: #06471C;
+  --mc-green3: #00785E;
+  --mc-green4: #00DDAD;
+  --mc-dark-grey3: #303030;
+  --mc-dark-grey5: #505050;
+  --mc-light-grey2: #B9B9B9;
+  --mc-blue: #004FB0;
+  --mc-red: #FF0000;
+  --mc-font: 'PT Sans Narrow', sans-serif;
+
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px var(--color-border-subtle);
-}
-
-.mock-header {
-  height: 56px;
-  flex-shrink: 0;
-  background: #121214;
-  border-bottom: 1px solid var(--color-border-subtle);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
   gap: var(--space-3);
-}
-
-.mock-title {
-  font-family: var(--type-ui-strong-font-family);
-  font-size: var(--type-ui-strong-font-size);
-  font-weight: var(--type-ui-strong-font-weight);
+  padding: var(--space-3);
+  min-width: 280px;
+  font-size: 14px;
   color: var(--color-text-primary);
-  margin-right: auto;
 }
 
-.mock-leds {
+.exemplar-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-}
-
-.mock-led {
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border-strong);
-  flex-shrink: 0;
-}
-
-.mock-led-green {
-  background: #00aa55;
-}
-
-.mock-led-duo {
-  /* Fallback until Mapping/Palette resolves; paint sets inline backgroundColor */
-  background-color: var(--color-surface-sunken);
-  outline: var(--comp-canvas-selection-outline-width) solid transparent;
-  outline-offset: var(--comp-canvas-selection-outline-offset);
-}
-
-.mock-led-duo[data-zone-unbound] {
-  background-color: var(--color-surface-sunken);
-}
-
-.mock-led-duo.is-selectable,
-.mock-orch.is-selectable {
-  cursor: pointer;
-}
-
-.mock-led-duo.is-selected,
-.mock-orch.is-selected {
-  outline-color: var(--comp-canvas-selection-outline);
-}
-
-.mock-led-duo.is-pulsing,
-.mock-orch.is-pulsing {
-  outline-width: var(--comp-pulse-highlight-outline-width);
-  outline-style: solid;
-  animation-name: mock-hit-pulse-outline;
-  animation-duration: var(--comp-pulse-highlight-duration);
-  animation-iteration-count: var(--comp-pulse-highlight-repeats);
-  animation-timing-function: var(--comp-pulse-highlight-easing);
-}
-
-.mock-body {
-  flex: 1;
-  display: flex;
+  gap: var(--space-4);
   min-height: 0;
 }
 
-.mock-col {
-  flex: 1;
-  padding: var(--space-4);
-  border-right: 1px solid var(--color-border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.mock-col:last-child {
-  border-right: none;
-}
-
-.mock-zone-label {
+.exemplar-caption {
+  flex: 0 0 180px;
   font-family: var(--type-label-font-family);
   font-size: var(--type-label-font-size);
   font-weight: var(--type-label-font-weight);
   letter-spacing: var(--type-label-letter-spacing);
-  text-transform: uppercase;
   color: var(--color-text-muted);
+  text-align: right;
 }
 
-.mock-knob-row {
-  display: flex;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.mock-knob {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: #1a1a1a;
-  border: 3px solid #00aa55;
-  box-shadow: inset 0 0 0 8px #2a2a2e;
-  /* Selection outline tokens reserved for story 4.3 */
-  outline: var(--comp-canvas-selection-outline-width) solid transparent;
-  outline-offset: var(--comp-canvas-selection-outline-offset);
-}
-
-.mock-btn-widget {
-  height: 28px;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-default);
-  background: #00aa55;
-  color: var(--color-canvas-veil);
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border-strong);
-  width: fit-content;
-}
-
-.mock-orch {
-  height: 48px;
-  margin-top: auto;
-  border-radius: var(--radius-default);
-  border: 1px solid var(--color-border-strong);
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-canvas-veil);
-  opacity: 0.9;
-  background: var(--color-surface-sunken);
-  outline: var(--comp-canvas-selection-outline-width) solid transparent;
-  outline-offset: var(--comp-canvas-selection-outline-offset);
-}
-
-.mock-orch[data-zone-unbound] {
-  color: var(--color-text-muted);
-  opacity: 0.55;
-}
-
-.mock-footer {
-  height: 48px;
+.exemplar-brick {
   flex-shrink: 0;
-  background: #121214;
-  border-top: 1px solid var(--color-border-subtle);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  padding: 0 var(--space-4);
-  gap: var(--space-2);
-}
-
-.mock-fader {
-  width: 80px;
-  height: 8px;
-  border-radius: var(--radius-sm);
-  background: #1a1a1a;
-  border: 1px solid var(--color-border-strong);
-  position: relative;
+  justify-content: center;
   overflow: hidden;
+  border: 1px solid var(--mc-dark-grey3);
+  background: var(--mc-black);
+  color: var(--mc-light-grey2);
+  font-family: var(--mc-font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  border-radius: 0;
+  user-select: none;
+  pointer-events: none;
 }
 
-.mock-fader::after {
-  content: '';
+/* Slider enabled: full track #002D0E, inset 1px value bar #00785E, centered text #00DDAD @ 14 */
+.exemplar-brick-slider {
+  position: relative;
+  justify-content: center;
+  border: none;
+  background: var(--mc-green1);
+  color: var(--mc-green4);
+}
+
+.exemplar-slider-fill {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 55%;
-  background: #00aa55;
-  border-radius: 1px;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 0;
+  background: var(--mc-green3);
+  pointer-events: none;
 }
 
-.mock-object-type-hits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: 0 var(--space-4) var(--space-3);
-  /* Hit chips only for loaded inventory ObjectTypes (AD-10) */
+.exemplar-slider-value {
+  position: relative;
+  z-index: 1;
+  font-family: var(--mc-font);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--mc-green4);
+  line-height: 1;
 }
 
-.mock-object-type-hit {
-  height: 24px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-surface-raised);
-  color: var(--color-text-secondary);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  outline: var(--comp-canvas-selection-outline-width) solid transparent;
-  outline-offset: var(--comp-canvas-selection-outline-offset);
+/* Combo Standard closed: Green1 fill, Green4 text, Green3 triangle */
+.exemplar-brick-combo {
+  justify-content: space-between;
+  gap: 2px;
+  padding: 0 4px 0 6px;
+  border: none;
+  background: var(--mc-green1);
+  color: var(--mc-green4);
 }
 
-.mock-object-type-hit.is-selected {
-  /* 2px accent outline; selection fill remains transparent (chip chrome bg stays). */
-  outline-color: var(--comp-canvas-selection-outline);
+.exemplar-combo-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mc-font);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--mc-green4);
 }
 
-/* Mapping-change pulse (UX-DR12 / AD-16) — outline only; chrome pulse tokens */
-@keyframes mock-hit-pulse-outline {
-  0% {
-    outline-color: var(--comp-pulse-highlight-outline);
-  }
-  100% {
-    outline-color: transparent;
-  }
+.exemplar-combo-chevron {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--mc-green3);
 }
 
-.mock-object-type-hit.is-pulsing {
-  outline-width: var(--comp-pulse-highlight-outline-width);
-  outline-style: solid;
-  animation-name: mock-hit-pulse-outline;
-  animation-duration: var(--comp-pulse-highlight-duration);
-  animation-iteration-count: var(--comp-pulse-highlight-repeats);
-  animation-timing-function: var(--comp-pulse-highlight-easing);
+.exemplar-brick-button {
+  background: var(--mc-black);
+  border-color: var(--mc-dark-grey3);
+  color: var(--mc-light-grey2);
+  font-size: 14px;
+}
+
+.exemplar-brick-toggle {
+  background: var(--mc-green2);
+  border-color: var(--mc-dark-grey3);
+  color: var(--mc-green4);
+  font-size: 12px;
+}
+
+.exemplar-brick-label {
+  justify-content: flex-start;
+  padding: 0 2px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--mc-light-grey2);
+  font-size: 14px;
+}
+
+.exemplar-brick-groupLabel {
+  justify-content: flex-start;
+  align-items: flex-end;
+  padding: 0 4px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--mc-dark-grey5);
+  color: var(--mc-light-grey2);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.exemplar-brick-moduleHeader,
+.exemplar-brick-sectionHeader {
+  justify-content: flex-start;
+  align-items: flex-end;
+  padding: 0 4px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--mc-blue);
+  color: var(--mc-light-grey2);
+}
+
+.exemplar-header-title {
+  font-family: var(--mc-font);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.exemplar-brick-sectionHeader .exemplar-header-title {
+  font-size: 20px;
+}
+
+.exemplar-brick-modulationBusHeader {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 6px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--mc-blue);
+  color: var(--mc-light-grey2);
+}
+
+.exemplar-bus-num {
+  flex: 0 0 12px;
+  font-family: var(--mc-font);
+  font-size: 16px;
+  color: var(--mc-light-grey2);
+}
+
+.exemplar-bus-cols {
+  font-family: var(--mc-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mc-light-grey2);
+  letter-spacing: 0.02em;
+}
+
+.exemplar-brick-envelopeDisplay,
+.exemplar-brick-trackGeneratorDisplay {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 6px;
+  gap: 6px;
+  background: var(--mc-black);
+  border-color: var(--mc-dark-grey3);
+}
+
+.exemplar-display-label {
+  font-family: var(--mc-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mc-light-grey2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.exemplar-display-curve {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--mc-dark-grey3);
+  background:
+    linear-gradient(
+      135deg,
+      transparent 38%,
+      var(--mc-green4) 38%,
+      var(--mc-green4) 40%,
+      transparent 40%,
+      transparent 55%,
+      var(--mc-green4) 55%,
+      var(--mc-green4) 57%,
+      transparent 57%
+    ),
+    var(--mc-black);
+}
+
+.exemplar-brick-patchNameDisplay {
+  padding: 0 10px;
+  background: var(--mc-black);
+  border-color: var(--mc-dark-grey3);
+  color: var(--mc-red);
+  font-family: var(--mc-font);
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.exemplar-brick-horizontalSeparator {
+  border: none;
+  border-top: 1px solid var(--mc-dark-grey5);
+  background: transparent;
+  height: 8px !important;
+  padding: 0;
 }
 
 /* Sidebar — Lot B two zones / PhotoCraft floating panels */

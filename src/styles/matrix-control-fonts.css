@@ -1,0 +1,16 @@
+/* Matrix-Control product fonts for the canvas exemplar gallery (not Skin Studio chrome). */
+@font-face {
+  font-family: 'PT Sans Narrow';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/matrix-control/PTSansNarrow-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'PT Sans Narrow';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/matrix-control/PTSansNarrow-Bold.ttf') format('truetype');
+}
